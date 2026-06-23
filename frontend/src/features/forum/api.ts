@@ -1,0 +1,72 @@
+import { api } from "../../lib/api";
+
+export interface ReplyItem {
+  id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+}
+
+export interface ThreadItem {
+  id: string;
+  batch: string;
+  batch_code: string;
+  title: string;
+  body: string;
+  resolved: boolean;
+  author_name: string;
+  reply_count: number;
+  created_at: string;
+}
+
+export interface ThreadDetail extends ThreadItem {
+  replies: ReplyItem[];
+}
+
+export interface ForumBatch {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface MonitorThread {
+  id: string;
+  title: string;
+  batch_code: string;
+  author_name: string;
+  hours_waiting: number;
+  overdue: boolean;
+  created_at: string;
+}
+
+export interface MonitorResult {
+  window_hours: number;
+  threads: MonitorThread[];
+}
+
+export const forumApi = {
+  async list(q?: string): Promise<ThreadItem[]> {
+    return (await api.get<ThreadItem[]>(`/threads/${q ? `?q=${encodeURIComponent(q)}` : ""}`)).data;
+  },
+  async get(id: string): Promise<ThreadDetail> {
+    return (await api.get<ThreadDetail>(`/threads/${id}/`)).data;
+  },
+  async create(payload: { batch: string; title: string; body: string }): Promise<ThreadItem> {
+    return (await api.post<ThreadItem>("/threads/", payload)).data;
+  },
+  async reply(id: string, body: string): Promise<ThreadDetail> {
+    return (await api.post<ThreadDetail>(`/threads/${id}/reply/`, { body })).data;
+  },
+  async resolve(id: string): Promise<void> {
+    await api.post(`/threads/${id}/resolve/`);
+  },
+  async batches(): Promise<ForumBatch[]> {
+    return (await api.get<ForumBatch[]>("/forum/batches/")).data;
+  },
+  async monitor(): Promise<MonitorResult> {
+    return (await api.get<MonitorResult>("/forum/monitor/")).data;
+  },
+  async remind(id: string): Promise<void> {
+    await api.post(`/threads/${id}/remind/`);
+  },
+};

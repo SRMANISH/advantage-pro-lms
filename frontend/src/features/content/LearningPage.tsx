@@ -1,0 +1,84 @@
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+
+import type { RoleDef } from "../../app/roles";
+import { Badge, Button, Card } from "../../design-system";
+import { useAuth } from "../auth/auth";
+import { PortalLayout } from "../portal/PortalLayout";
+import { UpsellPrompt } from "../upsell/UpsellPrompt";
+import { contentApi, type VideoItem } from "./api";
+import { VideoPlayer } from "./VideoPlayer";
+
+export function LearningPage({ role }: { role: RoleDef }) {
+  const { user } = useAuth();
+  const videos = useQuery({ queryKey: ["videos"], queryFn: () => contentApi.listVideos() });
+  const materials = useQuery({ queryKey: ["materials"], queryFn: () => contentApi.listMaterials() });
+  const [active, setActive] = useState<VideoItem | null>(null);
+  const watermark = `${user?.full_name || user?.username} · ${user?.username}`;
+
+  return (
+    <PortalLayout role={role}>
+      <h1 className="mb-4 text-xl font-medium text-ink">Videos</h1>
+
+      {active ? (
+        <div className="grid gap-3">
+          <Button variant="ghost" className="w-fit" onClick={() => setActive(null)}>
+            ← Back to list
+          </Button>
+          <h2 className="text-base font-medium text-ink">{active.title}</h2>
+          <VideoPlayer video={active} watermark={watermark} />
+          <p className="text-xs text-muted">
+            Watching ≥80% marks you present. Playback is in-app only — no downloads.
+          </p>
+          <UpsellPrompt />
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          <Card>
+            <h2 className="mb-3 text-base font-medium text-ink">Class videos</h2>
+            {videos.isLoading ? (
+              <p className="text-sm text-muted">Loading…</p>
+            ) : videos.data && videos.data.length > 0 ? (
+              <div className="flex flex-col divide-y divide-brdr">
+                {videos.data.map((v) => (
+                  <div key={v.id} className="flex items-center justify-between py-2">
+                    <div className="text-sm">
+                      <span className="font-medium text-ink">{v.title}</span>
+                      {v.progress?.completed && (
+                        <Badge className="ml-2">watched</Badge>
+                      )}
+                    </div>
+                    <Button onClick={() => setActive(v)}>Watch</Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">No videos yet.</p>
+            )}
+          </Card>
+
+          <Card>
+            <h2 className="mb-3 text-base font-medium text-ink">Notes &amp; materials</h2>
+            {materials.data && materials.data.length > 0 ? (
+              <div className="flex flex-col divide-y divide-brdr">
+                {materials.data.map((m) => (
+                  <a
+                    key={m.id}
+                    href={m.view_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-2 text-sm font-medium text-brand-strong underline"
+                  >
+                    {m.title}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">No notes yet.</p>
+            )}
+          </Card>
+        </div>
+      )}
+    </PortalLayout>
+  );
+}

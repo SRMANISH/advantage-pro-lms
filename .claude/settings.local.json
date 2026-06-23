@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip --version)",
+      "Read(//c/Users/Manish SR/Downloads/**)",
+      "Bash(python -c ' *)",
+      "mcp__visualize__show_widget"
+    ]
+  }
+}

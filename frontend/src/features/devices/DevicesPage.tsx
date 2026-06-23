@@ -1,0 +1,57 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import type { RoleDef } from "../../app/roles";
+import { Button, Card } from "../../design-system";
+import { PortalLayout } from "../portal/PortalLayout";
+import { devicesApi } from "./api";
+
+export function DevicesPage({ role }: { role: RoleDef }) {
+  const qc = useQueryClient();
+  const requests = useQuery({ queryKey: ["device-requests"], queryFn: devicesApi.listRequests });
+  const decide = useMutation({
+    mutationFn: (v: { id: string; decision: "approve" | "reject" }) =>
+      devicesApi.decide(v.id, v.decision),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["device-requests"] }),
+  });
+
+  return (
+    <PortalLayout role={role}>
+      <h1 className="mb-1 text-xl font-medium text-ink">Device requests</h1>
+      <p className="mb-4 text-sm text-muted">
+        Students are tied to their first device. Approve a change so they can sign in from a new one.
+      </p>
+
+      <Card>
+        {requests.isLoading ? (
+          <p className="text-sm text-muted">Loading…</p>
+        ) : requests.data && requests.data.length > 0 ? (
+          <div className="flex flex-col divide-y divide-brdr">
+            {requests.data.map((r) => (
+              <div key={r.id} className="flex items-center justify-between py-3">
+                <div>
+                  <div className="text-sm font-medium text-ink">{r.student_name}</div>
+                  <div className="text-xs text-muted">
+                    {r.registration_number} · requested {r.created_at.slice(0, 16).replace("T", " ")}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={() => decide.mutate({ id: r.id, decision: "approve" })}>
+                    Approve
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => decide.mutate({ id: r.id, decision: "reject" })}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted">No pending device requests.</p>
+        )}
+      </Card>
+    </PortalLayout>
+  );
+}

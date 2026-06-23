@@ -1,0 +1,139 @@
+"""Video upload, role-scoped listing, gated streaming, and progress tracking."""
+
+import datetime
+import shutil
+from pathlib import Path
+
+import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework.test import APIClient
+
+from accounts.models import User, UserStatus
+from batches.models import Batch, Course
+from content.models import Video, VideoProgress
+from core.roles import Role
+from enrollments.models import Enrollment
+
+VIDEOS_URL = "/api/v1/videos/"
+
+
+@pytest.fixture(autouse=True)
+def _media(settings):
+    media = Path(settings.BASE_DIR) / ".pytest_media_content"
+    settings.MEDIA_ROOT = media
+    yield
+    shutil.rmtree(media, ignore_errors=True)
+
+
+def user(username, role):
+    return User.objects.create_user(
+        username=username, password="x", role=role, status=UserStatus.ACTIVE
+    )
+
+
+def client_for(u):
+    c = APIClient()
+    c.force_authenticate(user=u)
+    return c
+
+
+@pytest.fixture
+def world(db):
+    course = Course.objects.create(code="FS", name="Full Stack")
+    batch = Batch.objects.create(
+        code="B1",
+        name="Batch 1",
+        course=course,
+        start_date=datetime.date(2026, 1, 1),
+        end_date=datetime.date(2026, 4, 1),
+    )
+    other = Batch.objects.create(
+        code="B2",
+        name="Batch 2",
+        course=course,
+        start_date=datetime.date(2026, 1, 1),
+        end_date=datetime.date(2026, 4, 1),
+    )
+    fac = user("fac", Role.FACULTY)
+    batch.faculty.add(fac)
+    student = user("stu", Role.STUDENT)
+    Enrollment.objects.create(student=student, batch=batch, registration_number="stu")
+    return {"batch": batch, "other": other, "fac": fac, "student": student}
+
+
+def mp4(name="lesson.mp4"):
+    return SimpleUploadedFile(name, b"\x00\x00\x00\x18ftypmp42fake-bytes", content_type="video/mp4")
+
+
+@pytest.mark.django_db
+def test_faculty_uploads_video_to_own_batch(world):
+    resp = client_for(world["fac"]).post(
+        VIDEOS_URL,
+        {"batch": str(world["batch"].id), "title": "Lesson 1", "file": mp4()},
+        format="multipart",
+    )
+    assert resp.status_code == 201
+    assert Video.objects.filter(batch=world["batch"], title="Lesson 1").exists()
+
+
+@pytest.mark.django_db
+def test_faculty_cannot_upload_to_other_batch(world):
+    resp = client_for(world["fac"]).post(
+        VIDEOS_URL,
+        {"batch": str(world["other"].id), "title": "Nope", "file": mp4()},
+        format="multipart",
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_student_cannot_upload(world):
+    resp = client_for(world["student"]).post(
+        VIDEOS_URL,
+        {"batch": str(world["batch"].id), "title": "Nope", "file": mp4()},
+        format="multipart",
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_student_sees_only_their_batch_videos(world):
+    Video.objects.create(batch=world["batch"], title="Mine", storage_key="videos/a/x.mp4")
+    Video.objects.create(batch=world["other"], title="Hidden", storage_key="videos/b/y.mp4")
+    resp = client_for(world["student"]).get(VIDEOS_URL)
+    assert resp.status_code == 200
+    titles = {v["title"] for v in resp.json()}
+    assert titles == {"Mine"}
+
+
+@pytest.mark.django_db
+def test_progress_marks_completed_at_80_percent(world):
+    video = Video.objects.create(batch=world["batch"], title="V", storage_key="videos/a/x.mp4")
+    resp = client_for(world["student"]).post(
+        f"{VIDEOS_URL}{video.id}/progress/",
+        {"percent": 85, "watched_seconds": 510, "last_position": 510},
+        format="json",
+    )
+    assert resp.status_code == 200
+    assert resp.json()["completed"] is True
+    progress = VideoProgress.objects.get(video=video, student=world["student"])
+    assert progress.completed is True
+    assert progress.last_position == 510
+
+
+@pytest.mark.django_db
+def test_play_streams_with_range_for_authorized_student(world):
+    video = (
+        client_for(world["fac"])
+        .post(
+            VIDEOS_URL,
+            {"batch": str(world["batch"].id), "title": "Stream me", "file": mp4()},
+            format="multipart",
+        )
+        .json()
+    )
+    resp = client_for(world["student"]).get(
+        f"{VIDEOS_URL}{video['id']}/play/", HTTP_RANGE="bytes=0-3"
+    )
+    assert resp.status_code == 206
+    assert resp["Content-Range"].startswith("bytes 0-3/")

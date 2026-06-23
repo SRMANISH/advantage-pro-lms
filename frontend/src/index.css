@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand palette (RGB channels) sampled from the Advantage Pro logo. */
+  --color-brand: 0 160 224; /* #00A0E0 — logo azure */
+  --color-brand-strong: 0 122 176; /* #007AB0 — darker azure (AA on white) */
+  --color-sky: 230 246 253; /* #E6F6FD */
+  --color-navy: 22 58 140; /* #163A8C — logo ring/tagline */
+  --color-violet: 110 46 160; /* #6E2EA0 — emblem */
+  --color-surface: 255 255 255; /* #FFFFFF */
+  --color-bg: 244 250 254; /* #F4FAFE */
+  --color-border: 214 235 248; /* #D6EBF8 */
+  --color-text: 15 31 58; /* #0F1F3A */
+  --color-muted: 90 105 130; /* #5A6982 */
+}
+
+@layer base {
+  body {
+    @apply bg-appbg text-ink antialiased;
+    font-family:
+      ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+}
+
+/* Moving per-student watermark over secure video (traceable, deters casual sharing). */
+@keyframes apWmMove {
+  0% {
+    top: 8%;
+    left: 6%;
+  }
+  25% {
+    top: 68%;
+    left: 58%;
+  }
+  50% {
+    top: 38%;
+    left: 22%;
+  }
+  75% {
+    top: 78%;
+    left: 36%;
+  }
+  100% {
+    top: 8%;
+    left: 6%;
+  }
+}
+.ap-watermark {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 13px;
+  white-space: nowrap;
+  animation: apWmMove 17s linear infinite;
+}
