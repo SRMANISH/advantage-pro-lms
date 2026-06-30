@@ -24,6 +24,7 @@ import { LearningPage } from "./features/content/LearningPage";
 import { EnrollmentPage } from "./features/enrollments/EnrollmentPage";
 import { PortalPage } from "./features/portal/PortalPage";
 import { ReportsPage } from "./features/reports/ReportsPage";
+import { StaffPage } from "./features/staff/StaffPage";
 import { SetupPage } from "./features/setup/SetupPage";
 import { LandingPage } from "./pages/LandingPage";
 import { ShowcasePage } from "./pages/ShowcasePage";
@@ -32,9 +33,10 @@ import { ShowcasePage } from "./pages/ShowcasePage";
 // the backend enforces the matrix on every endpoint.
 const BATCH_ROLES = new Set(["admin", "mis", "faculty"]);
 const ENROL_ROLES = new Set(["admin", "mis"]);
+const STAFF_ROLES = new Set(["super_admin", "admin"]);
 const CONTENT_ROLES = new Set(["mis", "faculty"]);
 const TEST_ROLES = new Set(["mis", "faculty", "student"]);
-const TASK_ROLES = new Set(["faculty", "student"]);
+const TASK_ROLES = new Set(["mis", "faculty", "student"]);
 const ATTEND_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student", "counselor"]);
 const PERF_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student", "counselor"]);
 const DEVICE_ROLES = new Set(["mis", "faculty"]);
@@ -80,6 +82,17 @@ export default function App() {
           element={
             <ProtectedRoute role={role}>
               <BatchesPage role={role} />
+            </ProtectedRoute>
+          }
+        />
+      ))}
+      {ROLES.filter((role) => STAFF_ROLES.has(role.value)).map((role) => (
+        <Route
+          key={`staff-${role.slug}`}
+          path={`/${role.slug}/staff`}
+          element={
+            <ProtectedRoute role={role}>
+              <StaffPage role={role} />
             </ProtectedRoute>
           }
         />

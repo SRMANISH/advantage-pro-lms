@@ -32,7 +32,7 @@ EXPECTED: dict[str, set[str]] = {
     Action.UPLOAD_VIDEOS: {FAC},
     Action.UPLOAD_NOTES: {MIS, FAC},
     Action.CREATE_TESTS: {MIS, FAC},
-    Action.CREATE_TASKS: {FAC},
+    Action.CREATE_TASKS: {MIS, FAC},
     Action.SUBMIT_TASKS_TESTS: {STU},
     Action.VIEW_PERFORMANCE: {SA, AD, MIS, CO, FAC, STU},
     Action.MANAGE_ATTENDANCE: {SA, AD, MIS, CO, FAC, STU},
@@ -89,6 +89,11 @@ def test_notes_and_mcq_uploads_are_mis_and_faculty_only():
     for a in (Action.UPLOAD_NOTES, Action.CREATE_TESTS):
         assert can(MIS, a) and can(FAC, a)
         assert not can(AD, a) and not can(SA, a)
+
+
+def test_tasks_created_by_mis_and_faculty():
+    assert can(MIS, Action.CREATE_TASKS) and can(FAC, Action.CREATE_TASKS)
+    assert not can(AD, Action.CREATE_TASKS) and not can(SA, Action.CREATE_TASKS)
 
 
 def test_faculty_now_schedules_live_classes_and_uploads_videos():

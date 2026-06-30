@@ -29,3 +29,21 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "username", "full_name", "email", "phone", "role", "status"]
         read_only_fields = fields
+
+
+# Creatable staff roles (never Super Admin or Student). Admin is further restricted to
+# Counsellor only in the view; Super Admin may create any of these.
+STAFF_ROLES = (Role.ADMIN, Role.MIS, Role.COUNSELOR, Role.TECH_SUPPORT, Role.FACULTY)
+
+
+class StaffCreateSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, help_text="Login ID")
+    full_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    email = serializers.EmailField()
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
+    role = serializers.ChoiceField(choices=[(r, r) for r in STAFF_ROLES])
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("That login ID is already taken.")
+        return value

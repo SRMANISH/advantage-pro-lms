@@ -32,7 +32,33 @@ export interface NextPlanRow {
   submitted_at: string;
 }
 
+export interface EngagementMe {
+  linkedin: { status: string; show: boolean };
+  google_review: { status: string | null; show: boolean };
+  next_plan: { show: boolean };
+}
+
+export interface NextPlanInput {
+  planning_another_course: boolean;
+  interested_course: string;
+  expected_timing: string;
+  goal: string;
+  preferred_contact_time: string;
+}
+
 export const engagementApi = {
+  async me(): Promise<EngagementMe> {
+    return (await api.get<EngagementMe>("/engagement/me/")).data;
+  },
+  async linkedinAction(action: "opened" | "confirmed" | "skipped"): Promise<void> {
+    await api.post("/engagement/linkedin/", { action });
+  },
+  async googleReviewAction(action: "opened" | "submitted" | "skipped"): Promise<void> {
+    await api.post("/engagement/google-review/", { action });
+  },
+  async submitNextPlan(body: NextPlanInput): Promise<void> {
+    await api.post("/engagement/next-plan/", body);
+  },
   async linkedinReport(): Promise<LinkedInReport> {
     return (await api.get<LinkedInReport>("/engagement/reports/linkedin/")).data;
   },

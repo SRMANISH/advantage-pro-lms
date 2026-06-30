@@ -15,7 +15,8 @@ from rest_framework.views import APIView
 
 from attendance.services import record_login_attendance
 from audit.services import record_action
-from core.permissions import has_any_role
+from core.permissions import MatrixPermission, has_any_role
+from core.permissions_matrix import Action
 from core.roles import Role
 from core.utils import get_client_ip
 from notifications.services import admins_and_mis, notify_many
@@ -24,7 +25,12 @@ from . import device
 from . import password as password_service
 from . import setup as setup_service
 from .models import DeviceChangeRequest, User, UserStatus
-from .serializers import DeviceRequestSerializer, LoginSerializer, UserSerializer
+from .serializers import (
+    DeviceRequestSerializer,
+    LoginSerializer,
+    StaffCreateSerializer,
+    UserSerializer,
+)
 from .throttling import LoginRateThrottle
 
 
@@ -337,6 +343,50 @@ class ForgotPasswordResendView(APIView):
         if settings.DEBUG:
             data["dev_code"] = code
         return Response(data)
+
+
+class StaffAccountsView(APIView):
+    """Create and list staff accounts.
+
+    Super Admin may create any staff role; Admin may create Counsellor accounts only
+    (Admin never creates Faculty/Admin). New accounts go through the same two-step setup
+    (email link -> email OTP -> phone OTP -> password) as students.
+    """
+
+    permission_classes = [MatrixPermission]
+    required_action = Action.MANAGE_STAFF_ACCOUNTS
+
+    def get(self, request):
+        staff = User.objects.exclude(role=Role.STUDENT).order_by("role", "username")
+        return Response(UserSerializer(staff, many=True).data)
+
+    def post(self, request):
+        serializer = StaffCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        role = serializer.validated_data["role"]
+        if request.user.role == Role.ADMIN and role != Role.COUNSELOR:
+            return Response(
+                {"detail": "Admin can create Counsellor accounts only."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        user = User.objects.create(
+            username=serializer.validated_data["username"],
+            full_name=serializer.validated_data["full_name"],
+            email=serializer.validated_data["email"],
+            phone=serializer.validated_data["phone"],
+            role=role,
+            status=UserStatus.PENDING,
+        )
+        token = setup_service.create_setup_token(user)
+        setup_service.send_setup_email(user, token)
+        record_action(
+            actor=request.user,
+            action="staff_account_created",
+            target=user,
+            metadata={"role": role},
+            ip_address=get_client_ip(request),
+        )
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
 class ChangePasswordView(APIView):

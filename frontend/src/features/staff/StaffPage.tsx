@@ -1,0 +1,132 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+
+import type { RoleDef } from "../../app/roles";
+import { Badge, Button, Card, Input, Select } from "../../design-system";
+import { useAuth } from "../auth/auth";
+import { PortalLayout } from "../portal/PortalLayout";
+import { staffApi } from "./api";
+
+// Super Admin may create any staff role; Admin may create Counsellor only.
+const ALL_STAFF_ROLES: { value: string; label: string }[] = [
+  { value: "admin", label: "Admin" },
+  { value: "mis", label: "MIS Executive" },
+  { value: "counselor", label: "Counsellor" },
+  { value: "tech_support", label: "Tech Support" },
+  { value: "faculty", label: "Faculty" },
+];
+const ROLE_LABEL: Record<string, string> = Object.fromEntries(
+  ALL_STAFF_ROLES.map((r) => [r.value, r.label]),
+);
+
+const empty = { username: "", full_name: "", email: "", phone: "", role: "" };
+
+export function StaffPage({ role }: { role: RoleDef }) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
+  const roleOptions = isSuperAdmin
+    ? ALL_STAFF_ROLES
+    : ALL_STAFF_ROLES.filter((r) => r.value === "counselor");
+
+  const staff = useQuery({ queryKey: ["staff"], queryFn: staffApi.list });
+  const [form, setForm] = useState({ ...empty, role: roleOptions[0]?.value ?? "" });
+  const [error, setError] = useState("");
+
+  const create = useMutation({
+    mutationFn: () => staffApi.create(form),
+    onSuccess: () => {
+      setForm({ ...empty, role: roleOptions[0]?.value ?? "" });
+      setError("");
+      qc.invalidateQueries({ queryKey: ["staff"] });
+    },
+    onError: (e: unknown) => {
+      const detail = (e as { response?: { data?: { detail?: string; username?: string[] } } })
+        ?.response?.data;
+      setError(detail?.detail ?? detail?.username?.[0] ?? "Could not create the account.");
+    },
+  });
+
+  return (
+    <PortalLayout role={role}>
+      <h1 className="mb-1 text-xl font-medium text-ink">Staff accounts</h1>
+      <p className="mb-4 text-sm text-muted">
+        {isSuperAdmin
+          ? "Create any staff account. New staff finish the same two-step email + phone setup."
+          : "Create Counsellor accounts. They finish the same two-step email + phone setup."}
+      </p>
+
+      <Card className="mb-6">
+        <h2 className="mb-3 text-base font-medium text-ink">New staff member</h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input
+            placeholder="Login ID"
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })}
+          />
+          <Input
+            placeholder="Full name"
+            value={form.full_name}
+            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+          />
+          <Input
+            placeholder="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+          <Input
+            placeholder="Phone"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+          <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+            {roleOptions.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        {error && (
+          <p className="mt-2 text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        )}
+        <Button
+          className="mt-3"
+          onClick={() => create.mutate()}
+          disabled={!form.username || !form.email || !form.role || create.isPending}
+        >
+          {create.isPending ? "Creating…" : "Create & send setup link"}
+        </Button>
+      </Card>
+
+      <Card>
+        <h2 className="mb-3 text-base font-medium text-ink">Existing staff</h2>
+        {staff.data && staff.data.length > 0 ? (
+          <div className="flex flex-col divide-y divide-brdr">
+            {staff.data.map((s) => (
+              <div key={s.id} className="flex items-center justify-between py-2 text-sm">
+                <div>
+                  <span className="font-medium text-ink">{s.full_name || s.username}</span>
+                  <span className="text-muted"> · {s.username}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge>{ROLE_LABEL[s.role] ?? s.role}</Badge>
+                  <span
+                    className={s.status === "active" ? "text-xs text-muted" : "text-xs text-amber-600"}
+                  >
+                    {s.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted">No staff accounts yet.</p>
+        )}
+      </Card>
+    </PortalLayout>
+  );
+}

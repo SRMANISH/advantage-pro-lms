@@ -17,6 +17,7 @@ import {
   Smartphone,
   Sparkles,
   TriangleAlert,
+  UserCog,
   UserPlus,
   Users,
   Video,
@@ -27,6 +28,7 @@ import { Link, useLocation } from "react-router-dom";
 import type { RoleDef } from "../../app/roles";
 import { Button, Logo, cn } from "../../design-system";
 import { useAuth } from "../auth/auth";
+import { EngagementPrompts } from "../engagement/EngagementPrompts";
 import { NotificationBell } from "../notifications/NotificationBell";
 
 const role = (...values: string[]) => new Set(values);
@@ -37,7 +39,7 @@ const BATCHES = role("admin", "mis", "faculty"); // Admin manages, MIS/Faculty v
 const ADMIN_MIS = role("admin", "mis"); // enrolment/import
 const CONTENT = role("mis", "faculty"); // notes (MIS+FAC), videos (FAC)
 const TESTS = role("mis", "faculty", "student"); // MCQ build = MIS+FAC; student takes
-const TASKS = role("faculty", "student"); // Faculty assigns; student submits
+const TASKS = role("mis", "faculty", "student"); // Faculty/MIS assign; student submits
 const LIVE = role("admin", "mis", "faculty", "student"); // Faculty schedules; others view
 const ATTEND = role("super_admin", "admin", "mis", "faculty", "student", "counselor");
 const FORUM = role("mis", "tech_support", "faculty", "student"); // no SA/AD moderation
@@ -58,6 +60,7 @@ const NAV: NavEntry[] = [
   { to: "", label: "Dashboard", Icon: LayoutDashboard, roles: ALL },
   { to: "batches", label: "Batches", Icon: Users, roles: BATCHES },
   { to: "enrolment", label: "Enrolment", Icon: UserPlus, roles: ADMIN_MIS },
+  { to: "staff", label: "Staff", Icon: UserCog, roles: role("super_admin", "admin") },
   { to: "content", label: "Content", Icon: Video, roles: CONTENT },
   { to: "videos", label: "Videos", Icon: PlayCircle, roles: role("student") },
   { to: "tests", label: "Tests", Icon: ClipboardList, roles: TESTS },
@@ -121,6 +124,7 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
 
   return (
     <div className="flex min-h-screen bg-appbg">
+      {roleDef.value === "student" && <EngagementPrompts />}
       <aside className="hidden w-60 flex-col border-r border-brdr bg-surface md:flex">{sidebar}</aside>
 
       {open && (

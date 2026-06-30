@@ -72,7 +72,7 @@ MATRIX: dict[str, frozenset[str]] = {
     Action.UPLOAD_VIDEOS: frozenset({FAC}),
     Action.UPLOAD_NOTES: frozenset({MIS, FAC}),
     Action.CREATE_TESTS: frozenset({MIS, FAC}),
-    Action.CREATE_TASKS: frozenset({FAC}),
+    Action.CREATE_TASKS: frozenset({MIS, FAC}),
     Action.SUBMIT_TASKS_TESTS: frozenset({STU}),
     Action.VIEW_PERFORMANCE: frozenset({SA, AD, MIS, CO, FAC, STU}),
     Action.MANAGE_ATTENDANCE: frozenset({SA, AD, MIS, CO, FAC, STU}),
