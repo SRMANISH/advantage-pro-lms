@@ -25,6 +25,22 @@ OPTIONAL = ["address", "guardian", "employment_company"]
 
 _PHONE_RE = re.compile(r"^\+?\d[\d\s-]{6,18}$")
 
+# "Registration ID" is the student recognition term. Accept friendly spellings for that
+# column (and tolerate case/spacing on every column) so admins can use "Registration ID"
+# in the sheet while we still store it as the canonical ``registration_number``.
+_HEADER_ALIASES = {
+    "registration_id": "registration_number",
+    "registration_no": "registration_number",
+    "registration_number": "registration_number",
+    "reg_id": "registration_number",
+    "reg_no": "registration_number",
+}
+
+
+def _canonical_header(key: str) -> str:
+    norm = re.sub(r"\s+", "_", (key or "").strip().lower())
+    return _HEADER_ALIASES.get(norm, norm)
+
 
 def parse_rows(uploaded) -> list[dict]:
     """Return a list of dict rows from a CSV or XLSX upload. Raises ValueError on bad files."""
@@ -42,7 +58,7 @@ def _parse_csv(raw: bytes) -> list[dict]:
     reader = csv.DictReader(io.StringIO(text))
     if reader.fieldnames is None:
         raise ValueError("The file is empty.")
-    return [{(k or "").strip(): (v or "").strip() for k, v in row.items()} for row in reader]
+    return [{_canonical_header(k): (v or "").strip() for k, v in row.items()} for row in reader]
 
 
 def _parse_xlsx(raw: bytes) -> list[dict]:
@@ -52,7 +68,7 @@ def _parse_xlsx(raw: bytes) -> list[dict]:
     ws = wb.active
     rows = ws.iter_rows(values_only=True)
     try:
-        header = [str(h).strip() if h is not None else "" for h in next(rows)]
+        header = [_canonical_header(str(h)) if h is not None else "" for h in next(rows)]
     except StopIteration as exc:
         raise ValueError("The file is empty.") from exc
     out = []
@@ -106,11 +122,9 @@ def validate_and_build(rows: list[dict]) -> tuple[list[dict], list[dict]]:
 
         if reg:
             if reg in existing_regs:
-                err(
-                    "registration_number", "A student with this registration number already exists."
-                )
+                err("registration_number", "A student with this Registration ID already exists.")
             if reg in seen_regs:
-                err("registration_number", "Duplicate registration number within the file.")
+                err("registration_number", "Duplicate Registration ID within the file.")
             seen_regs.add(reg)
 
         if email:

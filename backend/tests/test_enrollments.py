@@ -61,6 +61,20 @@ def test_valid_import_creates_pending_students(setup):
 
 
 @pytest.mark.django_db
+def test_registration_id_header_alias_is_accepted(setup):
+    # Admins can use the friendly "Registration ID" column name instead of the
+    # canonical registration_number; it still imports to the same field.
+    header = "Registration ID,name,email,phone,batch,course,faculty"
+    content = "\n".join([header, "S001,Asha Rao,asha@example.com,9876543210,FS-1,FS,prof"]).encode(
+        "utf-8"
+    )
+    upload = SimpleUploadedFile("students.csv", content, content_type="text/csv")
+    resp = admin_client(setup).post(IMPORT_URL, {"file": upload}, format="multipart")
+    assert resp.status_code == 201
+    assert User.objects.filter(username="S001").exists()
+
+
+@pytest.mark.django_db
 def test_dry_run_validates_without_creating(setup):
     rows = ["S010,Maya N,maya@example.com,9876543210,FS-1,FS,prof"]
     resp = admin_client(setup).post(

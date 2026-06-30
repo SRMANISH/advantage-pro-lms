@@ -59,7 +59,9 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
       <Card className="mb-6">
         <h2 className="mb-1 text-base font-medium text-ink">Import student list</h2>
         <p className="mb-3 text-sm text-muted">
-          Upload a .csv or .xlsx. Every row is validated; if any row is invalid the whole upload is
+          Upload a .csv or .xlsx. The first column is each student&apos;s{" "}
+          <span className="font-medium text-ink">Registration ID</span> (their login and
+          recognition ID). Every row is validated; if any row is invalid the whole upload is
           rejected and nothing is saved.
         </p>
 
@@ -141,7 +143,7 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
             <table className="w-full text-sm">
               <thead className="bg-sky text-navy">
                 <tr>
-                  <th className="px-3 py-2 text-left">Reg. no</th>
+                  <th className="px-3 py-2 text-left">Registration ID</th>
                   <th className="px-3 py-2 text-left">Name</th>
                   <th className="px-3 py-2 text-left">Batch</th>
                   <th className="px-3 py-2 text-left">Email</th>
