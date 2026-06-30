@@ -2,7 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, Input, SectionHeading, Select } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  SectionHeading,
+  Select,
+  useToast,
+} from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { staffApi } from "./api";
@@ -23,6 +32,7 @@ const empty = { username: "", full_name: "", email: "", phone: "", role: "" };
 
 export function StaffPage({ role }: { role: RoleDef }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === "super_admin";
   const roleOptions = isSuperAdmin
@@ -39,6 +49,7 @@ export function StaffPage({ role }: { role: RoleDef }) {
       setForm({ ...empty, role: roleOptions[0]?.value ?? "" });
       setError("");
       qc.invalidateQueries({ queryKey: ["staff"] });
+      toast.show("Staff account created — setup link sent.", "success");
     },
     onError: (e: unknown) => {
       const detail = (e as { response?: { data?: { detail?: string; username?: string[] } } })

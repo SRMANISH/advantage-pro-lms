@@ -1,17 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, EmptyState, SectionHeading } from "../../design-system";
+import { Button, Card, EmptyState, SectionHeading, useToast } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { devicesApi } from "./api";
 
 export function DevicesPage({ role }: { role: RoleDef }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const requests = useQuery({ queryKey: ["device-requests"], queryFn: devicesApi.listRequests });
   const decide = useMutation({
     mutationFn: (v: { id: string; decision: "approve" | "reject" }) =>
       devicesApi.decide(v.id, v.decision),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["device-requests"] }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["device-requests"] });
+      toast.show(v.decision === "approve" ? "Device approved." : "Request rejected.", "success");
+    },
+    onError: () => toast.show("Could not action this request.", "error"),
   });
 
   return (

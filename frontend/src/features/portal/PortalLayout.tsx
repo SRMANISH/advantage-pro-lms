@@ -9,7 +9,9 @@ import {
   Download,
   Eye,
   FileText,
+  KeyRound,
   LayoutDashboard,
+  LogOut,
   type LucideIcon,
   Menu,
   MessagesSquare,
@@ -23,7 +25,6 @@ import {
   UserPlus,
   Users,
   Video,
-  X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -248,11 +249,18 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
                         <div className="truncate text-sm font-medium text-ink">{name}</div>
                         <div className="truncate text-xs text-muted">{user?.email}</div>
                       </div>
+                      <Link
+                        to={`/${roleDef.slug}/change-password`}
+                        onClick={() => setMenuOpen(false)}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-sky"
+                      >
+                        <KeyRound size={15} className="text-muted" /> Change password
+                      </Link>
                       <button
                         onClick={() => void logout()}
                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-sky"
                       >
-                        <X size={15} className="text-muted" /> Sign out
+                        <LogOut size={15} className="text-muted" /> Sign out
                       </button>
                     </motion.div>
                   </>
