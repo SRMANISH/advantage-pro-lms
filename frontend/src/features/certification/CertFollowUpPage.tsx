@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card } from "../../design-system";
+import { Badge, Button, Card, EmptyState, SectionHeading } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import {
   CERT_FOLLOW_UP_STATUSES,
@@ -27,15 +27,15 @@ export function CertFollowUpPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-medium text-ink">Certificate follow-up</h1>
-        <Button variant="soft" onClick={() => remind.mutate()} disabled={remind.isPending}>
-          {remind.isPending ? "Sending…" : "Send weekly reminders"}
-        </Button>
-      </div>
-      <p className="mb-4 text-sm text-muted">
-        {data.length} completed-course student(s) · {pending} certificate pending.
-      </p>
+      <SectionHeading
+        title="Certificate follow-up"
+        subtitle={`${data.length} completed-course student(s) · ${pending} certificate pending.`}
+        action={
+          <Button variant="soft" onClick={() => remind.mutate()} disabled={remind.isPending}>
+            {remind.isPending ? "Sending…" : "Send weekly reminders"}
+          </Button>
+        }
+      />
 
       <Card>
         {rows.isLoading ? (
@@ -92,7 +92,7 @@ export function CertFollowUpPage({ role }: { role: RoleDef }) {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-muted">No completed-course students yet.</p>
+          <EmptyState title="No completed-course students yet" />
         )}
       </Card>
     </PortalLayout>

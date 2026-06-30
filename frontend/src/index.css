@@ -14,6 +14,10 @@
   --color-border: 214 235 248; /* #D6EBF8 */
   --color-text: 15 31 58; /* #0F1F3A */
   --color-muted: 90 105 130; /* #5A6982 */
+  --color-navy-deep: 13 30 74; /* #0D1E4A — sidebar gradient base */
+  --color-success: 30 142 90; /* #1E8E5A */
+  --color-warning: 180 110 20; /* #B46E14 */
+  --color-danger: 200 52 60; /* #C8343C */
 }
 
 @layer base {

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input } from "../../design-system";
+import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
 import { batchesApi } from "../batches/api";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -12,7 +12,7 @@ export function TestsPage({ role }: { role: RoleDef }) {
   const { user } = useAuth();
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Tests</h1>
+      <SectionHeading title="Tests" subtitle="Auto-graded MCQ tests." />
       {user?.role === "student" ? <StudentTests /> : <ManageTests />}
     </PortalLayout>
   );
@@ -101,7 +101,7 @@ function ManageTests() {
                 <span className="text-sm font-medium text-ink">Question {qi + 1}</span>
                 {questions.length > 1 && (
                   <button
-                    className="text-xs text-red-600"
+                    className="text-xs text-danger"
                     onClick={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))}
                   >
                     Remove
@@ -149,7 +149,7 @@ function ManageTests() {
               {create.isPending ? "Creating…" : "Create test"}
             </Button>
           </div>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-2 text-sm text-danger">{error}</p>}
         </Card>
       )}
 
@@ -167,7 +167,7 @@ function ManageTests() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No tests yet.</p>
+          <EmptyState title="No tests yet" />
         )}
       </Card>
     </div>
@@ -195,7 +195,9 @@ function StudentTests() {
             <div key={t.id} className="flex items-center justify-between py-2">
               <div className="text-sm">
                 <span className="font-medium text-ink">{t.title}</span>{" "}
-                <Badge>{t.is_open ? "open" : "closed"}</Badge>
+                <Badge tone={t.is_open ? "success" : "neutral"}>
+                  {t.is_open ? "open" : "closed"}
+                </Badge>
               </div>
               {t.my_attempt ? (
                 <span className="text-sm text-brand-strong">

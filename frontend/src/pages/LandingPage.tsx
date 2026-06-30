@@ -1,104 +1,127 @@
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
 import { ROLES } from "../app/roles";
-import { Logo } from "../design-system";
+import { Logo, fadeUp, staggerContainer, staggerItem } from "../design-system";
 
 const FEATURES = [
-  {
-    title: "Secure video & notes",
-    body: "Class recordings stream in-app with a personalised watermark — no downloads.",
-  },
-  {
-    title: "Tests, tasks & grading",
-    body: "Auto-graded MCQ tests and faculty-graded tasks, tracked per student.",
-  },
-  {
-    title: "Attendance & performance",
-    body: "Auto-captured from videos, tests, tasks and live classes, with batch ranking.",
-  },
-  {
-    title: "Doubts & live classes",
-    body: "Per-batch doubt forum and scheduled live classes with reminders.",
-  },
+  { title: "Secure learning", body: "Watermarked, no-download video and trusted access." },
+  { title: "Batch-based LMS", body: "Structured cohorts, faculty and assignments." },
+  { title: "Role-based access", body: "A focused portal for every role on the team." },
 ];
 
-const STAFF = ROLES.filter((r) => r.value !== "student");
+const PRIMARY = ["student", "faculty", "admin", "super_admin"];
 
 export function LandingPage() {
-  return (
-    <div className="min-h-screen bg-appbg">
-      {/* Top bar */}
-      <header className="flex items-center justify-between border-b border-brdr bg-surface px-6 py-3">
-        <Logo size={40} />
-        <Link
-          to="/login/student"
-          className="rounded-lg bg-brand-strong px-4 py-2 text-sm font-medium text-white hover:bg-navy"
-        >
-          Sign in
-        </Link>
-      </header>
+  const primaryRoles = PRIMARY.map((v) => ROLES.find((r) => r.value === v)!).filter(Boolean);
 
-      {/* Hero */}
-      <section className="bg-sky">
-        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 py-16 text-center">
-          <Logo size={120} />
-          <h1 className="text-3xl font-medium text-navy sm:text-4xl">Advantage Pro LMS</h1>
-          <p className="max-w-2xl text-base text-ink">
-            One private platform for our batches — enrolment, class videos, tests, tasks,
-            attendance, doubts and live classes, all in one place.
-          </p>
-          <p className="text-sm text-muted">Vectra Technosoft · Networking with success · since 1998</p>
-          <div className="mt-2 flex flex-wrap justify-center gap-3">
-            <Link
-              to="/login/student"
-              className="rounded-lg bg-brand-strong px-5 py-2.5 text-sm font-medium text-white hover:bg-navy"
-            >
-              Student sign in
-            </Link>
-            <Link
-              to="/login/faculty"
-              className="rounded-lg border border-brdr bg-surface px-5 py-2.5 text-sm font-medium text-navy hover:bg-sky"
-            >
-              Faculty sign in
-            </Link>
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-sky via-appbg to-surface">
+      {/* Ambient brand glows */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-brand/10 blur-3xl" />
+        <div className="absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-navy/10 blur-3xl" />
+      </div>
+
+      <header className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+        <div className="flex items-center gap-3">
+          <Logo size={40} />
+          <div className="leading-tight">
+            <div className="text-sm font-semibold text-ink">Advantage Pro</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted">
+              Learning Management
+            </div>
           </div>
         </div>
-      </section>
+        <span className="inline-flex items-center gap-2 rounded-full border border-brdr bg-surface px-3 py-1.5 text-xs text-muted shadow-card">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          All learning systems operational
+        </span>
+      </header>
 
-      {/* Features */}
-      <section className="mx-auto max-w-5xl px-6 py-14">
-        <h2 className="mb-6 text-center text-xl font-medium text-ink">What's inside</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-2xl border border-brdr bg-surface p-5">
-              <h3 className="mb-1 text-base font-medium text-brand-strong">{f.title}</h3>
-              <p className="text-sm text-muted">{f.body}</p>
+      <main className="relative mx-auto grid max-w-6xl gap-10 px-6 pb-16 pt-6 lg:grid-cols-2 lg:items-center lg:pt-14">
+        <motion.div variants={staggerContainer} initial="hidden" animate="show">
+          <motion.span
+            variants={staggerItem}
+            className="inline-flex rounded-full border border-brdr bg-surface px-3 py-1 text-xs font-medium tracking-wide text-navy shadow-card"
+          >
+            THE COMPLETE TRAINING INSTITUTE OS
+          </motion.span>
+          <motion.h1
+            variants={staggerItem}
+            className="mt-5 text-4xl font-semibold leading-[1.05] tracking-tight text-ink sm:text-5xl"
+          >
+            Learning operations,
+            <br />
+            <span className="relative text-brand-strong">
+              made exceptional.
+              <span className="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-brand/40" />
+            </span>
+          </motion.h1>
+          <motion.p variants={staggerItem} className="mt-5 max-w-md text-base text-muted">
+            One focused platform for batches, faculty, learners, assessments, live classes, and
+            institute-wide intelligence.
+          </motion.p>
+
+          <motion.div variants={staggerItem} className="mt-8 grid gap-3 sm:grid-cols-3">
+            {FEATURES.map((f) => (
+              <div key={f.title} className="rounded-2xl border border-brdr bg-surface/70 p-4 shadow-card">
+                <div className="text-sm font-semibold text-ink">{f.title}</div>
+                <div className="mt-1 text-xs leading-relaxed text-muted">{f.body}</div>
+              </div>
+            ))}
+          </motion.div>
+
+          <motion.p variants={staggerItem} className="mt-8 text-xs text-muted">
+            Vectra Technosoft · Networking with success · since 1998
+          </motion.p>
+        </motion.div>
+
+        <motion.div variants={fadeUp} initial="hidden" animate="show">
+          <div className="rounded-3xl border border-brdr bg-surface p-8 shadow-lift">
+            <div className="text-xs font-semibold uppercase tracking-wider text-brand-strong">
+              Welcome to Advantage Pro
             </div>
-          ))}
-        </div>
-      </section>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+              Sign in to your portal
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Choose your portal — each role signs in through its own secure page.
+            </p>
 
-      {/* Portals */}
-      <section className="mx-auto max-w-5xl px-6 pb-16">
-        <h2 className="mb-1 text-center text-xl font-medium text-ink">Choose your portal</h2>
-        <p className="mb-6 text-center text-sm text-muted">
-          Each role signs in through its own secure page.
-        </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {STAFF.map((r) => (
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {primaryRoles.map((r) => (
+                <Link
+                  key={r.slug}
+                  to={`/login/${r.slug}`}
+                  className="group rounded-xl border border-brdr bg-surface px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card"
+                >
+                  <div className="text-sm font-semibold text-navy group-hover:text-brand-strong">
+                    {r.label}
+                  </div>
+                  <div className="truncate text-xs text-muted">{r.tagline}</div>
+                </Link>
+              ))}
+            </div>
+
             <Link
-              key={r.slug}
-              to={`/login/${r.slug}`}
-              className="rounded-xl border border-brdr bg-surface px-4 py-4 transition hover:bg-sky"
+              to="/login/mis"
+              className="mt-3 block rounded-xl bg-brand-strong px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-navy"
             >
-              <div className="text-sm font-medium text-navy">{r.label}</div>
-              <div className="text-xs text-muted">{r.tagline}</div>
+              Other staff sign in
             </Link>
-          ))}
-        </div>
-      </section>
 
-      <footer className="border-t border-brdr bg-surface py-6 text-center text-xs text-muted">
+            <div className="mt-5 flex items-center justify-between text-xs">
+              <Link to="/forgot-password" className="font-medium text-brand-strong hover:underline">
+                Forgot password?
+              </Link>
+              <span className="text-muted">Two-step verified access</span>
+            </div>
+          </div>
+        </motion.div>
+      </main>
+
+      <footer className="relative border-t border-brdr bg-surface/60 py-6 text-center text-xs text-muted">
         Advantage Pro · Vectra Technosoft · since 1998
       </footer>
     </div>

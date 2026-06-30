@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input } from "../../design-system";
+import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { certificationApi, type CertRow } from "./api";
 
@@ -11,10 +11,10 @@ export function CertificatePage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-1 text-xl font-medium text-ink">Certification</h1>
-      <p className="mb-4 text-sm text-muted">
-        After a course ends, enter your Certificate ID to complete certification and stop reminders.
-      </p>
+      <SectionHeading
+        title="Certification"
+        subtitle="Enter your Certificate ID after a course ends to complete certification and stop reminders."
+      />
 
       {rows.isLoading ? (
         <p className="text-sm text-muted">Loading…</p>
@@ -25,9 +25,7 @@ export function CertificatePage({ role }: { role: RoleDef }) {
           ))}
         </div>
       ) : (
-        <Card>
-          <p className="text-sm text-muted">No completed courses yet.</p>
-        </Card>
+        <EmptyState title="No completed courses yet" />
       )}
     </PortalLayout>
   );
@@ -45,7 +43,11 @@ function CertCard({ row }: { row: CertRow }) {
     <Card>
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-base font-medium text-ink">{row.batch_name}</h2>
-        {row.certified ? <Badge>certified</Badge> : <Badge>pending</Badge>}
+        {row.certified ? (
+          <Badge tone="success">certified</Badge>
+        ) : (
+          <Badge tone="warning">pending</Badge>
+        )}
       </div>
       {row.certified ? (
         <p className="text-sm text-ink">Certificate ID: {row.certificate_id}</p>

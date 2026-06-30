@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input } from "../../design-system";
+import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -56,7 +56,7 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Live classes</h1>
+      <SectionHeading title="Live classes" subtitle="Scheduled sessions with reminders and check-in." />
 
       {canSchedule && (
         <Card className="mb-6">
@@ -121,7 +121,7 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No live classes scheduled.</p>
+          <EmptyState title="No live classes scheduled" />
         )}
       </Card>
     </PortalLayout>

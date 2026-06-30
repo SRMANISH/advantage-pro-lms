@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, Input, Select } from "../../design-system";
+import { Button, Card, EmptyState, Input, SectionHeading, Select } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -57,7 +57,10 @@ export function ContentPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Content</h1>
+      <SectionHeading
+        title="Content"
+        subtitle="Upload and manage class videos and study notes per batch."
+      />
 
       <Card className="mb-6">
         <label className="mb-1 block text-sm text-muted">Batch</label>
@@ -153,7 +156,7 @@ export function ContentPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No videos yet.</p>
+          <EmptyState title="No videos yet" hint="Faculty upload class recordings here." />
         )}
       </Card>
 
@@ -168,7 +171,7 @@ export function ContentPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No notes yet.</p>
+          <EmptyState title="No notes yet" />
         )}
       </Card>
     </PortalLayout>

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Card } from "../../design-system";
+import { Card, EmptyState, SectionHeading } from "../../design-system";
 import { attendanceApi } from "../attendance/api";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -32,7 +32,10 @@ export function PerformancePage({ role }: { role: RoleDef }) {
   const { user } = useAuth();
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Performance</h1>
+      <SectionHeading
+        title="Performance"
+        subtitle="Composite of tests, tasks, videos and attendance."
+      />
       {user?.role === "student" ? <MyPerformance /> : <BatchBoard />}
     </PortalLayout>
   );
@@ -60,9 +63,7 @@ function MyPerformance() {
           </Card>
         ))
       ) : (
-        <Card>
-          <p className="text-sm text-muted">No performance data yet.</p>
-        </Card>
+        <EmptyState title="No performance data yet" />
       )}
     </div>
   );
@@ -130,7 +131,7 @@ function BatchBoard() {
               </table>
             </div>
           ) : (
-            <p className="text-sm text-muted">No students in this batch.</p>
+            <EmptyState title="No students in this batch" />
           )}
         </Card>
       )}

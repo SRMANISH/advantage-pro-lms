@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input, Select } from "../../design-system";
+import { Badge, Button, Card, EmptyState, Input, SectionHeading, Select } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { staffApi } from "./api";
@@ -49,12 +49,14 @@ export function StaffPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-1 text-xl font-medium text-ink">Staff accounts</h1>
-      <p className="mb-4 text-sm text-muted">
-        {isSuperAdmin
-          ? "Create any staff account. New staff finish the same two-step email + phone setup."
-          : "Create Counsellor accounts. They finish the same two-step email + phone setup."}
-      </p>
+      <SectionHeading
+        title="Staff accounts"
+        subtitle={
+          isSuperAdmin
+            ? "Create any staff account. New staff finish the same two-step email + phone setup."
+            : "Create Counsellor accounts. They finish the same two-step email + phone setup."
+        }
+      />
 
       <Card className="mb-6">
         <h2 className="mb-3 text-base font-medium text-ink">New staff member</h2>
@@ -124,7 +126,7 @@ export function StaffPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No staff accounts yet.</p>
+          <EmptyState title="No staff accounts yet" />
         )}
       </Card>
     </PortalLayout>

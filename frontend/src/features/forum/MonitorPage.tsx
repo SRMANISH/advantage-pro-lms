@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card } from "../../design-system";
+import { Badge, Button, Card, EmptyState, SectionHeading } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { forumApi } from "./api";
 
@@ -22,10 +22,10 @@ export function MonitorPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-1 text-xl font-medium text-ink">Doubt monitor</h1>
-      <p className="mb-4 text-sm text-muted">
-        Unanswered doubts. Anything waiting longer than {window}h is overdue — nudge the faculty.
-      </p>
+      <SectionHeading
+        title="Doubt monitor"
+        subtitle={`Unanswered doubts — anything waiting over ${window}h is overdue.`}
+      />
 
       <Card>
         {monitor.isLoading ? (
@@ -37,20 +37,14 @@ export function MonitorPage({ role }: { role: RoleDef }) {
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium text-ink">
                     {t.title}
-                    {t.overdue && (
-                      <span className="rounded-full bg-[color:var(--color-bg-danger,#FCEBEB)] px-2 py-0.5 text-xs text-red-600">
-                        overdue
-                      </span>
-                    )}
+                    {t.overdue && <Badge tone="danger">overdue</Badge>}
                   </div>
                   <div className="text-xs text-muted">
                     {t.batch_code} · {t.author_name} · waiting {t.hours_waiting}h
                   </div>
                 </div>
                 {reminded.has(t.id) ? (
-                  <span className="text-xs text-[color:var(--color-text-success,#1E8E5A)]">
-                    Reminded ✓
-                  </span>
+                  <span className="text-xs text-success">Reminded ✓</span>
                 ) : (
                   <Button variant="soft" onClick={() => remind.mutate(t.id)}>
                     Remind faculty
@@ -60,7 +54,7 @@ export function MonitorPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No unanswered doubts.</p>
+          <EmptyState title="No unanswered doubts" hint="Faculty are on top of it." />
         )}
       </Card>
     </PortalLayout>

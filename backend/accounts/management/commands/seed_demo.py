@@ -61,19 +61,26 @@ class Command(BaseCommand):
         )
         Course.objects.get_or_create(code="DS", defaults={"name": "Data Science Foundations"})
 
+        today = timezone.now().date()
         batch, _ = Batch.objects.get_or_create(
             code="FS-DEMO",
             defaults={
                 "name": "Full Stack — Demo Batch",
                 "course": course,
-                "start_date": datetime.date(2026, 1, 1),
-                "end_date": datetime.date(2026, 4, 1),
+                "start_date": today - datetime.timedelta(days=45),
+                "end_date": today + datetime.timedelta(days=45),
                 "state": BatchState.ACTIVE,
             },
         )
+        # Keep the demo batch current even on re-seed so dashboards stay populated.
+        batch.start_date = today - datetime.timedelta(days=45)
+        batch.end_date = today + datetime.timedelta(days=45)
+        batch.state = BatchState.ACTIVE
+        batch.save(update_fields=["start_date", "end_date", "state"])
         batch.faculty.add(faculty)
 
         students = self._seed_students(batch, users["student1"])
+        self._seed_login_attendance(batch, students)
 
         if not Video.objects.filter(batch=batch).exists():
             self._seed_content(batch, faculty, students)
@@ -137,6 +144,22 @@ class Command(BaseCommand):
             )
             students.append(student)
         return students
+
+    # --- login attendance (login-based, last ~40 days) ---
+    def _seed_login_attendance(self, batch, students):
+        from attendance.models import AttendanceEvent, AttendanceSource
+
+        today = timezone.now().date()
+        for student in students:
+            for d in range(40):
+                day = today - datetime.timedelta(days=d)
+                if random.random() < 0.78:  # ~78% daily login -> realistic attendance %
+                    AttendanceEvent.objects.get_or_create(
+                        student=student,
+                        source=AttendanceSource.LOGIN,
+                        reference_id=f"{batch.id}:{day.isoformat()}",
+                        defaults={"batch": batch, "date": day},
+                    )
 
     # --- content ---
     def _seed_content(self, batch, faculty, students):

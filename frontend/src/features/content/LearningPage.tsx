@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card } from "../../design-system";
+import { Badge, Button, Card, EmptyState, SectionHeading } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { UpsellPrompt } from "../upsell/UpsellPrompt";
@@ -18,7 +18,12 @@ export function LearningPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Videos</h1>
+      {!active && (
+        <SectionHeading
+          title="Videos"
+          subtitle="Your class recordings and notes — streamed in-app, no downloads."
+        />
+      )}
 
       {active ? (
         <div className="grid gap-3">
@@ -45,7 +50,9 @@ export function LearningPage({ role }: { role: RoleDef }) {
                     <div className="text-sm">
                       <span className="font-medium text-ink">{v.title}</span>
                       {v.progress?.completed && (
-                        <Badge className="ml-2">watched</Badge>
+                        <Badge tone="success" className="ml-2">
+                          watched
+                        </Badge>
                       )}
                     </div>
                     <Button onClick={() => setActive(v)}>Watch</Button>
@@ -53,7 +60,7 @@ export function LearningPage({ role }: { role: RoleDef }) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted">No videos yet.</p>
+              <EmptyState title="No videos yet" hint="Class recordings will appear here." />
             )}
           </Card>
 
@@ -74,7 +81,7 @@ export function LearningPage({ role }: { role: RoleDef }) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted">No notes yet.</p>
+              <EmptyState title="No notes yet" />
             )}
           </Card>
         </div>

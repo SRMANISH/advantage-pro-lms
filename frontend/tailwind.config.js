@@ -17,6 +17,27 @@ export default {
         brdr: "rgb(var(--color-border) / <alpha-value>)",
         ink: "rgb(var(--color-text) / <alpha-value>)",
         muted: "rgb(var(--color-muted) / <alpha-value>)",
+        navyDeep: "rgb(var(--color-navy-deep) / <alpha-value>)",
+        success: "rgb(var(--color-success) / <alpha-value>)",
+        warning: "rgb(var(--color-warning) / <alpha-value>)",
+        danger: "rgb(var(--color-danger) / <alpha-value>)",
+      },
+      boxShadow: {
+        card: "0 1px 2px rgb(15 31 58 / 0.04), 0 10px 28px rgb(15 31 58 / 0.06)",
+        lift: "0 14px 40px rgb(15 31 58 / 0.14)",
+        sidebar: "0 0 40px rgb(8 18 48 / 0.45)",
+      },
+      keyframes: {
+        "fade-up": {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "none" },
+        },
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
+      },
+      animation: {
+        "fade-up": "fade-up 0.45s cubic-bezier(0.22,1,0.36,1) both",
       },
     },
   },

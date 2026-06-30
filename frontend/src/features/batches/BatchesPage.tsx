@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input, Select } from "../../design-system";
+import { Badge, Button, Card, EmptyState, Input, SectionHeading, Select } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { batchesApi, type Batch, type BatchState } from "./api";
@@ -47,7 +47,14 @@ export function BatchesPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Batches</h1>
+      <SectionHeading
+        title="Batches"
+        subtitle={
+          canManage
+            ? "Create batches, assign faculty, and track every cohort."
+            : "Your assigned cohorts."
+        }
+      />
 
       {canManage && (
         <div className="mb-6 grid gap-4 md:grid-cols-2">
@@ -135,7 +142,7 @@ export function BatchesPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No batches yet.</p>
+          <EmptyState title="No batches yet" />
         )}
       </Card>
     </PortalLayout>

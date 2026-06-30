@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Card } from "../../design-system";
+import { Card, SectionHeading } from "../../design-system";
 import { attendanceApi } from "../attendance/api";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -26,7 +26,7 @@ export function ReportsPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Reports &amp; exports</h1>
+      <SectionHeading title="Reports & exports" subtitle="Download per-batch CSVs." />
 
       <Card className="mb-6">
         <label className="mb-1 block text-sm text-muted">Batch</label>

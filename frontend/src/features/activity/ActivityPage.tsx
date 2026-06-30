@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Card } from "../../design-system";
+import { Card, EmptyState, SectionHeading } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { activityApi } from "./api";
 
@@ -12,10 +12,10 @@ export function ActivityPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-1 text-xl font-medium text-ink">Activity</h1>
-      <p className="mb-4 text-sm text-muted">
-        Recent actions{role.value === "faculty" ? " for your batches" : " across the platform"}.
-      </p>
+      <SectionHeading
+        title="Activity"
+        subtitle={`Recent actions${role.value === "faculty" ? " for your batches" : " across the platform"}.`}
+      />
       <Card>
         {rows.isLoading ? (
           <p className="text-sm text-muted">Loading…</p>
@@ -34,7 +34,7 @@ export function ActivityPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No activity yet.</p>
+          <EmptyState title="No activity yet" />
         )}
       </Card>
     </PortalLayout>

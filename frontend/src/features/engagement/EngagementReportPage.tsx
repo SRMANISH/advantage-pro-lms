@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Card } from "../../design-system";
+import { Card, EmptyState, SectionHeading } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { engagementApi } from "./api";
 
@@ -12,7 +12,10 @@ export function EngagementReportPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Engagement</h1>
+      <SectionHeading
+        title="Engagement"
+        subtitle="LinkedIn follow, Google reviews and next-plan responses."
+      />
 
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         <Card>
@@ -61,7 +64,7 @@ export function EngagementReportPage({ role }: { role: RoleDef }) {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-muted">No next-plan responses yet.</p>
+          <EmptyState title="No next-plan responses yet" />
         )}
       </Card>
     </PortalLayout>

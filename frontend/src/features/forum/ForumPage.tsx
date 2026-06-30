@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input } from "../../design-system";
+import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { forumApi, type ThreadStatus } from "./api";
@@ -17,7 +17,7 @@ export function ForumPage({ role }: { role: RoleDef }) {
   const [selected, setSelected] = useState<string | null>(null);
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Doubt forum</h1>
+      <SectionHeading title="Doubt forum" subtitle="Ask, answer and resolve batch doubts." />
       {selected ? (
         <ThreadView id={selected} onBack={() => setSelected(null)} />
       ) : (
@@ -110,7 +110,7 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No doubts found.</p>
+          <EmptyState title="No doubts found" hint="Post a doubt to start a thread." />
         )}
       </Card>
     </div>

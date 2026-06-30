@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input } from "../../design-system";
+import { Badge, Button, Card, Input, SectionHeading, TableShell, THead } from "../../design-system";
 import { api } from "../../lib/api";
 import { PortalLayout } from "../portal/PortalLayout";
 
@@ -25,36 +25,37 @@ export function ChannelsPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-1 text-xl font-medium text-ink">Notification channels</h1>
-      <p className="mb-4 text-sm text-muted">
-        Every channel runs behind a swappable adapter. In development these are local/console stubs;
-        Hostinger email and the SMS/WhatsApp provider plug in here later with no code changes.
-      </p>
+      <SectionHeading
+        title="Notification channels"
+        subtitle="Each channel runs behind a swappable adapter — console stubs in dev, real providers at deploy."
+      />
 
       <Card className="mb-6">
         <h2 className="mb-3 text-base font-medium text-ink">Configured providers</h2>
-        <div className="overflow-hidden rounded-lg border border-brdr">
-          <table className="w-full text-sm">
-            <thead className="bg-sky text-navy">
-              <tr>
-                <th className="px-3 py-2 text-left">Channel</th>
-                <th className="px-3 py-2 text-left">Adapter</th>
-                <th className="px-3 py-2 text-left">Mode</th>
+        <TableShell>
+          <THead>
+            <tr>
+              <th className="px-3 py-2">Channel</th>
+              <th className="px-3 py-2">Adapter</th>
+              <th className="px-3 py-2">Mode</th>
+            </tr>
+          </THead>
+          <tbody>
+            {channels.data?.map((c) => (
+              <tr key={c.kind} className="border-t border-brdr">
+                <td className="px-3 py-2 font-medium text-ink">{c.kind}</td>
+                <td className="px-3 py-2 font-mono text-xs text-muted">{c.adapter}</td>
+                <td className="px-3 py-2">
+                  {c.dev_stub ? (
+                    <Badge tone="warning">dev stub</Badge>
+                  ) : (
+                    <Badge tone="success">live</Badge>
+                  )}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {channels.data?.map((c) => (
-                <tr key={c.kind} className="border-t border-brdr">
-                  <td className="px-3 py-2 font-medium text-ink">{c.kind}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-muted">{c.adapter}</td>
-                  <td className="px-3 py-2">
-                    {c.dev_stub ? <Badge>dev stub</Badge> : <Badge>live</Badge>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </TableShell>
       </Card>
 
       <Card>
@@ -83,7 +84,7 @@ export function ChannelsPage({ role }: { role: RoleDef }) {
             {test.isPending ? "Sending…" : "Send test"}
           </Button>
           {test.isSuccess && (
-            <p className="text-sm text-[color:var(--color-text-success,#1E8E5A)]">
+            <p className="text-sm text-success">
               ✓ Sent via the {form.channel} adapter (logged to the server console in dev).
             </p>
           )}

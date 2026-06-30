@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card } from "../../design-system";
+import { Button, Card, SectionHeading } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { attendanceApi, FOLLOW_UP_STATUSES, type FollowUpStatus } from "./api";
@@ -26,7 +26,10 @@ export function AttendancePage({ role }: { role: RoleDef }) {
   const { user } = useAuth();
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Attendance</h1>
+      <SectionHeading
+        title="Attendance"
+        subtitle="Login-based attendance and absentee follow-up."
+      />
       {user?.role === "student" ? <MyAttendance /> : <BatchRoster />}
     </PortalLayout>
   );

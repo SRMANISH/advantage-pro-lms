@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input } from "../../design-system";
+import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -12,7 +12,7 @@ export function TasksPage({ role }: { role: RoleDef }) {
   const { user } = useAuth();
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-4 text-xl font-medium text-ink">Tasks</h1>
+      <SectionHeading title="Tasks" subtitle="Assignments with deadlines, submissions and grading." />
       {user?.role === "student" ? <StudentTasks /> : <ManageTasks />}
     </PortalLayout>
   );
@@ -122,7 +122,7 @@ function ManageTasks() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No tasks yet.</p>
+          <EmptyState title="No tasks yet" />
         )}
       </Card>
     </div>
@@ -151,7 +151,7 @@ function TaskGrading({ task }: { task: TaskItem }) {
               <GradeRow key={s.id} submission={s} onGraded={() => qc.invalidateQueries({ queryKey: ["submissions", task.id] })} />
             ))
           ) : (
-            <p className="text-sm text-muted">No submissions yet.</p>
+            <EmptyState title="No submissions yet" />
           )}
         </div>
       )}
@@ -208,7 +208,7 @@ function StudentTasks() {
         tasks.data.map((t) => <StudentTaskCard key={t.id} task={t} />)
       ) : (
         <Card>
-          <p className="text-sm text-muted">No tasks yet.</p>
+          <EmptyState title="No tasks yet" />
         </Card>
       )}
     </div>

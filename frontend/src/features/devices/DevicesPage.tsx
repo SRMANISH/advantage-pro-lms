@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card } from "../../design-system";
+import { Button, Card, EmptyState, SectionHeading } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { devicesApi } from "./api";
 
@@ -16,11 +16,10 @@ export function DevicesPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <h1 className="mb-1 text-xl font-medium text-ink">Device requests</h1>
-      <p className="mb-4 text-sm text-muted">
-        Students are tied to their first device. Faculty approve a change during a live class; MIS
-        approve outside class hours.
-      </p>
+      <SectionHeading
+        title="Device requests"
+        subtitle="Faculty approve a change during a live class; MIS approve outside class hours."
+      />
 
       <Card>
         {requests.isLoading ? (
@@ -59,7 +58,7 @@ export function DevicesPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted">No pending device requests.</p>
+          <EmptyState title="No pending device requests" />
         )}
       </Card>
     </PortalLayout>
