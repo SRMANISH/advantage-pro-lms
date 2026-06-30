@@ -24,6 +24,7 @@ def users(db):
     return {
         "super": make_user("sa", Role.SUPER_ADMIN),
         "admin": make_user("ad", Role.ADMIN),
+        "mis": make_user("mis", Role.MIS),
         "faculty": make_user("fac", Role.FACULTY),
         "faculty2": make_user("fac2", Role.FACULTY),
         "student": make_user("stu", Role.STUDENT),
@@ -108,32 +109,44 @@ def test_faculty_sees_only_their_batches(users, course):
 
 
 @pytest.mark.django_db
-def test_only_super_admin_can_delete_batch(users, course):
-    batch = make_batch(course)
-    assert client_for(users["admin"]).delete(f"{BATCHES_URL}{batch.id}/").status_code == 403
-    assert client_for(users["super"]).delete(f"{BATCHES_URL}{batch.id}/").status_code == 204
+def test_mis_cannot_create_batch(users, course):
+    payload = {
+        "code": "MIS-1",
+        "name": "MIS Batch",
+        "course": str(course.id),
+        "start_date": "2026-01-01",
+        "end_date": "2026-04-01",
+    }
+    # Batch creation is Admin-only under the updated procedure.
+    assert client_for(users["mis"]).post(BATCHES_URL, payload, format="json").status_code == 403
 
 
 @pytest.mark.django_db
-def test_faculty_assigns_faculty_to_own_batch_only(users, course):
+def test_only_admin_can_delete_batch(users, course):
+    batch = make_batch(course)
+    # Super Admin is out of batch operations; Admin owns delete.
+    assert client_for(users["super"]).delete(f"{BATCHES_URL}{batch.id}/").status_code == 403
+    assert client_for(users["admin"]).delete(f"{BATCHES_URL}{batch.id}/").status_code == 204
+
+
+@pytest.mark.django_db
+def test_admin_assigns_faculty_and_faculty_cannot(users, course):
     own = make_batch(course, code="OWN")
     own.faculty.add(users["faculty"])
-    other = make_batch(course, code="NOTOWN")
 
     url = f"{BATCHES_URL}{own.id}/assign-faculty/"
-    resp = client_for(users["faculty"]).post(
+    # Admin assigns faculty.
+    resp = client_for(users["admin"]).post(
         url, {"faculty_ids": [str(users["faculty2"].id)]}, format="json"
     )
     assert resp.status_code == 200
     assert users["faculty2"] in own.faculty.all()
 
-    # Cannot touch a batch they don't teach (queryset-scoped -> 404).
+    # Faculty may no longer assign faculty — not even on their own batch.
     resp2 = client_for(users["faculty"]).post(
-        f"{BATCHES_URL}{other.id}/assign-faculty/",
-        {"faculty_ids": [str(users["faculty2"].id)]},
-        format="json",
+        url, {"faculty_ids": [str(users["faculty2"].id)]}, format="json"
     )
-    assert resp2.status_code == 404
+    assert resp2.status_code == 403
 
 
 @pytest.mark.django_db

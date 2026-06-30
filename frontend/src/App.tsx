@@ -24,17 +24,20 @@ import { SetupPage } from "./features/setup/SetupPage";
 import { LandingPage } from "./pages/LandingPage";
 import { ShowcasePage } from "./pages/ShowcasePage";
 
-const BATCH_ROLES = new Set(["super_admin", "admin", "mis", "faculty"]);
-const ENROL_ROLES = new Set(["super_admin", "admin", "mis"]);
-const CONTENT_ROLES = new Set(["super_admin", "admin", "mis", "faculty"]);
-const TEST_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student"]);
+// Route guards mirror the updated permission matrix (and PortalLayout NAV). UI hiding only;
+// the backend enforces the matrix on every endpoint.
+const BATCH_ROLES = new Set(["admin", "mis", "faculty"]);
+const ENROL_ROLES = new Set(["admin", "mis"]);
+const CONTENT_ROLES = new Set(["mis", "faculty"]);
+const TEST_ROLES = new Set(["mis", "faculty", "student"]);
+const TASK_ROLES = new Set(["faculty", "student"]);
 const ATTEND_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student", "counselor"]);
 const PERF_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student", "counselor"]);
-const DEVICE_ROLES = new Set(["super_admin", "admin", "mis", "faculty"]);
+const DEVICE_ROLES = new Set(["mis", "faculty"]);
 const ESCALATION_ROLES = new Set(["super_admin", "admin", "mis"]);
-const FORUM_ROLES = new Set(["super_admin", "admin", "mis", "tech_support", "faculty", "student"]);
-const MONITOR_ROLES = new Set(["super_admin", "admin", "mis", "tech_support"]);
-const LIVE_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student"]);
+const FORUM_ROLES = new Set(["mis", "tech_support", "faculty", "student"]);
+const MONITOR_ROLES = new Set(["mis", "tech_support"]);
+const LIVE_ROLES = new Set(["admin", "mis", "faculty", "student"]);
 const SETTINGS_ROLES = new Set(["super_admin"]);
 const REPORT_ROLES = new Set(["super_admin", "admin", "mis", "counselor", "faculty"]);
 
@@ -117,7 +120,7 @@ export default function App() {
           }
         />
       ))}
-      {ROLES.filter((role) => TEST_ROLES.has(role.value)).map((role) => (
+      {ROLES.filter((role) => TASK_ROLES.has(role.value)).map((role) => (
         <Route
           key={`tasks-${role.slug}`}
           path={`/${role.slug}/tasks`}

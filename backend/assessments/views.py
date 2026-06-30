@@ -40,10 +40,10 @@ class TestViewSet(viewsets.ModelViewSet):
     permission_classes = [AssessmentRoles, MatrixPermission]
 
     _ACTIONS = {
-        "create": Action.CREATE_TESTS_TASKS,
-        "update": Action.CREATE_TESTS_TASKS,
-        "partial_update": Action.CREATE_TESTS_TASKS,
-        "destroy": Action.CREATE_TESTS_TASKS,
+        "create": Action.CREATE_TESTS,
+        "update": Action.CREATE_TESTS,
+        "partial_update": Action.CREATE_TESTS,
+        "destroy": Action.CREATE_TESTS,
         "submit": Action.SUBMIT_TASKS_TESTS,
     }
 
@@ -126,12 +126,12 @@ class TaskViewSet(viewsets.ModelViewSet):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     _ACTIONS = {
-        "create": Action.CREATE_TESTS_TASKS,
-        "update": Action.CREATE_TESTS_TASKS,
-        "partial_update": Action.CREATE_TESTS_TASKS,
-        "destroy": Action.CREATE_TESTS_TASKS,
+        "create": Action.CREATE_TASKS,
+        "update": Action.CREATE_TASKS,
+        "partial_update": Action.CREATE_TASKS,
+        "destroy": Action.CREATE_TASKS,
         "submit": Action.SUBMIT_TASKS_TESTS,
-        "submissions": Action.CREATE_TESTS_TASKS,
+        "submissions": Action.CREATE_TASKS,
     }
 
     def get_required_action(self):
@@ -201,7 +201,7 @@ class TaskSubmissionViewSet(viewsets.GenericViewSet):
     queryset = TaskSubmission.objects.select_related("task", "task__batch", "student")
     permission_classes = [AssessmentRoles, MatrixPermission]
 
-    _ACTIONS = {"grade": Action.CREATE_TESTS_TASKS}
+    _ACTIONS = {"grade": Action.CREATE_TASKS}
 
     def get_required_action(self):
         return self._ACTIONS.get(self.action)

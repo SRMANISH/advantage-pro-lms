@@ -34,3 +34,15 @@ class CheckIn(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(fields=["live_class", "student"], name="uniq_live_checkin")
         ]
+
+
+class LiveReminder(TimeStampedModel):
+    """Records that an N-minutes-before reminder was sent (idempotent dedupe)."""
+
+    live_class = models.ForeignKey(LiveClass, on_delete=models.CASCADE, related_name="reminders")
+    offset_min = models.PositiveSmallIntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["live_class", "offset_min"], name="uniq_live_reminder")
+        ]

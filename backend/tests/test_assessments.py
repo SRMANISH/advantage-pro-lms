@@ -84,6 +84,21 @@ def test_student_cannot_create_test(world):
 
 
 @pytest.mark.django_db
+def test_mis_can_create_test_but_admin_cannot(world):
+    # MCQ test creation is MIS + Faculty only under the updated procedure.
+    mis = user("mis", Role.MIS)
+    admin = user("adm", Role.ADMIN)
+    assert (
+        client_for(mis).post(TESTS_URL, build_payload(world["batch"]), format="json").status_code
+        == 201
+    )
+    assert (
+        client_for(admin).post(TESTS_URL, build_payload(world["batch"]), format="json").status_code
+        == 403
+    )
+
+
+@pytest.mark.django_db
 def test_student_take_view_hides_correct_answers(world):
     client_for(world["fac"]).post(TESTS_URL, build_payload(world["batch"]), format="json")
     test = Test.objects.get(title="Quiz 1")

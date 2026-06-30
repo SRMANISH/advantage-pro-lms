@@ -69,3 +69,12 @@ def test_me_after_login_and_logout(client, faculty):
 
     assert client.post("/api/v1/auth/logout/").status_code == 204
     assert client.get("/api/v1/auth/me/").status_code in (401, 403)
+
+
+@pytest.mark.django_db
+def test_login_is_rate_limited(client, faculty):
+    # The login page is throttled (10/min) — the 11th attempt is blocked (brute-force guard).
+    last = None
+    for _ in range(11):
+        last = _login(client, "fac1", "wrong-password", Role.FACULTY)
+    assert last.status_code == 429

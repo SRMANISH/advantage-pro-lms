@@ -15,6 +15,7 @@ from core.roles import Role
 from enrollments.models import Enrollment
 
 VIDEOS_URL = "/api/v1/videos/"
+MATERIALS_URL = "/api/v1/materials/"
 
 
 @pytest.fixture(autouse=True)
@@ -94,6 +95,35 @@ def test_student_cannot_upload(world):
         format="multipart",
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_mis_can_upload_note_but_admin_cannot(world):
+    # Notes/materials upload is MIS + Faculty only under the updated procedure.
+    mis = user("mis", Role.MIS)
+    admin = user("adm", Role.ADMIN)
+    note = SimpleUploadedFile("notes.pdf", b"%PDF-1.4 fake", content_type="application/pdf")
+    note2 = SimpleUploadedFile("notes2.pdf", b"%PDF-1.4 fake", content_type="application/pdf")
+    assert (
+        client_for(mis)
+        .post(
+            MATERIALS_URL,
+            {"batch": str(world["batch"].id), "title": "Notes", "file": note},
+            format="multipart",
+        )
+        .status_code
+        == 201
+    )
+    assert (
+        client_for(admin)
+        .post(
+            MATERIALS_URL,
+            {"batch": str(world["batch"].id), "title": "Nope", "file": note2},
+            format="multipart",
+        )
+        .status_code
+        == 403
+    )
 
 
 @pytest.mark.django_db

@@ -4,7 +4,9 @@
       "Bash(pip --version)",
       "Read(//c/Users/Manish SR/Downloads/**)",
       "Bash(python -c ' *)",
-      "mcp__visualize__show_widget"
+      "mcp__visualize__show_widget",
+      "Bash(Get-ChildItem -Force)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

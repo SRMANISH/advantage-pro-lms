@@ -350,5 +350,13 @@ Palette derived from the Advantage Pro logo (brand blue + emblem violet accent).
   - ✅ **Rich demo seed** — 9 students, videos, 2 tests (6 attempts), 2 tasks (6 submissions), forum
     threads, 2 live classes, 34 attendance events — every screen is populated.
   - ⬜ Optional further polish: per-page metric cards/skeletons, table refinements.
-- **Go-live (remaining):** git/GitHub, deploy to Hostinger (PostgreSQL, prod settings), plug real
-  email/SMS/WhatsApp + video storage providers into the adapters.
+- **Production hardening — in progress:**
+  - ✅ **Real scheduler (cron path)** — live-class 1h/15m reminders are now an idempotent
+    `send_due_reminders` command (+ `LiveReminder` dedupe); escalations & certificate reminders
+    already have commands. All three wired to cron in `docs/DEPLOYMENT.md` (no Celery/Redis needed).
+  - ✅ **Global API rate-limiting** (anon/user throttles, env-tunable) + login brute-force guard (tested).
+  - ✅ **Prod fail-fast** — settings refuse to boot with a dev `SECRET_KEY` or default `ALLOWED_HOSTS`.
+  - ✅ `docs/DEPLOYMENT.md` — full Hostinger go-live runbook (env, gunicorn/nginx, cron, provider swap, checklist).
+  - ⬜ Still to do: actually run/verify on PostgreSQL (needs a PG instance), upload size/type limits,
+    Sentry + structured logging, CI pipeline, then real providers + deploy.
+- **Tests: ~117 backend passing.**

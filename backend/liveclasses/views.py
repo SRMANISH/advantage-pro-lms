@@ -1,7 +1,5 @@
 """Live class APIs: schedule (Admin/MIS), list (scoped), join + check-in (student)."""
 
-from datetime import timedelta
-
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,7 +7,6 @@ from rest_framework.response import Response
 from attendance.services import record_attendance
 from audit.services import record_action
 from content.access import accessible_batch_ids
-from core.adapters.registry import get_scheduler
 from core.permissions import MatrixPermission, has_any_role
 from core.permissions_matrix import Action
 from core.roles import Role
@@ -54,14 +51,7 @@ class LiveClassViewSet(viewsets.ModelViewSet):
             target=live,
             ip_address=get_client_ip(self.request),
         )
-        # Reminders 1h and 15m before (the scheduler adapter runs them in production).
-        scheduler = get_scheduler()
-        for offset in (60, 15):
-            scheduler.schedule(
-                live.scheduled_at - timedelta(minutes=offset),
-                "live_class_reminder",
-                {"live_class": str(live.id), "offset_min": offset},
-            )
+        # 1h/15m reminders are sent by the `send_due_reminders` cron command, not here.
         notify_many(
             batch_student_users(live.batch),
             "new_live_class",

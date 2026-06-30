@@ -28,9 +28,21 @@ import { useAuth } from "../auth/auth";
 import { NotificationBell } from "../notifications/NotificationBell";
 
 const role = (...values: string[]) => new Set(values);
+// Visibility sets mirror the updated permission matrix (backend is the source of truth;
+// these only hide UI). Super Admin is intentionally out of operational flows.
 const ALL = role("super_admin", "admin", "mis", "counselor", "tech_support", "faculty", "student");
-const STAFF_FAC = role("super_admin", "admin", "mis", "faculty");
-const MANAGERS = role("super_admin", "admin", "mis");
+const BATCHES = role("admin", "mis", "faculty"); // Admin manages, MIS/Faculty view
+const ADMIN_MIS = role("admin", "mis"); // enrolment/import
+const CONTENT = role("mis", "faculty"); // notes (MIS+FAC), videos (FAC)
+const TESTS = role("mis", "faculty", "student"); // MCQ build = MIS+FAC; student takes
+const TASKS = role("faculty", "student"); // Faculty assigns; student submits
+const LIVE = role("admin", "mis", "faculty", "student"); // Faculty schedules; others view
+const ATTEND = role("super_admin", "admin", "mis", "faculty", "student", "counselor");
+const FORUM = role("mis", "tech_support", "faculty", "student"); // no SA/AD moderation
+const MONITOR = role("mis", "tech_support"); // doubt monitor
+const DEVICES = role("mis", "faculty"); // approve device change (MIS outside / FAC in class)
+const ESCALATIONS = role("super_admin", "admin", "mis");
+const REPORTS = role("super_admin", "admin", "mis", "counselor", "faculty");
 
 interface NavEntry {
   to: string;
@@ -41,21 +53,21 @@ interface NavEntry {
 
 const NAV: NavEntry[] = [
   { to: "", label: "Dashboard", Icon: LayoutDashboard, roles: ALL },
-  { to: "batches", label: "Batches", Icon: Users, roles: STAFF_FAC },
-  { to: "enrolment", label: "Enrolment", Icon: UserPlus, roles: MANAGERS },
-  { to: "content", label: "Content", Icon: Video, roles: STAFF_FAC },
+  { to: "batches", label: "Batches", Icon: Users, roles: BATCHES },
+  { to: "enrolment", label: "Enrolment", Icon: UserPlus, roles: ADMIN_MIS },
+  { to: "content", label: "Content", Icon: Video, roles: CONTENT },
   { to: "videos", label: "Videos", Icon: PlayCircle, roles: role("student") },
-  { to: "tests", label: "Tests", Icon: ClipboardList, roles: role("super_admin", "admin", "mis", "faculty", "student") },
-  { to: "tasks", label: "Tasks", Icon: FileText, roles: role("super_admin", "admin", "mis", "faculty", "student") },
-  { to: "live", label: "Live classes", Icon: Radio, roles: role("super_admin", "admin", "mis", "faculty", "student") },
-  { to: "attendance", label: "Attendance", Icon: CalendarCheck, roles: role("super_admin", "admin", "mis", "faculty", "student", "counselor") },
-  { to: "performance", label: "Performance", Icon: BarChart3, roles: role("super_admin", "admin", "mis", "faculty", "student", "counselor") },
-  { to: "forum", label: "Forum", Icon: MessagesSquare, roles: role("super_admin", "admin", "mis", "tech_support", "faculty", "student") },
-  { to: "monitor", label: "Doubt monitor", Icon: Eye, roles: role("super_admin", "admin", "mis", "tech_support") },
+  { to: "tests", label: "Tests", Icon: ClipboardList, roles: TESTS },
+  { to: "tasks", label: "Tasks", Icon: FileText, roles: TASKS },
+  { to: "live", label: "Live classes", Icon: Radio, roles: LIVE },
+  { to: "attendance", label: "Attendance", Icon: CalendarCheck, roles: ATTEND },
+  { to: "performance", label: "Performance", Icon: BarChart3, roles: ATTEND },
+  { to: "forum", label: "Forum", Icon: MessagesSquare, roles: FORUM },
+  { to: "monitor", label: "Doubt monitor", Icon: Eye, roles: MONITOR },
   { to: "certificate", label: "Certificate", Icon: Award, roles: role("student") },
-  { to: "devices", label: "Devices", Icon: Smartphone, roles: STAFF_FAC },
-  { to: "escalations", label: "Escalations", Icon: TriangleAlert, roles: MANAGERS },
-  { to: "reports", label: "Reports", Icon: Download, roles: role("super_admin", "admin", "mis", "counselor", "faculty") },
+  { to: "devices", label: "Devices", Icon: Smartphone, roles: DEVICES },
+  { to: "escalations", label: "Escalations", Icon: TriangleAlert, roles: ESCALATIONS },
+  { to: "reports", label: "Reports", Icon: Download, roles: REPORTS },
   { to: "channels", label: "Channels", Icon: Settings, roles: role("super_admin") },
 ];
 

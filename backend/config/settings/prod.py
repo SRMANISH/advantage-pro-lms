@@ -1,9 +1,19 @@
 """Production settings — security hardened."""
 
+from django.core.exceptions import ImproperlyConfigured
+
 from .base import *  # noqa: F401,F403
-from .base import MIDDLEWARE
+from .base import ALLOWED_HOSTS, MIDDLEWARE, SECRET_KEY
 
 DEBUG = False
+
+# Fail fast on insecure dev defaults — never boot prod with these.
+if SECRET_KEY in ("", "dev-insecure-secret-change-me"):
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set to a strong secret in production.")
+if not ALLOWED_HOSTS or ALLOWED_HOSTS == ["localhost", "127.0.0.1"]:
+    raise ImproperlyConfigured(
+        "DJANGO_ALLOWED_HOSTS must be set to your real host(s) in production."
+    )
 
 # HTTPS / transport security
 SECURE_SSL_REDIRECT = True

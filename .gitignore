@@ -29,3 +29,7 @@ Thumbs.db
 
 # Build artifacts / scratch
 _lms_plan.txt
+
+# Pytest scratch media (regenerated every test run)
+/backend/.pytest_media_content/
+/backend/.pytest_media_tasks/
