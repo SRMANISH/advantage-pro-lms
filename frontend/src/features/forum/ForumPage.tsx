@@ -3,8 +3,15 @@ import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
 import { Badge, Button, Card, Input } from "../../design-system";
+import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
-import { forumApi } from "./api";
+import { forumApi, type ThreadStatus } from "./api";
+
+const RESPONDERS = new Set(["faculty", "tech_support", "mis"]);
+
+function StatusBadge({ status }: { status: ThreadStatus }) {
+  return <Badge>{status}</Badge>;
+}
 
 export function ForumPage({ role }: { role: RoleDef }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -98,7 +105,7 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
                     {t.batch_code} · {t.author_name} · {t.reply_count} repl{t.reply_count === 1 ? "y" : "ies"}
                   </div>
                 </div>
-                {t.resolved && <Badge>resolved</Badge>}
+                <StatusBadge status={t.status} />
               </button>
             ))}
           </div>
@@ -112,6 +119,7 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
 
 function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const thread = useQuery({ queryKey: ["thread", id], queryFn: () => forumApi.get(id) });
   const [body, setBody] = useState("");
 
@@ -127,24 +135,32 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
     },
   });
   const resolve = useMutation({ mutationFn: () => forumApi.resolve(id), onSuccess: invalidate });
+  const escalate = useMutation({ mutationFn: () => forumApi.escalate(id), onSuccess: invalidate });
 
   if (thread.isLoading || !thread.data) return <p className="text-sm text-muted">Loading…</p>;
   const t = thread.data;
+  const canEscalate = RESPONDERS.has(user?.role ?? "") && t.status !== "resolved" && t.status !== "escalated";
 
   return (
     <Card>
       <Button variant="ghost" className="mb-3" onClick={onBack}>
         ← Back
       </Button>
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-1 flex items-center justify-between gap-2">
         <h2 className="text-base font-medium text-ink">{t.title}</h2>
-        {t.resolved ? (
-          <Badge>resolved</Badge>
-        ) : (
-          <Button variant="soft" onClick={() => resolve.mutate()}>
-            Mark resolved
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <StatusBadge status={t.status} />
+          {canEscalate && (
+            <Button variant="ghost" onClick={() => escalate.mutate()}>
+              Escalate
+            </Button>
+          )}
+          {!t.resolved && (
+            <Button variant="soft" onClick={() => resolve.mutate()}>
+              Mark resolved
+            </Button>
+          )}
+        </div>
       </div>
       <p className="mb-1 text-sm text-ink">{t.body}</p>
       <p className="mb-4 text-xs text-muted">

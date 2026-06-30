@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "forum",
     "liveclasses",
     "certification",
+    "engagement",
 ]
 
 MIDDLEWARE = [
@@ -145,6 +146,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Business rules (config-driven; editable per the dynamic principle).
 FORUM_RESPONSE_WINDOW_HOURS = env.int("FORUM_RESPONSE_WINDOW_HOURS", default=3)
+LIVE_CLASS_DURATION_MINUTES = env.int("LIVE_CLASS_DURATION_MINUTES", default=120)
+
+# Upload limits. DATA_UPLOAD_MAX_MEMORY_SIZE caps non-file POST bodies; the per-file hard
+# caps (video/document) are enforced by core.uploads.validate_upload.
+DATA_UPLOAD_MAX_MEMORY_SIZE = env.int("DATA_UPLOAD_MAX_MEMORY_SIZE", default=10 * 1024 * 1024)
+FILE_UPLOAD_MAX_MEMORY_SIZE = env.int("FILE_UPLOAD_MAX_MEMORY_SIZE", default=10 * 1024 * 1024)
+MAX_VIDEO_UPLOAD_MB = env.int("MAX_VIDEO_UPLOAD_MB", default=512)
+MAX_DOCUMENT_UPLOAD_MB = env.int("MAX_DOCUMENT_UPLOAD_MB", default=25)
+
+# Data retention (days) for purge_old_data — activity data only, never academic records.
+RETENTION_AUDIT_DAYS = env.int("RETENTION_AUDIT_DAYS", default=365)
+RETENTION_NOTIFICATION_DAYS = env.int("RETENTION_NOTIFICATION_DAYS", default=180)
 
 # Frontend (SPA) integration
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
@@ -156,6 +169,44 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=["http://localho
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
+
+# Cache — Redis when REDIS_URL is set (shared across gunicorn workers, so DRF throttling
+# and rate limits are consistent), else in-process LocMemCache for local dev/tests.
+REDIS_URL = env("REDIS_URL", default="")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
+    }
+else:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+# Structured logging to stdout (the platform/process manager collects it).
+LOG_LEVEL = env("LOG_LEVEL", default="INFO")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+    },
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "loggers": {
+        "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.security": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+    },
+}
+
+# Error monitoring — initialised in prod.py only when a DSN is configured.
+SENTRY_DSN = env("SENTRY_DSN", default="")
+SENTRY_TRACES_SAMPLE_RATE = env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.0)
 
 # Ports & adapters — swap dotted paths via env for Hostinger / 3rd-party services.
 LMS_ADAPTERS = {

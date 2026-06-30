@@ -65,6 +65,21 @@ class SetupToken(TimeStampedModel):
         return f"setup<{self.user_id}>"
 
 
+class PasswordResetToken(TimeStampedModel):
+    """A short-lived token for the two-step (email + phone OTP) forgot-password flow."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reset_tokens")
+    token = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+    email_verified = models.BooleanField(default=False)
+    phone_verified = models.BooleanField(default=False)
+    resend_count = models.PositiveSmallIntegerField(default=0)
+
+    def __str__(self) -> str:
+        return f"reset<{self.user_id}>"
+
+
 class OTPCode(TimeStampedModel):
     class Purpose(models.TextChoices):
         EMAIL = "email", "Email"
@@ -99,10 +114,17 @@ class DeviceChangeRequest(TimeStampedModel):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="device_change_requests")
     new_device_id = models.CharField(max_length=64)
+    old_device_id = models.CharField(max_length=64, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    # Context captured when the request was raised: whether a live class was in session
+    # (routes the approval to Faculty during class, MIS outside class).
+    during_class = models.BooleanField(default=False)
+    class_context = models.CharField(max_length=200, blank=True)
     decided_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
+    approver_role = models.CharField(max_length=20, blank=True)
+    approval_reason = models.CharField(max_length=255, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

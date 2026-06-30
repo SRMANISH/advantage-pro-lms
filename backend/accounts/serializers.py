@@ -16,6 +16,8 @@ class DeviceRequestSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     student_name = serializers.SerializerMethodField()
     registration_number = serializers.CharField(source="user.username", read_only=True)
+    during_class = serializers.BooleanField(read_only=True)
+    class_context = serializers.CharField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
 
     def get_student_name(self, obj) -> str:

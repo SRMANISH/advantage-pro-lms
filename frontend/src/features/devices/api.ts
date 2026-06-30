@@ -4,6 +4,8 @@ export interface DeviceRequest {
   id: string;
   student_name: string;
   registration_number: string;
+  during_class: boolean;
+  class_context: string;
   created_at: string;
 }
 

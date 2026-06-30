@@ -1,0 +1,15 @@
+# Development, test and lint tooling. Installs runtime deps too.
+-r requirements.txt
+
+pytest==9.1.1
+pytest-django==4.12.0
+factory_boy==3.3.3
+Faker==40.23.0
+
+ruff==0.15.18
+black==26.5.1
+
+mypy==2.1.0
+django-stubs==6.0.5
+django-stubs-ext==6.0.5
+djangorestframework-stubs==3.17.0

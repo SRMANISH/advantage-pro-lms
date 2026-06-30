@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import type { RoleDef } from "../../app/roles";
 import { Button, Input, Logo } from "../../design-system";
@@ -50,14 +50,14 @@ export function LoginPage({ role }: LoginPageProps) {
 
         <form className="flex flex-col gap-3" onSubmit={onSubmit}>
           <label className="text-xs text-muted" htmlFor="login-id">
-            Login ID
+            Registration ID / Login ID
           </label>
           <Input
             id="login-id"
             autoComplete="username"
             value={loginId}
             onChange={(e) => setLoginId(e.target.value)}
-            placeholder="e.g. your registration number"
+            placeholder="e.g. your Registration ID"
           />
           <label className="text-xs text-muted" htmlFor="password">
             Password
@@ -82,6 +82,9 @@ export function LoginPage({ role }: LoginPageProps) {
           </Button>
         </form>
 
+        <Link to="/forgot-password" className="text-xs text-brand-strong underline">
+          Forgot password?
+        </Link>
         <p className="text-xs text-muted">Two-step verified · device-bound access.</p>
       </div>
     </div>

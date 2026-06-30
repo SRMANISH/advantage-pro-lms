@@ -1,9 +1,14 @@
+from typing import TYPE_CHECKING
+
 from django.contrib.auth.models import BaseUserManager
 
 from core.roles import Role
 
+if TYPE_CHECKING:
+    from .models import User  # noqa: F401  (used in the BaseUserManager["User"] generic)
 
-class UserManager(BaseUserManager):
+
+class UserManager(BaseUserManager["User"]):
     """Manager for the username-keyed custom user."""
 
     use_in_migrations = True

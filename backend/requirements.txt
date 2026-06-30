@@ -1,0 +1,22 @@
+# Runtime dependencies (production). Dev/test/lint tools are in requirements-dev.txt.
+# Pin exact versions for reproducible deploys.
+
+Django==5.2.15
+djangorestframework==3.17.1
+django-cors-headers==4.9.0
+django-environ==0.14.0
+drf-spectacular==0.29.0
+argon2-cffi==25.1.0
+openpyxl==3.1.5
+
+# --- Deploy-time infrastructure (install on the server; optional in local dev) ---
+# PostgreSQL driver (set DATABASE_URL=postgres://...).
+psycopg[binary]>=3.2,<4
+# Redis cache for shared throttling/rate-limit across workers (set REDIS_URL=redis://...).
+redis>=5.0,<6
+# Error monitoring (set SENTRY_DSN=...). Used by config/settings/prod.py.
+sentry-sdk>=2.0,<3
+# Static file serving behind gunicorn (referenced by config/settings/prod.py).
+whitenoise>=6.6,<7
+# WSGI server.
+gunicorn>=22.0

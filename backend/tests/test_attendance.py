@@ -7,9 +7,14 @@ from rest_framework.test import APIClient
 
 from accounts.models import User, UserStatus
 from assessments.models import Choice, Question, Task, Test
-from attendance.models import AttendanceEvent
-from attendance.services import student_summary
-from batches.models import Batch, Course
+from attendance.models import AbsenceFollowUp, AttendanceEvent
+from attendance.services import (
+    expected_days,
+    record_login_attendance,
+    remind_absentees,
+    student_summary,
+)
+from batches.models import Batch, BatchState, Course
 from content.models import Video
 from core.roles import Role
 from enrollments.models import Enrollment
@@ -88,15 +93,96 @@ def test_video_80_percent_marks_present(world):
 
 
 @pytest.mark.django_db
-def test_summary_percentage(world):
-    # 2 opportunities (1 test + 1 task); student does the task only -> 50%.
-    Test.objects.create(batch=world["batch"], title="T")
+def test_attendance_is_login_based(world):
+    # Engagement (a task submission) no longer counts as attendance.
     task = Task.objects.create(batch=world["batch"], title="Essay")
     client_for(world["student"]).post(
         f"/api/v1/tasks/{task.id}/submit/", {"text": "done"}, format="json"
     )
+    assert student_summary(world["student"], world["batch"])["present"] == 0
+
+    # A login marks the student present for today.
+    record_login_attendance(world["student"])
     summary = student_summary(world["student"], world["batch"])
-    assert summary == {"present": 1, "total": 2, "percent": 50}
+    total = expected_days(world["batch"])
+    assert summary["present"] == 1
+    assert summary["total"] == total
+    assert summary["percent"] == (round(1 / total * 100) if total else 0)
+
+    # Same-day re-login is idempotent (one present-day).
+    record_login_attendance(world["student"])
+    assert student_summary(world["student"], world["batch"])["present"] == 1
+
+
+@pytest.mark.django_db
+def test_login_endpoint_records_login_attendance(world, client):
+    resp = client.post(
+        "/api/v1/auth/login/",
+        {"username": "stu", "password": "x", "role": "student", "device_id": "dev-1"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 200
+    assert AttendanceEvent.objects.filter(
+        student=world["student"], batch=world["batch"], source="login", device_id="dev-1"
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_absentee_roster_and_followup_by_counselor_and_mis(world):
+    co = user("co", Role.COUNSELOR)
+    mis = user("mis", Role.MIS)
+    batch_id = world["batch"].id
+
+    # Student has not logged in today -> shows as absentee to the Counselor.
+    resp = client_for(co).get(f"/api/v1/attendance/daily/?batch={batch_id}")
+    assert resp.status_code == 200
+    rows = resp.json()["rows"]
+    assert any(r["registration_number"] == "stu" and r["logged_in"] is False for r in rows)
+
+    # Counselor sets a follow-up status...
+    set_url = "/api/v1/attendance/follow-up/status/"
+    co_resp = client_for(co).post(
+        set_url,
+        {
+            "batch": str(batch_id),
+            "student_id": str(world["student"].id),
+            "status": "contacted",
+            "note": "Called the student.",
+        },
+        format="json",
+    )
+    assert co_resp.status_code == 200
+
+    # ...and MIS can also update the same follow-up (both own absentee follow-up).
+    mis_resp = client_for(mis).post(
+        set_url,
+        {"batch": str(batch_id), "student_id": str(world["student"].id), "status": "resolved"},
+        format="json",
+    )
+    assert mis_resp.status_code == 200
+    f = AbsenceFollowUp.objects.get(student=world["student"], batch=world["batch"])
+    assert f.status == "resolved"
+
+
+@pytest.mark.django_db
+def test_remind_absentees_notifies_then_dedupes(db):
+    today = datetime.date.today()
+    course = Course.objects.create(code="FS2", name="FS2")
+    batch = Batch.objects.create(
+        code="BR",
+        name="BR",
+        course=course,
+        start_date=today - datetime.timedelta(days=5),
+        end_date=today + datetime.timedelta(days=30),
+        state=BatchState.ACTIVE,
+    )
+    student = user("stuR", Role.STUDENT)
+    Enrollment.objects.create(student=student, batch=batch, registration_number="stuR")
+
+    assert remind_absentees() == 1
+    assert student.notifications.filter(kind="absence_reminder").exists()
+    # A second run on the same day does not re-send.
+    assert remind_absentees() == 0
 
 
 @pytest.mark.django_db

@@ -17,7 +17,11 @@ class Notification(TimeStampedModel):
 
     class Meta:
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["recipient", "read"])]
+        indexes = [
+            models.Index(fields=["recipient", "read"]),
+            models.Index(fields=["recipient", "kind"]),  # per-kind dedupe (reminders)
+            models.Index(fields=["created_at"]),  # retention sweeps
+        ]
 
     def __str__(self) -> str:
         return f"{self.kind} -> {self.recipient_id}"

@@ -58,7 +58,7 @@ class StudentsReport(APIView):
         )
         return _csv(
             f"students_{batch.code}.csv",
-            ["registration_number", "name", "email", "phone", "status"],
+            ["Registration ID", "Name", "Email", "Phone", "Status"],
             rows,
         )
 
@@ -81,7 +81,7 @@ class AttendanceReport(APIView):
             )
         return _csv(
             f"attendance_{batch.code}.csv",
-            ["registration_number", "name", "present", "total", "percent"],
+            ["Registration ID", "Name", "Present", "Total", "Percent"],
             rows,
         )
 
@@ -111,14 +111,14 @@ class PerformanceReport(APIView):
         return _csv(
             f"performance_{batch.code}.csv",
             [
-                "rank",
-                "registration_number",
-                "name",
-                "tests",
-                "tasks",
-                "videos",
-                "attendance",
-                "overall",
+                "Rank",
+                "Registration ID",
+                "Name",
+                "Tests %",
+                "Tasks %",
+                "Videos %",
+                "Attendance %",
+                "Overall %",
             ],
             rows,
         )

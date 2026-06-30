@@ -58,3 +58,33 @@ class VideoProgress(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(fields=["video", "student"], name="uniq_video_student")
         ]
+
+
+class VideoAccessRevocation(TimeStampedModel):
+    """Blocks video/material streaming for students.
+
+    * ``student`` set, ``batch`` null  -> individual revoke across all the student's batches (MIS).
+    * ``student`` set, ``batch`` set    -> individual revoke for that student in that batch (MIS).
+    * ``student`` null, ``batch`` set   -> course-end closure for the whole batch (Admin + MIS).
+    """
+
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="video_revocations",
+    )
+    batch = models.ForeignKey(
+        Batch, null=True, blank=True, on_delete=models.CASCADE, related_name="video_revocations"
+    )
+    revoked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["student"]),
+            models.Index(fields=["batch"]),
+        ]

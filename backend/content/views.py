@@ -1,13 +1,16 @@
 """Video & material APIs: upload (faculty), list (role-scoped), gated streaming, progress."""
 
 from django.http import StreamingHttpResponse
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from accounts.models import User
 from attendance.services import record_attendance
 from audit.services import record_action
+from batches.models import Batch
 from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission, has_any_role
 from core.permissions_matrix import Action
@@ -15,8 +18,8 @@ from core.roles import Role
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify_many
 
-from .access import accessible_batch_ids
-from .models import Material, Video, VideoProgress
+from .access import accessible_batch_ids, is_video_blocked
+from .models import Material, Video, VideoAccessRevocation, VideoProgress
 from .serializers import (
     MaterialSerializer,
     MaterialUploadSerializer,
@@ -116,12 +119,22 @@ class VideoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def play(self, request, pk=None):
         video = self.get_object()
+        if request.user.role == Role.STUDENT and is_video_blocked(request.user, video.batch):
+            return Response(
+                {"detail": "Your video access for this course has been closed."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         fileobj = get_storage().open(video.storage_key)
         return _stream(fileobj, video.content_type, request.headers.get("Range"))
 
     @action(detail=True, methods=["post"])
     def progress(self, request, pk=None):
         video = self.get_object()
+        if request.user.role == Role.STUDENT and is_video_blocked(request.user, video.batch):
+            return Response(
+                {"detail": "Your video access for this course has been closed."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         serializer = ProgressSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -168,5 +181,86 @@ class MaterialViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def view(self, request, pk=None):
         material = self.get_object()
+        if request.user.role == Role.STUDENT and is_video_blocked(request.user, material.batch):
+            return Response(
+                {"detail": "Your access for this course has been closed."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         fileobj = get_storage().open(material.storage_key)
         return _stream(fileobj, material.content_type, request.headers.get("Range"))
+
+
+class RevokeVideoAccessView(APIView):
+    """MIS revokes an individual student's video access (optionally per batch)."""
+
+    permission_classes = [MatrixPermission]
+    required_action = Action.REVOKE_VIDEO_INDIVIDUAL
+
+    def post(self, request):
+        student = User.objects.filter(id=request.data.get("student_id"), role=Role.STUDENT).first()
+        if not student:
+            return Response({"detail": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+        batch = None
+        if request.data.get("batch_id"):
+            batch = Batch.objects.filter(id=request.data["batch_id"]).first()
+            if not batch:
+                return Response({"detail": "Batch not found."}, status=status.HTTP_404_NOT_FOUND)
+        VideoAccessRevocation.objects.get_or_create(
+            student=student,
+            batch=batch,
+            defaults={"revoked_by": request.user, "reason": request.data.get("reason", "")},
+        )
+        record_action(
+            actor=request.user,
+            action="video_access_revoked",
+            target=student,
+            ip_address=get_client_ip(request),
+        )
+        return Response({"ok": True})
+
+
+class RestoreVideoAccessView(APIView):
+    """MIS restores a previously revoked individual student's video access."""
+
+    permission_classes = [MatrixPermission]
+    required_action = Action.REVOKE_VIDEO_INDIVIDUAL
+
+    def post(self, request):
+        student = User.objects.filter(id=request.data.get("student_id"), role=Role.STUDENT).first()
+        if not student:
+            return Response({"detail": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+        qs = VideoAccessRevocation.objects.filter(student=student)
+        if request.data.get("batch_id"):
+            qs = qs.filter(batch_id=request.data["batch_id"])
+        qs.delete()
+        record_action(
+            actor=request.user,
+            action="video_access_restored",
+            target=student,
+            ip_address=get_client_ip(request),
+        )
+        return Response({"ok": True})
+
+
+class CloseCourseVideoAccessView(APIView):
+    """Admin or MIS close a whole batch's video access at course end."""
+
+    permission_classes = [MatrixPermission]
+    required_action = Action.CLOSE_COURSE_VIDEO_ACCESS
+
+    def post(self, request):
+        batch = Batch.objects.filter(id=request.data.get("batch_id")).first()
+        if not batch:
+            return Response({"detail": "Batch not found."}, status=status.HTTP_404_NOT_FOUND)
+        VideoAccessRevocation.objects.get_or_create(
+            student=None,
+            batch=batch,
+            defaults={"revoked_by": request.user, "reason": "course-end closure"},
+        )
+        record_action(
+            actor=request.user,
+            action="course_video_access_closed",
+            target=batch,
+            ip_address=get_client_ip(request),
+        )
+        return Response({"ok": True})

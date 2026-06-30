@@ -17,7 +17,7 @@ from core.roles import Role
 from enrollments.models import Enrollment
 from notifications.services import notify, notify_many
 
-from .models import Reply, Thread
+from .models import Reply, Thread, ThreadStatus
 from .serializers import (
     ReplyCreateSerializer,
     ThreadCreateSerializer,
@@ -25,11 +25,17 @@ from .serializers import (
     ThreadSerializer,
 )
 
-ForumRoles = has_any_role(
-    Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.TECH_SUPPORT, Role.FACULTY, Role.STUDENT
-)
-ALL_FORUM = {Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.TECH_SUPPORT}
-MONITOR_ROLES = {Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.TECH_SUPPORT}
+# Updated procedure: forum is MIS / Tech Support / Faculty / Student. Admin and Super
+# Admin no longer moderate. Tech Support can reply and resolve, not just monitor.
+ForumRoles = has_any_role(Role.MIS, Role.TECH_SUPPORT, Role.FACULTY, Role.STUDENT)
+ALL_FORUM = {Role.MIS, Role.TECH_SUPPORT}  # read every batch's forum
+MONITOR_ROLES = {Role.MIS, Role.TECH_SUPPORT}
+RESPONDER_ROLES = {Role.FACULTY, Role.TECH_SUPPORT, Role.MIS}
+
+
+def _can_reply(user, thread) -> bool:
+    # Tech Support helps across all batches; others use their normal batch access.
+    return user.role == Role.TECH_SUPPORT or can_access_batch(user, thread.batch)
 
 
 def _forum_batch_ids(user):
@@ -82,13 +88,17 @@ class ThreadViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def reply(self, request, pk=None):
         thread = self.get_object()
-        if not can_access_batch(request.user, thread.batch):
+        if not _can_reply(request.user, thread):
             return Response({"detail": "You cannot reply here."}, status=status.HTTP_403_FORBIDDEN)
         serializer = ReplyCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         Reply.objects.create(
             thread=thread, author=request.user, body=serializer.validated_data["body"]
         )
+        # A reply from a responder (faculty/TS/MIS) marks the doubt answered.
+        if thread.status == ThreadStatus.OPEN and request.user.role in RESPONDER_ROLES:
+            thread.status = ThreadStatus.ANSWERED
+            thread.save(update_fields=["status", "updated_at"])
         if thread.author_id != request.user.id:
             notify(
                 thread.author,
@@ -105,11 +115,32 @@ class ThreadViewSet(viewsets.ModelViewSet):
         is_faculty_of_batch = thread.batch.faculty.filter(id=request.user.id).exists()
         is_author = thread.author_id == request.user.id
         if not (
-            is_faculty_of_batch or is_author or request.user.role in {Role.SUPER_ADMIN, Role.ADMIN}
+            is_faculty_of_batch or is_author or request.user.role in {Role.TECH_SUPPORT, Role.MIS}
         ):
             return Response({"detail": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
         thread.resolved = True
-        thread.save(update_fields=["resolved", "updated_at"])
+        thread.status = ThreadStatus.RESOLVED
+        thread.save(update_fields=["resolved", "status", "updated_at"])
+        return Response(ThreadSerializer(thread, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"])
+    def escalate(self, request, pk=None):
+        """Tech Support / MIS / batch faculty escalate an unresolved doubt."""
+        thread = self.get_object()
+        is_faculty_of_batch = thread.batch.faculty.filter(id=request.user.id).exists()
+        if not (is_faculty_of_batch or request.user.role in {Role.TECH_SUPPORT, Role.MIS}):
+            return Response({"detail": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
+        thread.status = ThreadStatus.ESCALATED
+        thread.save(update_fields=["status", "updated_at"])
+        notify_many(
+            list(thread.batch.faculty.all()),
+            "doubt_escalated",
+            f"Doubt escalated in {thread.batch.code}: '{thread.title}'.",
+            link="/faculty/forum",
+            subject="Doubt escalated",
+            channels=("in_app", "email"),
+        )
+        record_action(actor=request.user, action="doubt_escalated", target=thread)
         return Response(ThreadSerializer(thread, context={"request": request}).data)
 
     @action(detail=True, methods=["post"])
@@ -131,22 +162,23 @@ class ThreadViewSet(viewsets.ModelViewSet):
 
 
 class ForumMonitorView(APIView):
-    """Unanswered doubts (Tech Support monitor), with an overdue flag past the window."""
+    """Tech Support / MIS doubt dashboard: unanswered doubts, overdue flags, and
+    status counts (new, unanswered, faculty-response-pending, answered-by-TS)."""
 
-    permission_classes = [has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.TECH_SUPPORT)]
+    permission_classes = [has_any_role(Role.MIS, Role.TECH_SUPPORT)]
 
     def get(self, request):
         window = settings.FORUM_RESPONSE_WINDOW_HOURS
         now = timezone.now()
-        threads = (
-            Thread.objects.filter(resolved=False)
+        unanswered = (
+            Thread.objects.exclude(status=ThreadStatus.RESOLVED)
             .annotate(rc=Count("replies"))
             .filter(rc=0)
             .select_related("batch", "author")
             .order_by("created_at")
         )
         rows = []
-        for t in threads:
+        for t in unanswered:
             hours = (now - t.created_at).total_seconds() / 3600
             rows.append(
                 {
@@ -154,12 +186,23 @@ class ForumMonitorView(APIView):
                     "title": t.title,
                     "batch_code": t.batch.code,
                     "author_name": t.author.full_name or t.author.username,
+                    "status": t.status,
                     "hours_waiting": round(hours, 1),
                     "overdue": hours >= window,
+                    "faculty_pending": hours >= window,
                     "created_at": t.created_at,
                 }
             )
-        return Response({"window_hours": window, "threads": rows})
+        counts = {
+            "open": Thread.objects.filter(status=ThreadStatus.OPEN).count(),
+            "answered": Thread.objects.filter(status=ThreadStatus.ANSWERED).count(),
+            "escalated": Thread.objects.filter(status=ThreadStatus.ESCALATED).count(),
+            "resolved": Thread.objects.filter(status=ThreadStatus.RESOLVED).count(),
+            "answered_by_ts": Thread.objects.filter(replies__author__role=Role.TECH_SUPPORT)
+            .distinct()
+            .count(),
+        }
+        return Response({"window_hours": window, "threads": rows, "counts": counts})
 
 
 class ForumBatchesView(APIView):

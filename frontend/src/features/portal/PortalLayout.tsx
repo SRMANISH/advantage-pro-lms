@@ -1,4 +1,5 @@
 import {
+  Activity,
   Award,
   BarChart3,
   CalendarCheck,
@@ -14,6 +15,7 @@ import {
   Radio,
   Settings,
   Smartphone,
+  Sparkles,
   TriangleAlert,
   UserPlus,
   Users,
@@ -41,6 +43,7 @@ const ATTEND = role("super_admin", "admin", "mis", "faculty", "student", "counse
 const FORUM = role("mis", "tech_support", "faculty", "student"); // no SA/AD moderation
 const MONITOR = role("mis", "tech_support"); // doubt monitor
 const DEVICES = role("mis", "faculty"); // approve device change (MIS outside / FAC in class)
+const ACTIVITY = role("mis", "faculty"); // activity/audit access (no SA/AD)
 const ESCALATIONS = role("super_admin", "admin", "mis");
 const REPORTS = role("super_admin", "admin", "mis", "counselor", "faculty");
 
@@ -65,8 +68,11 @@ const NAV: NavEntry[] = [
   { to: "forum", label: "Forum", Icon: MessagesSquare, roles: FORUM },
   { to: "monitor", label: "Doubt monitor", Icon: Eye, roles: MONITOR },
   { to: "certificate", label: "Certificate", Icon: Award, roles: role("student") },
+  { to: "certificates", label: "Certificates", Icon: Award, roles: role("admin", "mis") },
   { to: "devices", label: "Devices", Icon: Smartphone, roles: DEVICES },
+  { to: "activity", label: "Activity", Icon: Activity, roles: ACTIVITY },
   { to: "escalations", label: "Escalations", Icon: TriangleAlert, roles: ESCALATIONS },
+  { to: "engagement", label: "Engagement", Icon: Sparkles, roles: ADMIN_MIS },
   { to: "reports", label: "Reports", Icon: Download, roles: REPORTS },
   { to: "channels", label: "Channels", Icon: Settings, roles: role("super_admin") },
 ];

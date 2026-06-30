@@ -3,15 +3,41 @@
 import datetime
 
 import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import DeviceChangeRequest, User, UserStatus
 from batches.models import Batch, BatchState, Course
 from core.roles import Role
 from enrollments.models import Enrollment
+from liveclasses.models import LiveClass
 
 LOGIN = "/api/v1/auth/login/"
 REQUESTS = "/api/v1/auth/devices/requests/"
+
+
+def active_class(batch):
+    """A live class in session right now for the batch."""
+    return LiveClass.objects.create(
+        batch=batch,
+        title="Live Now",
+        scheduled_at=timezone.now(),
+        meeting_link="https://meet.example.com/now",
+    )
+
+
+def decide(staff, req_id, decision="approve", reason=""):
+    c = APIClient()
+    c.force_authenticate(user=staff)
+    return c.post(
+        f"{REQUESTS}{req_id}/decide/", {"decision": decision, "reason": reason}, format="json"
+    )
+
+
+def mis_user():
+    return User.objects.create_user(
+        username="mis", password="x", role=Role.MIS, status=UserStatus.ACTIVE
+    )
 
 
 def make_student(username="stu", password="x"):
@@ -65,17 +91,46 @@ def test_new_device_is_blocked_and_raises_request(world):
 
 
 @pytest.mark.django_db
-def test_faculty_approves_then_new_device_works(world):
+def test_faculty_approves_during_live_class(world):
     login("stu", "device-A")
-    login("stu", "device-B")  # creates pending request
+    active_class(world["batch"])  # a class is in session
+    login("stu", "device-B")  # raised during class -> routed to faculty
     req = DeviceChangeRequest.objects.get(user=world["student"], status="pending")
+    assert req.during_class is True
 
-    fac_client = APIClient()
-    fac_client.force_authenticate(user=world["fac"])
-    decided = fac_client.post(f"{REQUESTS}{req.id}/decide/", {"decision": "approve"}, format="json")
+    decided = decide(world["fac"], req.id, reason="Verified in class")
     assert decided.status_code == 200
-
+    req.refresh_from_db()
+    assert req.approver_role == Role.FACULTY
     assert login("stu", "device-B").status_code == 200
+
+
+@pytest.mark.django_db
+def test_faculty_cannot_approve_outside_class(world):
+    login("stu", "device-A")
+    login("stu", "device-B")  # no class in session
+    req = DeviceChangeRequest.objects.get(user=world["student"], status="pending")
+    assert decide(world["fac"], req.id).status_code == 403
+
+
+@pytest.mark.django_db
+def test_mis_approves_outside_class(world):
+    login("stu", "device-A")
+    login("stu", "device-B")  # no class in session -> routed to MIS
+    req = DeviceChangeRequest.objects.get(user=world["student"], status="pending")
+    assert req.during_class is False
+
+    assert decide(mis_user(), req.id).status_code == 200
+    assert login("stu", "device-B").status_code == 200
+
+
+@pytest.mark.django_db
+def test_mis_cannot_approve_during_class(world):
+    login("stu", "device-A")
+    active_class(world["batch"])
+    login("stu", "device-B")
+    req = DeviceChangeRequest.objects.get(user=world["student"], status="pending")
+    assert decide(mis_user(), req.id).status_code == 403
 
 
 @pytest.mark.django_db

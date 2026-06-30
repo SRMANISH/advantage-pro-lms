@@ -7,18 +7,30 @@ from batches.models import Batch
 from core.models import TimeStampedModel
 
 
+class LiveClassStatus(models.TextChoices):
+    SCHEDULED = "scheduled", "Scheduled"
+    CANCELLED = "cancelled", "Cancelled"
+    COMPLETED = "completed", "Completed"
+
+
 class LiveClass(TimeStampedModel):
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="live_classes")
     title = models.CharField(max_length=200)
     scheduled_at = models.DateTimeField()
     platform = models.CharField(max_length=50, default="Google Meet")
     meeting_link = models.URLField()
+    status = models.CharField(
+        max_length=10, choices=LiveClassStatus.choices, default=LiveClassStatus.SCHEDULED
+    )
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancel_reason = models.CharField(max_length=255, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
     )
 
     class Meta:
         ordering = ["scheduled_at"]
+        indexes = [models.Index(fields=["status"])]
 
     def __str__(self) -> str:
         return self.title

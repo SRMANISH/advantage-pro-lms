@@ -145,7 +145,7 @@ class SubmitSerializer(serializers.Serializer):
 class TaskWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ["id", "batch", "title", "description", "deadline"]
+        fields = ["id", "batch", "title", "description", "deadline", "deadline_type"]
         read_only_fields = ["id"]
 
     def validate_batch(self, batch):
@@ -167,6 +167,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "deadline",
+            "deadline_type",
             "submission_count",
             "my_submission",
             "is_overdue",
@@ -194,6 +195,11 @@ class TaskSerializer(serializers.ModelSerializer):
 class TaskSubmitSerializer(serializers.Serializer):
     text = serializers.CharField(required=False, allow_blank=True, default="")
     file = serializers.FileField(required=False)
+
+    def validate_file(self, upload):
+        from core.uploads import validate_upload
+
+        return validate_upload(upload, "document")
 
     def validate(self, attrs):
         if not attrs.get("text") and not attrs.get("file"):

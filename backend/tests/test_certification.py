@@ -73,6 +73,61 @@ def test_reminders_target_uncertified_and_stop_after_entry():
 
 
 @pytest.mark.django_db
+def test_reminders_are_weekly_and_tracked():
+    import datetime as _dt
+
+    from django.utils import timezone
+
+    from certification.models import CertificateFollowUp
+
+    batch = make_batch(BatchState.COMPLETED)
+    student = user("stu", Role.STUDENT)
+    enrollment = Enrollment.objects.create(student=student, batch=batch, registration_number="stu")
+
+    assert run_certificate_reminders() == 1
+    fu = CertificateFollowUp.objects.get(enrollment=enrollment)
+    assert fu.reminder_count == 1
+    # A second run the same week does not re-send.
+    assert run_certificate_reminders() == 0
+    # Backdate the last reminder beyond a week -> it sends again.
+    CertificateFollowUp.objects.filter(pk=fu.pk).update(
+        last_reminder_at=timezone.now() - _dt.timedelta(days=8)
+    )
+    assert run_certificate_reminders() == 1
+    fu.refresh_from_db()
+    assert fu.reminder_count == 2
+
+
+@pytest.mark.django_db
+def test_mis_certificate_follow_up_dashboard_and_status():
+    batch = make_batch(BatchState.COMPLETED)
+    student = user("stu", Role.STUDENT)
+    enrollment = Enrollment.objects.create(student=student, batch=batch, registration_number="REG1")
+    mis = user("mis", Role.MIS)
+
+    listing = client_for(mis).get("/api/v1/certification/follow-up/")
+    assert listing.status_code == 200
+    rows = listing.json()
+    assert any(r["registration_number"] == "REG1" and r["certified"] is False for r in rows)
+
+    set_resp = client_for(mis).post(
+        "/api/v1/certification/follow-up/status/",
+        {"enrollment": str(enrollment.id), "status": "contacted", "note": "Called"},
+        format="json",
+    )
+    assert set_resp.status_code == 200
+    from certification.models import CertificateFollowUp
+
+    assert CertificateFollowUp.objects.get(enrollment=enrollment).status == "contacted"
+
+
+@pytest.mark.django_db
+def test_student_cannot_see_certificate_follow_up():
+    student = user("stu", Role.STUDENT)
+    assert client_for(student).get("/api/v1/certification/follow-up/").status_code == 403
+
+
+@pytest.mark.django_db
 def test_cannot_certify_active_course():
     batch = make_batch(BatchState.ACTIVE)
     student = user("stu", Role.STUDENT)

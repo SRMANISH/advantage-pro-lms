@@ -31,6 +31,7 @@ class ThreadSerializer(serializers.ModelSerializer):
             "title",
             "body",
             "resolved",
+            "status",
             "author_name",
             "reply_count",
             "created_at",

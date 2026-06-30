@@ -1,5 +1,6 @@
 """Live class APIs: schedule (Admin/MIS), list (scoped), join + check-in (student)."""
 
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -13,8 +14,9 @@ from core.roles import Role
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify_many
 
-from .models import CheckIn, LiveClass
+from .models import CheckIn, LiveClass, LiveClassStatus
 from .serializers import LiveClassSerializer, LiveClassWriteSerializer
+from .services import notify_cancellation
 
 LiveRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.FACULTY, Role.STUDENT)
 
@@ -27,6 +29,7 @@ class LiveClassViewSet(viewsets.ModelViewSet):
         "update": Action.SCHEDULE_LIVE_CLASSES,
         "partial_update": Action.SCHEDULE_LIVE_CLASSES,
         "destroy": Action.SCHEDULE_LIVE_CLASSES,
+        "cancel": Action.SCHEDULE_LIVE_CLASSES,
     }
 
     def get_required_action(self):
@@ -66,6 +69,30 @@ class LiveClassViewSet(viewsets.ModelViewSet):
         if request.user.role != Role.STUDENT:
             return Response({"detail": "Only students check in."}, status=status.HTTP_403_FORBIDDEN)
         live = self.get_object()
+        if live.status == LiveClassStatus.CANCELLED:
+            return Response(
+                {"detail": "This class was cancelled."}, status=status.HTTP_400_BAD_REQUEST
+            )
         CheckIn.objects.get_or_create(live_class=live, student=request.user)
         record_attendance(request.user, live.batch, "live", live.id)
         return Response({"ok": True, "meeting_link": live.meeting_link})
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        # get_object() is queryset-scoped, so Faculty can only cancel their own batches'
+        # classes (matrix restricts this action to Faculty).
+        live = self.get_object()
+        if live.status == LiveClassStatus.CANCELLED:
+            return Response({"detail": "Already cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+        live.status = LiveClassStatus.CANCELLED
+        live.cancelled_at = timezone.now()
+        live.cancel_reason = request.data.get("reason", "")
+        live.save(update_fields=["status", "cancelled_at", "cancel_reason", "updated_at"])
+        notify_cancellation(live)
+        record_action(
+            actor=request.user,
+            action="live_class_cancelled",
+            target=live,
+            ip_address=get_client_ip(request),
+        )
+        return Response({"ok": True})

@@ -3,14 +3,23 @@ import { useRef, useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
 import { Button, Card, Input, Select } from "../../design-system";
+import { useAuth } from "../auth/auth";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
 import { contentApi } from "./api";
 
 export function ContentPage({ role }: { role: RoleDef }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const canUploadVideo = user?.role === "faculty"; // videos = Faculty only
+  const isMis = user?.role === "mis"; // MIS revokes/closes video access
   const batches = useQuery({ queryKey: ["batches"], queryFn: batchesApi.listBatches });
   const [batchId, setBatchId] = useState("");
+  const [closed, setClosed] = useState(false);
+  const closeCourse = useMutation({
+    mutationFn: () => contentApi.closeCourseVideoAccess(batchId),
+    onSuccess: () => setClosed(true),
+  });
   const videos = useQuery({
     queryKey: ["videos", batchId],
     queryFn: () => contentApi.listVideos(batchId || undefined),
@@ -67,25 +76,27 @@ export function ContentPage({ role }: { role: RoleDef }) {
 
       {batchId && (
         <div className="mb-6 grid gap-4 md:grid-cols-2">
-          <Card>
-            <h2 className="mb-3 text-base font-medium text-ink">Upload class video</h2>
-            <div className="flex flex-col gap-2">
-              <Input placeholder="Title" value={vTitle} onChange={(e) => setVTitle(e.target.value)} />
-              <input
-                ref={vRef}
-                type="file"
-                accept="video/*"
-                onChange={(e) => setVFile(e.target.files?.[0] ?? null)}
-                className="text-sm"
-              />
-              <Button
-                onClick={() => uploadVideo.mutate()}
-                disabled={!vTitle || !vFile || uploadVideo.isPending}
-              >
-                {uploadVideo.isPending ? "Uploading…" : "Upload video"}
-              </Button>
-            </div>
-          </Card>
+          {canUploadVideo && (
+            <Card>
+              <h2 className="mb-3 text-base font-medium text-ink">Upload class video</h2>
+              <div className="flex flex-col gap-2">
+                <Input placeholder="Title" value={vTitle} onChange={(e) => setVTitle(e.target.value)} />
+                <input
+                  ref={vRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setVFile(e.target.files?.[0] ?? null)}
+                  className="text-sm"
+                />
+                <Button
+                  onClick={() => uploadVideo.mutate()}
+                  disabled={!vTitle || !vFile || uploadVideo.isPending}
+                >
+                  {uploadVideo.isPending ? "Uploading…" : "Upload video"}
+                </Button>
+              </div>
+            </Card>
+          )}
 
           <Card>
             <h2 className="mb-3 text-base font-medium text-ink">Upload note / material</h2>
@@ -107,6 +118,25 @@ export function ContentPage({ role }: { role: RoleDef }) {
             </div>
           </Card>
         </div>
+      )}
+
+      {batchId && isMis && (
+        <Card className="mb-6">
+          <h2 className="mb-1 text-base font-medium text-ink">Video access</h2>
+          <p className="mb-3 text-sm text-muted">
+            MIS can close this course&apos;s video access at course end (also closes automatically
+            when the batch is completed).
+          </p>
+          {closed ? (
+            <span className="text-sm text-[color:var(--color-text-success,#1E8E5A)]">
+              ✓ Course video access closed.
+            </span>
+          ) : (
+            <Button variant="ghost" onClick={() => closeCourse.mutate()} disabled={closeCourse.isPending}>
+              Close course video access
+            </Button>
+          )}
+        </Card>
       )}
 
       <Card className="mb-6">

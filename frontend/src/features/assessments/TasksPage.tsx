@@ -29,7 +29,12 @@ function ManageTasks() {
     queryFn: () => tasksApi.list(batchId || undefined),
   });
 
-  const [form, setForm] = useState({ title: "", description: "", deadline: "" });
+  const [form, setForm] = useState<{
+    title: string;
+    description: string;
+    deadline: string;
+    deadline_type: "daily" | "weekly" | "custom";
+  }>({ title: "", description: "", deadline: "", deadline_type: "custom" });
   const create = useMutation({
     mutationFn: () =>
       tasksApi.create({
@@ -37,9 +42,10 @@ function ManageTasks() {
         title: form.title,
         description: form.description,
         deadline: form.deadline || undefined,
+        deadline_type: form.deadline_type,
       }),
     onSuccess: () => {
-      setForm({ title: "", description: "", deadline: "" });
+      setForm({ title: "", description: "", deadline: "", deadline_type: "custom" });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
@@ -77,13 +83,30 @@ function ManageTasks() {
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
-          <label className="mb-1 block text-xs text-muted">Deadline (optional)</label>
-          <Input
-            type="datetime-local"
-            className="mb-3"
-            value={form.deadline}
-            onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-          />
+          <div className="mb-3 grid gap-2 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs text-muted">Deadline type</label>
+              <select
+                className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
+                value={form.deadline_type}
+                onChange={(e) =>
+                  setForm({ ...form, deadline_type: e.target.value as typeof form.deadline_type })
+                }
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="custom">Custom (5+ days)</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted">Deadline (optional)</label>
+              <Input
+                type="datetime-local"
+                value={form.deadline}
+                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+              />
+            </div>
+          </div>
           <Button onClick={() => create.mutate()} disabled={!form.title || create.isPending}>
             {create.isPending ? "Creating…" : "Create task"}
           </Button>

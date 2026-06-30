@@ -2,7 +2,11 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "./app/ProtectedRoute";
 import { ROLES } from "./app/roles";
+import { ActivityPage } from "./features/activity/ActivityPage";
 import { BatchesPage } from "./features/batches/BatchesPage";
+import { CertFollowUpPage } from "./features/certification/CertFollowUpPage";
+import { EngagementReportPage } from "./features/engagement/EngagementReportPage";
+import { ForgotPasswordPage } from "./features/auth/ForgotPasswordPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { TasksPage } from "./features/assessments/TasksPage";
 import { TestsPage } from "./features/assessments/TestsPage";
@@ -34,6 +38,9 @@ const TASK_ROLES = new Set(["faculty", "student"]);
 const ATTEND_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student", "counselor"]);
 const PERF_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student", "counselor"]);
 const DEVICE_ROLES = new Set(["mis", "faculty"]);
+const ACTIVITY_ROLES = new Set(["mis", "faculty"]);
+const CERT_FOLLOWUP_ROLES = new Set(["admin", "mis"]);
+const ENGAGEMENT_ROLES = new Set(["admin", "mis"]);
 const ESCALATION_ROLES = new Set(["super_admin", "admin", "mis"]);
 const FORUM_ROLES = new Set(["mis", "tech_support", "faculty", "student"]);
 const MONITOR_ROLES = new Set(["mis", "tech_support"]);
@@ -47,6 +54,7 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/showcase" element={<ShowcasePage />} />
       <Route path="/setup/:token" element={<SetupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       {ROLES.map((role) => (
         <Route
           key={`login-${role.slug}`}
@@ -164,6 +172,28 @@ export default function App() {
           }
         />
       ))}
+      {ROLES.filter((role) => ACTIVITY_ROLES.has(role.value)).map((role) => (
+        <Route
+          key={`activity-${role.slug}`}
+          path={`/${role.slug}/activity`}
+          element={
+            <ProtectedRoute role={role}>
+              <ActivityPage role={role} />
+            </ProtectedRoute>
+          }
+        />
+      ))}
+      {ROLES.filter((role) => ENGAGEMENT_ROLES.has(role.value)).map((role) => (
+        <Route
+          key={`engagement-${role.slug}`}
+          path={`/${role.slug}/engagement`}
+          element={
+            <ProtectedRoute role={role}>
+              <EngagementReportPage role={role} />
+            </ProtectedRoute>
+          }
+        />
+      ))}
       {ROLES.filter((role) => ESCALATION_ROLES.has(role.value)).map((role) => (
         <Route
           key={`escalations-${role.slug}`}
@@ -226,6 +256,17 @@ export default function App() {
           element={
             <ProtectedRoute role={role}>
               <CertificatePage role={role} />
+            </ProtectedRoute>
+          }
+        />
+      ))}
+      {ROLES.filter((role) => CERT_FOLLOWUP_ROLES.has(role.value)).map((role) => (
+        <Route
+          key={`certificates-${role.slug}`}
+          path={`/${role.slug}/certificates`}
+          element={
+            <ProtectedRoute role={role}>
+              <CertFollowUpPage role={role} />
             </ProtectedRoute>
           }
         />

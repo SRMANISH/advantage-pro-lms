@@ -3,9 +3,30 @@
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F401,F403
-from .base import ALLOWED_HOSTS, MIDDLEWARE, SECRET_KEY
+from .base import (
+    ALLOWED_HOSTS,
+    MIDDLEWARE,
+    SECRET_KEY,
+    SENTRY_DSN,
+    SENTRY_TRACES_SAMPLE_RATE,
+)
 
 DEBUG = False
+
+# Error monitoring (optional) — only active when a DSN is set and the SDK is installed.
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.django import DjangoIntegration
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[DjangoIntegration()],
+            traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+            send_default_pii=False,
+        )
+    except ImportError:
+        pass
 
 # Fail fast on insecure dev defaults — never boot prod with these.
 if SECRET_KEY in ("", "dev-insecure-secret-change-me"):

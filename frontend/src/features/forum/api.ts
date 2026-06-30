@@ -7,6 +7,8 @@ export interface ReplyItem {
   created_at: string;
 }
 
+export type ThreadStatus = "open" | "answered" | "resolved" | "escalated";
+
 export interface ThreadItem {
   id: string;
   batch: string;
@@ -14,6 +16,7 @@ export interface ThreadItem {
   title: string;
   body: string;
   resolved: boolean;
+  status: ThreadStatus;
   author_name: string;
   reply_count: number;
   created_at: string;
@@ -34,14 +37,25 @@ export interface MonitorThread {
   title: string;
   batch_code: string;
   author_name: string;
+  status: ThreadStatus;
   hours_waiting: number;
   overdue: boolean;
+  faculty_pending: boolean;
   created_at: string;
+}
+
+export interface MonitorCounts {
+  open: number;
+  answered: number;
+  escalated: number;
+  resolved: number;
+  answered_by_ts: number;
 }
 
 export interface MonitorResult {
   window_hours: number;
   threads: MonitorThread[];
+  counts: MonitorCounts;
 }
 
 export const forumApi = {
@@ -59,6 +73,9 @@ export const forumApi = {
   },
   async resolve(id: string): Promise<void> {
     await api.post(`/threads/${id}/resolve/`);
+  },
+  async escalate(id: string): Promise<void> {
+    await api.post(`/threads/${id}/escalate/`);
   },
   async batches(): Promise<ForumBatch[]> {
     return (await api.get<ForumBatch[]>("/forum/batches/")).data;

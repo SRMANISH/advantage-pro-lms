@@ -8,7 +8,8 @@ import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
 import { liveApi, type LiveClass } from "./api";
 
-const SCHEDULE_ROLES = new Set(["super_admin", "admin", "mis"]);
+// Faculty schedule (and cancel) their own batches' classes under the updated procedure.
+const SCHEDULE_ROLES = new Set(["faculty"]);
 
 export function LiveClassesPage({ role }: { role: RoleDef }) {
   const { user } = useAuth();
@@ -47,6 +48,10 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
       qc.invalidateQueries({ queryKey: ["liveclasses"] });
       if (data.meeting_link) window.open(data.meeting_link, "_blank", "noopener");
     },
+  });
+  const cancel = useMutation({
+    mutationFn: (id: string) => liveApi.cancel(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["liveclasses"] }),
   });
 
   return (
@@ -105,7 +110,14 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
         {classes.data && classes.data.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {classes.data.map((c) => (
-              <Row key={c.id} live={c} isStudent={isStudent} onJoin={() => checkIn.mutate(c.id)} />
+              <Row
+                key={c.id}
+                live={c}
+                isStudent={isStudent}
+                canSchedule={canSchedule}
+                onJoin={() => checkIn.mutate(c.id)}
+                onCancel={() => cancel.mutate(c.id)}
+              />
             ))}
           </div>
         ) : (
@@ -119,22 +131,33 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
 function Row({
   live,
   isStudent,
+  canSchedule,
   onJoin,
+  onCancel,
 }: {
   live: LiveClass;
   isStudent: boolean;
+  canSchedule: boolean;
   onJoin: () => void;
+  onCancel: () => void;
 }) {
   const when = new Date(live.scheduled_at).toLocaleString();
+  const cancelled = live.status === "cancelled";
   return (
     <div className="flex items-center justify-between py-3">
       <div>
-        <div className="text-sm font-medium text-ink">{live.title}</div>
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-medium ${cancelled ? "text-muted line-through" : "text-ink"}`}>
+            {live.title}
+          </span>
+          {cancelled && <Badge>cancelled</Badge>}
+        </div>
         <div className="text-xs text-muted">
           {live.batch_code} · {when} · {live.platform}
+          {cancelled && live.cancel_reason ? ` · ${live.cancel_reason}` : ""}
         </div>
       </div>
-      {isStudent ? (
+      {cancelled ? null : isStudent ? (
         live.checked_in ? (
           <div className="flex items-center gap-2">
             <Badge>checked in</Badge>
@@ -146,9 +169,16 @@ function Row({
           <Button onClick={onJoin}>Join &amp; check in</Button>
         )
       ) : (
-        <a href={live.meeting_link} target="_blank" rel="noreferrer" className="text-sm text-brand-strong underline">
-          Open link
-        </a>
+        <div className="flex items-center gap-2">
+          <a href={live.meeting_link} target="_blank" rel="noreferrer" className="text-sm text-brand-strong underline">
+            Open link
+          </a>
+          {canSchedule && (
+            <Button variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

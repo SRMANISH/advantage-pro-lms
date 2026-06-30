@@ -9,12 +9,15 @@ export interface MySubmission {
   has_file: boolean;
 }
 
+export type DeadlineType = "daily" | "weekly" | "custom";
+
 export interface TaskItem {
   id: string;
   batch: string;
   title: string;
   description: string;
   deadline: string | null;
+  deadline_type: DeadlineType;
   submission_count?: number;
   my_submission: MySubmission | null;
   is_overdue: boolean;
@@ -38,6 +41,7 @@ export interface NewTask {
   title: string;
   description?: string;
   deadline?: string;
+  deadline_type?: DeadlineType;
 }
 
 export const tasksApi = {

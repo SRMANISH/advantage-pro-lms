@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from core.adapters.registry import get_storage
 from core.roles import Role
+from core.uploads import validate_upload
 
 from .access import can_access_batch
 from .models import Material, Video
@@ -56,6 +57,9 @@ class VideoUploadSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You cannot upload to this batch.")
         return batch
 
+    def validate_file(self, upload):
+        return validate_upload(upload, "video")
+
     def create(self, validated):
         upload = validated.pop("file")
         key = f"videos/{uuid.uuid4()}/{upload.name}"
@@ -96,6 +100,9 @@ class MaterialUploadSerializer(serializers.ModelSerializer):
         if not can_access_batch(self.context["request"].user, batch):
             raise serializers.ValidationError("You cannot upload to this batch.")
         return batch
+
+    def validate_file(self, upload):
+        return validate_upload(upload, "document")
 
     def create(self, validated):
         upload = validated.pop("file")

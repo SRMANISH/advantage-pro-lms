@@ -24,6 +24,14 @@ def _student_faculty(student):
     )
 
 
+def _mis_users():
+    from core.roles import Role
+
+    from .models import User
+
+    return list(User.objects.filter(role=Role.MIS))
+
+
 def course_ended(student) -> bool:
     """True if the student is enrolled and every one of their batches is completed."""
     from batches.models import BatchState
@@ -52,27 +60,50 @@ def handle_device_login(student, device_id: str, course_ended: bool = False) -> 
     if course_ended:
         return False, "Your course has ended — device changes are closed."
 
+    # During a live class the change is approved by Faculty; outside class hours by MIS.
+    from liveclasses.services import active_live_class_for_student
+
+    active = active_live_class_for_student(student)
     request, created = DeviceChangeRequest.objects.get_or_create(
         user=student,
         new_device_id=device_id,
         status=DeviceChangeRequest.Status.PENDING,
+        defaults={
+            "old_device_id": binding.device_id,
+            "during_class": active is not None,
+            "class_context": active.title if active else "",
+        },
     )
     if created:
+        who = student.full_name or student.username
+        if active:
+            notify_many(
+                _student_faculty(student),
+                "new_device",
+                f"{who} tried to sign in from a new device during '{active.title}' — "
+                "approve the change during class.",
+                subject="New-device sign-in (during class)",
+                channels=("in_app", "email"),
+            )
+            return (
+                False,
+                "This is a new device. Your faculty can approve the change during the live class.",
+            )
         notify_many(
-            _student_faculty(student),
+            _mis_users(),
             "new_device",
-            f"{student.full_name or student.username} tried to sign in from a new device — "
-            "approval needed.",
+            f"{who} tried to sign in from a new device outside class hours — MIS approval needed.",
             subject="New-device sign-in",
             channels=("in_app", "email"),
         )
     return (
         False,
-        "This is a new device. Your faculty must approve the change before you can sign in here.",
+        "This is a new device. MIS must approve the change before you can sign in here "
+        "(or your faculty, during a live class).",
     )
 
 
-def approve_request(request, decided_by) -> None:
+def approve_request(request, decided_by, reason: str = "") -> None:
     binding, _ = DeviceBinding.objects.get_or_create(
         user=request.user, defaults={"device_id": request.new_device_id}
     )
@@ -80,8 +111,19 @@ def approve_request(request, decided_by) -> None:
     binding.save(update_fields=["device_id", "updated_at"])
     request.status = DeviceChangeRequest.Status.APPROVED
     request.decided_by = decided_by
+    request.approver_role = decided_by.role
+    request.approval_reason = reason
     request.decided_at = timezone.now()
-    request.save(update_fields=["status", "decided_by", "decided_at", "updated_at"])
+    request.save(
+        update_fields=[
+            "status",
+            "decided_by",
+            "approver_role",
+            "approval_reason",
+            "decided_at",
+            "updated_at",
+        ]
+    )
     notify(
         request.user,
         "device_approved",
@@ -91,11 +133,22 @@ def approve_request(request, decided_by) -> None:
     )
 
 
-def reject_request(request, decided_by) -> None:
+def reject_request(request, decided_by, reason: str = "") -> None:
     request.status = DeviceChangeRequest.Status.REJECTED
     request.decided_by = decided_by
+    request.approver_role = decided_by.role
+    request.approval_reason = reason
     request.decided_at = timezone.now()
-    request.save(update_fields=["status", "decided_by", "decided_at", "updated_at"])
+    request.save(
+        update_fields=[
+            "status",
+            "decided_by",
+            "approver_role",
+            "approval_reason",
+            "decided_at",
+            "updated_at",
+        ]
+    )
     notify(
         request.user,
         "device_rejected",

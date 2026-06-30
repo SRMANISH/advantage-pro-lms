@@ -104,6 +104,7 @@ function BatchBoard() {
                 <thead className="bg-sky text-navy">
                   <tr>
                     <th className="px-3 py-2 text-left">Rank</th>
+                    <th className="px-3 py-2 text-left">Registration ID</th>
                     <th className="px-3 py-2 text-left">Student</th>
                     <th className="px-3 py-2 text-left">Tests</th>
                     <th className="px-3 py-2 text-left">Tasks</th>
@@ -116,6 +117,7 @@ function BatchBoard() {
                   {board.data.map((r) => (
                     <tr key={r.student} className="border-t border-brdr">
                       <td className="px-3 py-2">{r.rank}</td>
+                      <td className="px-3 py-2">{r.registration_number}</td>
                       <td className="px-3 py-2">{r.student_name}</td>
                       <td className="px-3 py-2 text-muted">{r.test_pct}%</td>
                       <td className="px-3 py-2 text-muted">{r.task_pct}%</td>

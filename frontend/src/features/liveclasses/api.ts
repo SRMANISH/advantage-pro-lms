@@ -1,5 +1,7 @@
 import { api } from "../../lib/api";
 
+export type LiveClassStatus = "scheduled" | "cancelled" | "completed";
+
 export interface LiveClass {
   id: string;
   batch: string;
@@ -8,6 +10,8 @@ export interface LiveClass {
   scheduled_at: string;
   platform: string;
   meeting_link: string;
+  status: LiveClassStatus;
+  cancel_reason: string;
   checked_in: boolean | null;
   created_at: string;
 }
@@ -29,5 +33,8 @@ export const liveApi = {
   },
   async checkIn(id: string): Promise<{ ok: boolean; meeting_link: string }> {
     return (await api.post(`/liveclasses/${id}/check-in/`)).data;
+  },
+  async cancel(id: string, reason?: string): Promise<void> {
+    await api.post(`/liveclasses/${id}/cancel/`, { reason: reason ?? "" });
   },
 };

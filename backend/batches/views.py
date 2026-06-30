@@ -12,7 +12,7 @@ from core.permissions_matrix import Action
 from core.roles import Role
 from core.utils import get_client_ip
 
-from .models import ALLOWED_TRANSITIONS, Batch, Course
+from .models import ALLOWED_TRANSITIONS, Batch, BatchState, Course
 from .serializers import (
     BatchSerializer,
     CourseSerializer,
@@ -133,6 +133,15 @@ class BatchViewSet(viewsets.ModelViewSet):
             )
         batch.state = to_state
         batch.save(update_fields=["state", "updated_at"])
+        # Course-end video access closure (Admin completing the batch — matrix allows AD + MIS).
+        if to_state == BatchState.COMPLETED:
+            from content.models import VideoAccessRevocation
+
+            VideoAccessRevocation.objects.get_or_create(
+                student=None,
+                batch=batch,
+                defaults={"revoked_by": request.user, "reason": "course-end closure"},
+            )
         record_action(
             actor=request.user,
             action="batch_transitioned",

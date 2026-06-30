@@ -55,4 +55,10 @@ export const contentApi = {
     form.append("file", file);
     return (await api.post<MaterialItem>("/materials/", form)).data;
   },
+  async closeCourseVideoAccess(batchId: string): Promise<void> {
+    await api.post("/video-access/close-course/", { batch_id: batchId });
+  },
+  async revokeStudentVideoAccess(studentId: string, batchId?: string): Promise<void> {
+    await api.post("/video-access/revoke/", { student_id: studentId, batch_id: batchId });
+  },
 };

@@ -7,7 +7,9 @@ import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { batchesApi, type Batch, type BatchState } from "./api";
 
-const CAN_MANAGE = new Set(["super_admin", "admin", "mis"]);
+// Batch creation, lifecycle, and faculty assignment are Admin-only under the updated
+// procedure. MIS/Faculty can view batches but not manage them.
+const CAN_MANAGE = new Set(["admin"]);
 const NEXT_STATE: Record<BatchState, BatchState | null> = {
   draft: "active",
   active: "completed",
@@ -115,7 +117,7 @@ export function BatchesPage({ role }: { role: RoleDef }) {
 
       <Card>
         <h2 className="mb-3 text-base font-medium text-ink">
-          {canManage ? "All batches" : "Your batches"}
+          {user?.role === "faculty" ? "Your batches" : "All batches"}
         </h2>
         {batches.isLoading ? (
           <p className="text-sm text-muted">Loading…</p>
@@ -181,18 +183,20 @@ function BatchRow({
         </Button>
       )}
 
-      <Select
-        className="w-44"
-        value=""
-        onChange={(e) => e.target.value && onAssign(e.target.value)}
-      >
-        <option value="">Assign faculty…</option>
-        {available.map((f) => (
-          <option key={f.id} value={f.id}>
-            {f.full_name || f.username}
-          </option>
-        ))}
-      </Select>
+      {canManage && (
+        <Select
+          className="w-44"
+          value=""
+          onChange={(e) => e.target.value && onAssign(e.target.value)}
+        >
+          <option value="">Assign faculty…</option>
+          {available.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.full_name || f.username}
+            </option>
+          ))}
+        </Select>
+      )}
     </div>
   );
 }

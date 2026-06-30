@@ -92,6 +92,48 @@ def test_student_cannot_schedule(world):
 
 
 @pytest.mark.django_db
+def test_faculty_cancels_class_and_students_notified(world):
+    live = LiveClass.objects.create(
+        batch=world["batch"],
+        title="To cancel",
+        scheduled_at=timezone.now() + datetime.timedelta(days=2),
+        meeting_link="https://meet.example.com/c",
+    )
+    resp = client_for(world["fac"]).post(
+        f"{URL}{live.id}/cancel/", {"reason": "Faculty unwell"}, format="json"
+    )
+    assert resp.status_code == 200
+    live.refresh_from_db()
+    assert live.status == "cancelled"
+    assert world["student"].notifications.filter(kind="live_class_cancelled").exists()
+
+
+@pytest.mark.django_db
+def test_student_cannot_cancel_class(world):
+    live = LiveClass.objects.create(
+        batch=world["batch"],
+        title="X",
+        scheduled_at=timezone.now() + datetime.timedelta(days=1),
+        meeting_link="https://meet.example.com/x",
+    )
+    assert client_for(world["student"]).post(f"{URL}{live.id}/cancel/").status_code == 403
+
+
+@pytest.mark.django_db
+def test_cancelled_class_skipped_by_reminders(world):
+    from liveclasses.services import send_due_live_reminders
+
+    LiveClass.objects.create(
+        batch=world["batch"],
+        title="Cancelled soon",
+        scheduled_at=timezone.now() + datetime.timedelta(minutes=30),
+        meeting_link="https://meet.example.com/s",
+        status="cancelled",
+    )
+    assert send_due_live_reminders() == 0
+
+
+@pytest.mark.django_db
 def test_check_in_marks_live_attendance(world):
     live = LiveClass.objects.create(
         batch=world["batch"],

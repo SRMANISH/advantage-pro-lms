@@ -24,7 +24,7 @@ export const authApi = {
         username,
         password,
         role,
-        device_id: getDeviceId(),
+        device_id: await getDeviceId(),
       });
       return data;
     } catch (err) {

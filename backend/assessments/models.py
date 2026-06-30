@@ -63,11 +63,20 @@ class AttemptAnswer(TimeStampedModel):
     choice = models.ForeignKey(Choice, null=True, on_delete=models.SET_NULL, related_name="+")
 
 
+class TaskDeadlineType(models.TextChoices):
+    DAILY = "daily", "Daily"
+    WEEKLY = "weekly", "Weekly"
+    CUSTOM = "custom", "Custom"
+
+
 class Task(TimeStampedModel):
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="tasks")
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     deadline = models.DateTimeField(null=True, blank=True)
+    deadline_type = models.CharField(
+        max_length=10, choices=TaskDeadlineType.choices, default=TaskDeadlineType.CUSTOM
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
     )

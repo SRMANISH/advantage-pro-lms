@@ -1,11 +1,13 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
 import { Button, Card } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
-import { attendanceApi } from "./api";
+import { attendanceApi, FOLLOW_UP_STATUSES, type FollowUpStatus } from "./api";
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const FOLLOWUP_ROLES = new Set(["super_admin", "admin", "mis", "counselor"]);
 
@@ -45,7 +47,8 @@ function MyAttendance() {
             </div>
             <Bar percent={r.percent} />
             <p className="mt-2 text-xs text-muted">
-              {r.present} of {r.total} items completed (≥80% video, test, task, live check-in).
+              Present on {r.present} of {r.total} active days — attendance is based on your daily
+              login.
             </p>
           </Card>
         ))
@@ -103,7 +106,7 @@ function BatchRoster() {
               <table className="w-full text-sm">
                 <thead className="bg-sky text-navy">
                   <tr>
-                    <th className="px-3 py-2 text-left">Reg. no</th>
+                    <th className="px-3 py-2 text-left">Registration ID</th>
                     <th className="px-3 py-2 text-left">Name</th>
                     <th className="px-3 py-2 text-left">Present</th>
                     <th className="px-3 py-2 text-left">%</th>
@@ -142,6 +145,106 @@ function BatchRoster() {
           )}
         </Card>
       )}
+
+      {batchId && <DailyLoginPanel batchId={batchId} canFollowUp={canFollowUp} />}
     </div>
+  );
+}
+
+function DailyLoginPanel({ batchId, canFollowUp }: { batchId: string; canFollowUp: boolean }) {
+  const qc = useQueryClient();
+  const [date, setDate] = useState(todayIso());
+  const daily = useQuery({
+    queryKey: ["attendance-daily", batchId, date],
+    queryFn: () => attendanceApi.daily(batchId, date),
+    enabled: !!batchId,
+  });
+  const setStatus = useMutation({
+    mutationFn: ({ studentId, status }: { studentId: string; status: FollowUpStatus }) =>
+      attendanceApi.setFollowUpStatus(batchId, studentId, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance-daily", batchId, date] }),
+  });
+
+  const rows = daily.data?.rows ?? [];
+  const absentees = rows.filter((r) => !r.logged_in).length;
+
+  return (
+    <Card>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-medium text-ink">Daily login attendance</h2>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted" htmlFor="daily-date">
+            Date
+          </label>
+          <input
+            id="daily-date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+          />
+        </div>
+      </div>
+
+      {daily.isLoading ? (
+        <p className="text-sm text-muted">Loading…</p>
+      ) : rows.length > 0 ? (
+        <>
+          <p className="mb-2 text-xs text-muted">
+            {rows.length - absentees} logged in · {absentees} did not log in
+          </p>
+          <div className="overflow-hidden rounded-lg border border-brdr">
+            <table className="w-full text-sm">
+              <thead className="bg-sky text-navy">
+                <tr>
+                  <th className="px-3 py-2 text-left">Registration ID</th>
+                  <th className="px-3 py-2 text-left">Name</th>
+                  <th className="px-3 py-2 text-left">Logged in</th>
+                  {canFollowUp && <th className="px-3 py-2 text-left">Follow-up</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.student} className="border-t border-brdr">
+                    <td className="px-3 py-2">{r.registration_number}</td>
+                    <td className="px-3 py-2">{r.student_name}</td>
+                    <td className="px-3 py-2">
+                      {r.logged_in ? (
+                        <span className="text-[color:var(--color-text-success,#1E8E5A)]">✓ Yes</span>
+                      ) : (
+                        <span className="text-red-600">✗ No</span>
+                      )}
+                    </td>
+                    {canFollowUp && (
+                      <td className="px-3 py-2">
+                        <select
+                          className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+                          value={r.follow_up_status}
+                          disabled={r.logged_in}
+                          onChange={(e) =>
+                            setStatus.mutate({
+                              studentId: r.student,
+                              status: e.target.value as FollowUpStatus,
+                            })
+                          }
+                        >
+                          {FOLLOW_UP_STATUSES.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <p className="text-sm text-muted">No students in this batch.</p>
+      )}
+    </Card>
   );
 }

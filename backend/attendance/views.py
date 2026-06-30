@@ -1,5 +1,7 @@
 """Attendance read APIs: a student's own summary and a per-batch roster."""
 
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -14,10 +16,25 @@ from core.utils import get_client_ip
 from enrollments.models import Enrollment
 from notifications.services import notify
 
-from .services import student_summary
+from .models import FollowUpStatus
+from .services import daily_roster, set_followup, student_summary
 
 ReviewRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR, Role.FACULTY)
+# Absentee follow-up is owned by both Counselor and MIS (plus Admin).
 FollowUpRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR)
+
+
+def _resolve_batch(request):
+    """Return (batch, error_response). Enforces faculty-own-batch scoping."""
+    batch_id = request.query_params.get("batch") or request.data.get("batch")
+    if not batch_id:
+        return None, Response({"detail": "batch query param required."}, status=400)
+    batch = Batch.objects.filter(id=batch_id).first()
+    if not batch:
+        return None, Response({"detail": "Batch not found."}, status=404)
+    if request.user.role == Role.FACULTY and not batch.faculty.filter(id=request.user.id).exists():
+        return None, Response({"detail": "Not your batch."}, status=403)
+    return batch, None
 
 
 class MyAttendanceView(APIView):
@@ -111,3 +128,64 @@ class FollowUpView(APIView):
             ip_address=get_client_ip(request),
         )
         return Response({"ok": True})
+
+
+class DailyAttendanceView(APIView):
+    """Per-day login attendance for a batch: who logged in / who did not, with
+    follow-up status. Seen by Counselor and MIS (and Admin/Faculty-own-batch)."""
+
+    permission_classes = [ReviewRoles]
+
+    def get(self, request):
+        batch, error = _resolve_batch(request)
+        if error:
+            return error
+        day = None
+        raw = request.query_params.get("date")
+        if raw:
+            parsed = parse_date(raw)
+            if not parsed:
+                return Response({"detail": "Invalid date (use YYYY-MM-DD)."}, status=400)
+            day = parsed
+        day = day or timezone.localdate()
+        rows = daily_roster(batch, day)
+        return Response({"date": day.isoformat(), "rows": rows})
+
+
+class FollowUpStatusSerializer(serializers.Serializer):
+    student_id = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=FollowUpStatus.values)
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class FollowUpStatusView(APIView):
+    """Counselor/MIS set or update the follow-up status for an absent student."""
+
+    permission_classes = [FollowUpRoles]
+
+    def post(self, request):
+        batch, error = _resolve_batch(request)
+        if error:
+            return error
+        serializer = FollowUpStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        student = User.objects.filter(
+            id=serializer.validated_data["student_id"], role=Role.STUDENT
+        ).first()
+        if not student:
+            return Response({"detail": "Student not found."}, status=404)
+        followup = set_followup(
+            student,
+            batch,
+            serializer.validated_data["status"],
+            owner=request.user,
+            note=serializer.validated_data["note"],
+        )
+        record_action(
+            actor=request.user,
+            action="absence_followup_status",
+            target=student,
+            metadata={"batch": str(batch.id), "status": followup.status},
+            ip_address=get_client_ip(request),
+        )
+        return Response({"ok": True, "status": followup.status})

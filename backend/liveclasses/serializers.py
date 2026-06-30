@@ -20,6 +20,8 @@ class LiveClassSerializer(serializers.ModelSerializer):
             "scheduled_at",
             "platform",
             "meeting_link",
+            "status",
+            "cancel_reason",
             "checked_in",
             "created_at",
         ]

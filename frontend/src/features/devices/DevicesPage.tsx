@@ -18,7 +18,8 @@ export function DevicesPage({ role }: { role: RoleDef }) {
     <PortalLayout role={role}>
       <h1 className="mb-1 text-xl font-medium text-ink">Device requests</h1>
       <p className="mb-4 text-sm text-muted">
-        Students are tied to their first device. Approve a change so they can sign in from a new one.
+        Students are tied to their first device. Faculty approve a change during a live class; MIS
+        approve outside class hours.
       </p>
 
       <Card>
@@ -29,7 +30,16 @@ export function DevicesPage({ role }: { role: RoleDef }) {
             {requests.data.map((r) => (
               <div key={r.id} className="flex items-center justify-between py-3">
                 <div>
-                  <div className="text-sm font-medium text-ink">{r.student_name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-ink">{r.student_name}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] ${
+                        r.during_class ? "bg-sky text-navy" : "bg-appbg text-muted"
+                      }`}
+                    >
+                      {r.during_class ? `During class${r.class_context ? `: ${r.class_context}` : ""}` : "Outside class"}
+                    </span>
+                  </div>
                   <div className="text-xs text-muted">
                     {r.registration_number} · requested {r.created_at.slice(0, 16).replace("T", " ")}
                   </div>

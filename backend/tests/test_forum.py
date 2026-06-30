@@ -88,6 +88,35 @@ def test_author_can_resolve(world):
     assert resp.status_code == 200
     thread.refresh_from_db()
     assert thread.resolved is True
+    assert thread.status == "resolved"
+
+
+@pytest.mark.django_db
+def test_tech_support_can_reply_and_marks_answered(world):
+    ts = user("ts", Role.TECH_SUPPORT)
+    thread = Thread.objects.create(
+        batch=world["batch"], author=world["student"], title="Q", body="b"
+    )
+    resp = client_for(ts).post(
+        f"{THREADS}{thread.id}/reply/", {"body": "Try clearing cache"}, format="json"
+    )
+    assert resp.status_code == 200
+    thread.refresh_from_db()
+    assert thread.replies.count() == 1
+    assert thread.status == "answered"
+
+
+@pytest.mark.django_db
+def test_tech_support_can_escalate(world):
+    ts = user("ts", Role.TECH_SUPPORT)
+    thread = Thread.objects.create(
+        batch=world["batch"], author=world["student"], title="Q", body="b"
+    )
+    resp = client_for(ts).post(f"{THREADS}{thread.id}/escalate/")
+    assert resp.status_code == 200
+    thread.refresh_from_db()
+    assert thread.status == "escalated"
+    assert world["fac"].notifications.filter(kind="doubt_escalated").exists()
 
 
 @pytest.mark.django_db
