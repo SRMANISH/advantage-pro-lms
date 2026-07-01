@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
 import {
@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   EmptyState,
+  FileUpload,
   SectionHeading,
   TableShell,
   THead,
@@ -22,7 +23,6 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
   const qc = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const students = useQuery({ queryKey: ["enrollments"], queryFn: enrollmentsApi.list });
   const [setupLinks, setSetupLinks] = useState<Record<string, string>>({});
@@ -43,7 +43,6 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
       setResult(r);
       if (r.created != null) {
         setFile(null);
-        if (fileRef.current) fileRef.current.value = "";
         qc.invalidateQueries({ queryKey: ["enrollments"] });
       }
     },
@@ -80,17 +79,16 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
           recognition ID). If any row is invalid the whole upload is rejected and nothing is saved.
         </p>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,.xlsx"
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
-              setResult(null);
-            }}
-            className="text-sm"
-          />
+        <FileUpload
+          accept=".csv,.xlsx"
+          file={file}
+          onFile={(f) => {
+            setFile(f);
+            setResult(null);
+          }}
+          hint="CSV or XLSX · the first column must be the Registration ID"
+        />
+        <div className="mt-3">
           <Button onClick={() => validate.mutate()} disabled={!file || validate.isPending}>
             {validate.isPending ? "Validating…" : "Validate"}
           </Button>

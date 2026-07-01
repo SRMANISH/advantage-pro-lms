@@ -5,9 +5,9 @@ import { ROLES } from "../app/roles";
 import { Logo, fadeUp, staggerContainer, staggerItem } from "../design-system";
 
 const FEATURES = [
-  { title: "Secure learning", body: "Watermarked, no-download video and trusted access." },
-  { title: "Batch-based LMS", body: "Structured cohorts, faculty and assignments." },
-  { title: "Role-based access", body: "A focused portal for every role on the team." },
+  { title: "Learn your way", body: "Live classes and recorded lessons you can revisit anytime." },
+  { title: "Practice with purpose", body: "Tests, tasks and faculty feedback that help you improve." },
+  { title: "See your progress", body: "Attendance, scores, streaks and rank in one clear view." },
 ];
 
 const PRIMARY = ["student", "faculty", "admin", "super_admin"];
@@ -25,9 +25,11 @@ export function LandingPage() {
 
       <header className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <div className="flex items-center gap-3">
-          <Logo size={40} />
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface shadow-card">
+            <Logo size={42} />
+          </span>
           <div className="leading-tight">
-            <div className="text-sm font-semibold text-ink">Advantage Pro</div>
+            <div className="text-base font-semibold text-ink">Advantage Pro</div>
             <div className="text-[10px] uppercase tracking-[0.18em] text-muted">
               Learning Management
             </div>
@@ -45,22 +47,22 @@ export function LandingPage() {
             variants={staggerItem}
             className="inline-flex rounded-full border border-brdr bg-surface px-3 py-1 text-xs font-medium tracking-wide text-navy shadow-card"
           >
-            THE COMPLETE TRAINING INSTITUTE OS
+            YOUR LEARNING, ALL IN ONE PLACE
           </motion.span>
           <motion.h1
             variants={staggerItem}
             className="mt-5 text-4xl font-semibold leading-[1.05] tracking-tight text-ink sm:text-5xl"
           >
-            Learning operations,
+            Everything you need to
             <br />
             <span className="relative text-brand-strong">
-              made exceptional.
+              learn and grow.
               <span className="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-brand/40" />
             </span>
           </motion.h1>
           <motion.p variants={staggerItem} className="mt-5 max-w-md text-base text-muted">
-            One focused platform for batches, faculty, learners, assessments, live classes, and
-            institute-wide intelligence.
+            Watch classes, practise with tests and tasks, track your attendance and scores, and stay
+            connected with your batch — your whole learning journey in one place.
           </motion.p>
 
           <motion.div variants={staggerItem} className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -86,7 +88,7 @@ export function LandingPage() {
               Sign in to your portal
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Choose your portal — each role signs in through its own secure page.
+              Pick your portal and jump back into learning.
             </p>
 
             <div className="mt-6 grid grid-cols-2 gap-3">

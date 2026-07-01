@@ -103,22 +103,27 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
   useEffect(() => setOpen(false), [location.pathname]);
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-gradient-to-b from-navyDeep to-navy text-white">
+    <div className="ap-sidebar flex h-full flex-col border-r border-white/60 text-ink">
       <Link to={`/${roleDef.slug}`} className="flex items-center gap-3 px-5 py-5">
-        <Logo size={36} className="ring-2 ring-white/15" />
+        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-card ring-1 ring-black/5">
+          <Logo size={40} />
+        </span>
         <div className="leading-tight">
-          <div className="text-sm font-semibold">Advantage Pro</div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-white/50">
+          <div className="text-[15px] font-semibold text-navy">Advantage Pro</div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted">
             Learning Management
           </div>
         </div>
       </Link>
 
-      <div className="mx-4 mb-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-        <div className="text-[10px] uppercase tracking-wider text-white/45">Current workspace</div>
+      <div className="mx-4 mb-2 rounded-2xl border border-white/70 bg-white/60 px-4 py-3 shadow-card backdrop-blur">
+        <div className="text-[10px] uppercase tracking-wider text-muted">Current workspace</div>
         <div className="mt-1 flex items-center justify-between">
-          <span className="text-sm font-medium">{roleDef.label}</span>
-          <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_3px_rgba(52,211,153,0.18)]" />
+          <span className="text-sm font-semibold text-navy">{roleDef.label}</span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-success">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]" />
+            Online
+          </span>
         </div>
       </div>
 
@@ -127,8 +132,8 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
           const groupItems = items.filter((n) => n.group === g);
           if (groupItems.length === 0) return null;
           return (
-            <div key={g} className="mb-2">
-              <div className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-wider text-white/35">
+            <div key={g} className="mb-1.5">
+              <div className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted/80">
                 {g}
               </div>
               {groupItems.map(({ to, label, Icon }) => {
@@ -138,19 +143,30 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
                     key={label}
                     to={pathFor(to)}
                     className={cn(
-                      "relative mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                      active ? "text-white" : "text-white/65 hover:bg-white/5 hover:text-white",
+                      "group relative mb-0.5 flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-all",
+                      active
+                        ? "text-brand-strong"
+                        : "text-ink/70 hover:translate-x-[3px] hover:text-navy",
                     )}
                   >
                     {active && (
                       <motion.span
                         layoutId="ap-nav-active"
-                        className="absolute inset-0 rounded-lg bg-white/12 ring-1 ring-inset ring-white/10"
+                        className="absolute inset-0 rounded-xl bg-white shadow-card ring-1 ring-black/5"
                         transition={{ type: "spring", stiffness: 380, damping: 32 }}
                       />
                     )}
-                    <Icon size={17} className="relative z-10 shrink-0" aria-hidden />
-                    <span className="relative z-10 truncate">{label}</span>
+                    <span
+                      className={cn(
+                        "relative z-10 flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                        active
+                          ? "bg-brand text-white shadow-sm"
+                          : "bg-white/70 text-navy/70 group-hover:bg-white group-hover:text-brand-strong",
+                      )}
+                    >
+                      <Icon size={16} aria-hidden />
+                    </span>
+                    <span className="relative z-10 truncate font-medium">{label}</span>
                   </Link>
                 );
               })}
@@ -159,12 +175,12 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
         })}
       </nav>
 
-      <div className="border-t border-white/10 px-4 py-3">
+      <div className="border-t border-white/70 px-4 py-3">
         <div className="flex items-center gap-3">
-          <Avatar name={name} tone="brand" size={36} />
+          <Avatar name={name} size={38} />
           <div className="min-w-0 leading-tight">
-            <div className="truncate text-sm font-medium">{name}</div>
-            <div className="truncate text-[11px] text-white/45">{user?.email || roleDef.label}</div>
+            <div className="truncate text-sm font-semibold text-navy">{name}</div>
+            <div className="truncate text-[11px] text-muted">{user?.email || roleDef.label}</div>
           </div>
         </div>
       </div>
@@ -172,18 +188,20 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
   );
 
   return (
-    <div className="flex min-h-screen bg-appbg">
+    <div className="ap-appbg flex min-h-screen">
       {roleDef.value === "student" && <EngagementPrompts />}
 
       <aside className="hidden w-64 shrink-0 md:block">
-        <div className="fixed inset-y-0 left-0 w-64 shadow-sidebar">{sidebar}</div>
+        <div className="fixed inset-y-0 left-0 w-64 shadow-[2px_0_24px_rgba(15,31,58,0.05)]">
+          {sidebar}
+        </div>
       </aside>
 
       <AnimatePresence>
         {open && (
           <div className="fixed inset-0 z-40 md:hidden">
             <motion.div
-              className="absolute inset-0 bg-navyDeep/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => setOpen(false)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -202,7 +220,7 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
         )}
       </AnimatePresence>
 
-      <div className="flex min-w-0 flex-1 flex-col md:pl-64">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-brdr bg-surface/85 px-4 backdrop-blur md:px-8">
           <div className="flex items-center gap-3">
             <button
@@ -270,13 +288,13 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-8">
+        <main className="flex-1 px-5 py-6 md:px-8 md:py-8">
           <motion.div
             key={location.pathname}
             variants={pageVariants}
             initial="hidden"
             animate="show"
-            className="mx-auto max-w-6xl"
+            className="w-full max-w-[1400px]"
           >
             {children}
           </motion.div>

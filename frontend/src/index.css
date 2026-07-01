@@ -14,7 +14,11 @@
   --color-border: 214 235 248; /* #D6EBF8 */
   --color-text: 15 31 58; /* #0F1F3A */
   --color-muted: 90 105 130; /* #5A6982 */
-  --color-navy-deep: 13 30 74; /* #0D1E4A — sidebar gradient base */
+  --color-navy-deep: 13 30 74; /* #0D1E4A */
+  --color-aqua: 120 210 245; /* #78D2F5 — light aqua from logo */
+  --color-logo-red: 214 64 58; /* #D6403A — logo accent */
+  --color-logo-yellow: 235 170 40; /* #EBAA28 — logo accent */
+  --color-surface-soft: 240 248 254; /* #F0F8FE — soft blue surface */
   --color-success: 30 142 90; /* #1E8E5A */
   --color-warning: 180 110 20; /* #B46E14 */
   --color-danger: 200 52 60; /* #C8343C */
@@ -26,6 +30,53 @@
     font-family:
       ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
+}
+
+/* Brand surfaces — hardcoded hex so they always render, never depending on
+   Tailwind JIT resolving CSS-variable-based colour tokens. */
+
+/* Light sky-blue glass sidebar (logo-inspired). Dark text sits on top. */
+.ap-sidebar {
+  background-color: #e6f3fd;
+  background-image: linear-gradient(180deg, #eef8ff 0%, #ddeffb 46%, #cde5f6 100%);
+}
+
+/* Page background — soft blue wash, not flat white. */
+.ap-appbg {
+  background-color: #f4fafe;
+  background-image: radial-gradient(1200px 500px at 100% -5%, #e6f4fe 0%, transparent 55%),
+    radial-gradient(900px 500px at -10% 110%, #eaf6ff 0%, transparent 55%), #f5fbff;
+}
+
+/* Vibrant azure→royal gradient for hero cards + the login brand panel. */
+.ap-hero {
+  background-color: #1f6fd0;
+  background-image: linear-gradient(130deg, #06a6e6 0%, #1f6fd0 52%, #17408f 100%);
+  color: #fff;
+}
+.ap-brand-panel {
+  background-color: #17408f;
+  background-image: linear-gradient(140deg, #06a6e6 0%, #1a56b8 52%, #123a86 100%);
+}
+.ap-hero-soft {
+  background-color: #eef6fe;
+  background-image: linear-gradient(135deg, #e6f6fd 0%, #f4faff 45%, #ffffff 100%);
+}
+
+/* Slim, on-brand scrollbar for the sidebar nav (dark thumb on the light panel). */
+.ap-sidebar nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(22, 58, 140, 0.2) transparent;
+}
+.ap-sidebar nav::-webkit-scrollbar {
+  width: 6px;
+}
+.ap-sidebar nav::-webkit-scrollbar-thumb {
+  background: rgba(22, 58, 140, 0.18);
+  border-radius: 9999px;
+}
+.ap-sidebar nav::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Moving per-student watermark over secure video (traceable, deters casual sharing). */

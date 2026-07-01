@@ -4,6 +4,7 @@ export { Button } from "./components/Button";
 export { Card } from "./components/Card";
 export { CountUp } from "./components/CountUp";
 export { EmptyState } from "./components/EmptyState";
+export { FileUpload } from "./components/FileUpload";
 export { Input } from "./components/Input";
 export { Logo } from "./components/Logo";
 export { Modal } from "./components/Modal";

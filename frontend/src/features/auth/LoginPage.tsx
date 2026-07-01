@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { useState, type FormEvent } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ClipboardList, PlayCircle, TrendingUp } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import type { RoleDef } from "../../app/roles";
@@ -10,10 +11,28 @@ interface LoginPageProps {
   role: RoleDef;
 }
 
-const TRUST = [
-  "Two-step verified sign-in",
-  "Device-bound student access",
-  "Private, batch-based workspace",
+const QUOTES = [
+  "Learning today, leading tomorrow.",
+  "Every login is one step closer to your goal.",
+  "Small progress every day becomes big results.",
+];
+
+const HIGHLIGHTS = [
+  {
+    Icon: PlayCircle,
+    title: "Learn at your pace",
+    body: "Join live classes or replay recorded lessons whenever it suits you.",
+  },
+  {
+    Icon: ClipboardList,
+    title: "Practice with feedback",
+    body: "Attempt tests, submit tasks and get faculty feedback that helps you grow.",
+  },
+  {
+    Icon: TrendingUp,
+    title: "Track your growth",
+    body: "Attendance, scores, streaks and rank — always know where you stand.",
+  },
 ];
 
 /** Role-bound login page. Each role has its own URL; the server rejects mismatched accounts. */
@@ -24,6 +43,12 @@ export function LoginPage({ role }: LoginPageProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [quote, setQuote] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setQuote((q) => (q + 1) % QUOTES.length), 4500);
+    return () => clearInterval(t);
+  }, []);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -42,33 +67,56 @@ export function LoginPage({ role }: LoginPageProps) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-navyDeep to-navy p-12 text-white lg:flex">
+      <div className="ap-hero relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex">
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-brand/20 blur-3xl" />
           <div className="absolute -bottom-24 -left-10 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
         </div>
         <div className="relative flex items-center gap-3">
-          <Logo size={40} className="ring-2 ring-white/15" />
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm">
+            <Logo size={40} />
+          </span>
           <div className="leading-tight">
-            <div className="text-sm font-semibold">Advantage Pro</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-white/50">
+            <div className="text-[15px] font-semibold">Advantage Pro</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-white/60">
               Learning Management
             </div>
           </div>
         </div>
         <div className="relative">
-          <h2 className="text-3xl font-semibold leading-tight tracking-tight">
-            {role.label} workspace
+          <h2 className="text-[2rem] font-semibold leading-[1.15] tracking-tight">
+            A richer way to learn, all in one place.
           </h2>
-          <p className="mt-3 max-w-sm text-sm text-white/70">{role.tagline}</p>
-          <ul className="mt-8 space-y-3">
-            {TRUST.map((t) => (
-              <li key={t} className="flex items-center gap-3 text-sm text-white/80">
-                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-                {t}
-              </li>
+          <div className="mt-4 h-7">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={quote}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.4 }}
+                className="text-base font-medium text-white/90"
+              >
+                “{QUOTES[quote]}”
+              </motion.p>
+            </AnimatePresence>
+          </div>
+          <div className="mt-9 space-y-3">
+            {HIGHLIGHTS.map(({ Icon, title, body }) => (
+              <div
+                key={title}
+                className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <Icon size={18} />
+                </span>
+                <div>
+                  <div className="text-sm font-semibold">{title}</div>
+                  <div className="text-xs leading-relaxed text-white/70">{body}</div>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
         <p className="relative text-xs text-white/40">
           Vectra Technosoft · Networking with success · since 1998
@@ -87,7 +135,7 @@ export function LoginPage({ role }: LoginPageProps) {
             <Logo size={56} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">{role.label} sign in</h1>
-          <p className="mt-1 text-sm text-muted">Use the credentials issued for your account.</p>
+          <p className="mt-1 text-sm text-muted">Welcome back — continue your learning journey.</p>
 
           <form className="mt-6 flex flex-col gap-3" onSubmit={onSubmit}>
             <div>
