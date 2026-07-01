@@ -14,6 +14,7 @@ const PRIMARY = ["student", "faculty", "admin", "super_admin"];
 
 export function LandingPage() {
   const primaryRoles = PRIMARY.map((v) => ROLES.find((r) => r.value === v)!).filter(Boolean);
+  const staffRoles = ROLES.filter((r) => !PRIMARY.includes(r.value));
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-sky via-appbg to-surface">
@@ -106,12 +107,22 @@ export function LandingPage() {
               ))}
             </div>
 
-            <Link
-              to="/login/mis"
-              className="mt-3 block rounded-xl bg-brand-strong px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-navy"
-            >
-              Other staff sign in
-            </Link>
+            <div className="mt-4">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+                Staff portals
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {staffRoles.map((r) => (
+                  <Link
+                    key={r.slug}
+                    to={`/login/${r.slug}`}
+                    className="rounded-lg border border-brdr bg-surface px-3 py-1.5 text-xs font-medium text-navy transition hover:border-brand/40 hover:text-brand-strong"
+                  >
+                    {r.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
 
             <div className="mt-5 flex items-center justify-between text-xs">
               <Link to="/forgot-password" className="font-medium text-brand-strong hover:underline">
