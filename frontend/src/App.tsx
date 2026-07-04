@@ -53,6 +53,9 @@ const ReportsPage = lazy(() => import("./features/reports/ReportsPage").then((m)
 const ChangePasswordPage = lazy(() =>
   import("./features/auth/ChangePasswordPage").then((m) => ({ default: m.ChangePasswordPage })),
 );
+const UtilityLinksPage = lazy(() =>
+  import("./features/utility/UtilityLinksPage").then((m) => ({ default: m.UtilityLinksPage })),
+);
 
 // Route guards mirror the updated permission matrix (and PortalLayout NAV). UI hiding only;
 // the backend enforces the matrix on every endpoint.
@@ -248,6 +251,17 @@ export default function App() {
             element={
               <ProtectedRoute role={role}>
                 <EngagementReportPage role={role} />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        {ROLES.filter((role) => role.value === "mis").map((role) => (
+          <Route
+            key={`utility-${role.slug}`}
+            path={`/${role.slug}/utility-links`}
+            element={
+              <ProtectedRoute role={role}>
+                <UtilityLinksPage role={role} />
               </ProtectedRoute>
             }
           />

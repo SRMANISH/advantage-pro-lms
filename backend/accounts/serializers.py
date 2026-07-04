@@ -6,9 +6,12 @@ from .models import User
 
 
 class LoginSerializer(serializers.Serializer):
+    # ``username`` accepts a Login ID / Registration ID or an email address.
     username = serializers.CharField()
     password = serializers.CharField(style={"input_type": "password"}, trim_whitespace=False)
-    role = serializers.ChoiceField(choices=Role.choices)
+    # Optional: when present (role-bound portal pages) the account must match it; when
+    # omitted (unified sign-in) the backend routes by the account's own role.
+    role = serializers.ChoiceField(choices=Role.choices, required=False, allow_blank=True)
     device_id = serializers.CharField(required=False, allow_blank=True, default="")
 
 

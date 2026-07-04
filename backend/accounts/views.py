@@ -62,15 +62,32 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data["username"]
+        identifier = serializer.validated_data["username"].strip()
         password = serializer.validated_data["password"]
-        role = serializer.validated_data["role"]
+        role = serializer.validated_data.get("role") or None
         ip = get_client_ip(request)
 
+        # Unified sign-in: the identifier may be a Login ID / Registration ID or an email.
+        # Email is intentionally non-unique (one person may hold an account per course), so
+        # an ambiguous email must fall back to the Registration ID.
+        username = identifier
+        if "@" in identifier and not User.objects.filter(username=identifier).exists():
+            matches = list(User.objects.filter(email__iexact=identifier)[:2])
+            if len(matches) == 1:
+                username = matches[0].username
+            elif len(matches) > 1:
+                return Response(
+                    {
+                        "detail": "This email is linked to more than one account — "
+                        "please sign in with your Registration ID."
+                    },
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+
         user = authenticate(request, username=username, password=password)
-        # Role-bound: the account must match the portal it signed in through.
+        # Role-bound portals: when a role is supplied the account must match it.
         # Generic message — never reveal whether it was the password or the role.
-        if user is None or user.role != role:
+        if user is None or (role is not None and user.role != role):
             record_action(
                 action="login_failed",
                 target_type="auth",

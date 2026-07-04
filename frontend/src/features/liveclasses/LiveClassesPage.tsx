@@ -61,7 +61,7 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
       {canSchedule && (
         <Card className="mb-6">
           <h2 className="mb-3 text-base font-medium text-ink">Schedule a class</h2>
-          <div className="flex flex-col gap-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <select
               className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
               value={form.batch}
@@ -75,25 +75,24 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
               ))}
             </select>
             <Input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            <div className="flex gap-2">
-              <Input
-                type="datetime-local"
-                value={form.scheduled_at}
-                onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
-              />
-              <Input
-                placeholder="Platform"
-                value={form.platform}
-                onChange={(e) => setForm({ ...form, platform: e.target.value })}
-              />
-            </div>
             <Input
+              type="datetime-local"
+              value={form.scheduled_at}
+              onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
+            />
+            <Input
+              placeholder="Platform"
+              value={form.platform}
+              onChange={(e) => setForm({ ...form, platform: e.target.value })}
+            />
+            <Input
+              className="sm:col-span-2"
               placeholder="Meeting link (https://…)"
               value={form.meeting_link}
               onChange={(e) => setForm({ ...form, meeting_link: e.target.value })}
             />
             <Button
-              className="w-fit"
+              className="w-fit sm:col-span-2"
               onClick={() => create.mutate()}
               disabled={
                 !form.batch || !form.title || !form.scheduled_at || !form.meeting_link || create.isPending

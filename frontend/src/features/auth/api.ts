@@ -18,12 +18,13 @@ export const authApi = {
   async csrf(): Promise<void> {
     await api.get("/auth/csrf/");
   },
-  async login(username: string, password: string, role: string): Promise<AuthUser> {
+  async login(username: string, password: string, role?: string): Promise<AuthUser> {
     try {
       const { data } = await api.post<AuthUser>("/auth/login/", {
         username,
         password,
-        role,
+        // Omitted on the unified sign-in — the backend routes by the account's role.
+        ...(role ? { role } : {}),
         device_id: await getDeviceId(),
       });
       return data;

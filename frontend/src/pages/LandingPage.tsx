@@ -1,8 +1,13 @@
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { ExternalLink, Youtube } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
-import { ROLES } from "../app/roles";
-import { Logo, fadeUp, staggerContainer, staggerItem } from "../design-system";
+import { ROLES, slugForRole } from "../app/roles";
+import { Button, Input, Logo, cn, fadeUp, staggerContainer, staggerItem } from "../design-system";
+import { useAuth } from "../features/auth/auth";
+import { utilityApi, youtubeThumb } from "../features/utility/api";
 
 const FEATURES = [
   { title: "Learn your way", body: "Live classes and recorded lessons you can revisit anytime." },
@@ -10,12 +15,13 @@ const FEATURES = [
   { title: "See your progress", body: "Attendance, scores, streaks and rank in one clear view." },
 ];
 
-const PRIMARY = ["student", "faculty", "admin", "super_admin"];
+const NAV_LINKS = [
+  { label: "Features", href: "#features" },
+  { label: "Utility links", href: "#utility-links" },
+  { label: "Contact", href: "#contact" },
+];
 
 export function LandingPage() {
-  const primaryRoles = PRIMARY.map((v) => ROLES.find((r) => r.value === v)!).filter(Boolean);
-  const staffRoles = ROLES.filter((r) => !PRIMARY.includes(r.value));
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-sky via-appbg to-surface">
       {/* Ambient brand glows */}
@@ -24,25 +30,9 @@ export function LandingPage() {
         <div className="absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-navy/10 blur-3xl" />
       </div>
 
-      <header className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface shadow-card">
-            <Logo size={42} />
-          </span>
-          <div className="leading-tight">
-            <div className="text-base font-semibold text-ink">Advantage Pro</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted">
-              Learning Management
-            </div>
-          </div>
-        </div>
-        <span className="inline-flex items-center gap-2 rounded-full border border-brdr bg-surface px-3 py-1.5 text-xs text-muted shadow-card">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          All learning systems operational
-        </span>
-      </header>
+      <Navbar />
 
-      <main className="relative mx-auto grid max-w-6xl gap-10 px-6 pb-16 pt-6 lg:grid-cols-2 lg:items-center lg:pt-14">
+      <main className="relative mx-auto grid max-w-6xl gap-10 px-6 pb-10 pt-8 lg:grid-cols-2 lg:items-center lg:pt-14">
         <motion.div variants={staggerContainer} initial="hidden" animate="show">
           <motion.span
             variants={staggerItem}
@@ -62,11 +52,11 @@ export function LandingPage() {
             </span>
           </motion.h1>
           <motion.p variants={staggerItem} className="mt-5 max-w-md text-base text-muted">
-            Watch classes, practise with tests and tasks, track your attendance and scores, and stay
-            connected with your batch — your whole learning journey in one place.
+            Watch classes, practise with tests and tasks, track your attendance and scores, and
+            stay connected with your batch — your whole learning journey in one place.
           </motion.p>
 
-          <motion.div variants={staggerItem} className="mt-8 grid gap-3 sm:grid-cols-3">
+          <motion.div id="features" variants={staggerItem} className="mt-8 grid gap-3 sm:grid-cols-3">
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl border border-brdr bg-surface/70 p-4 shadow-card">
                 <div className="text-sm font-semibold text-ink">{f.title}</div>
@@ -80,63 +70,229 @@ export function LandingPage() {
           </motion.p>
         </motion.div>
 
-        <motion.div variants={fadeUp} initial="hidden" animate="show">
-          <div className="rounded-3xl border border-brdr bg-surface p-8 shadow-lift">
-            <div className="text-xs font-semibold uppercase tracking-wider text-brand-strong">
-              Welcome to Advantage Pro
-            </div>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-              Sign in to your portal
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              Pick your portal and jump back into learning.
-            </p>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              {primaryRoles.map((r) => (
-                <Link
-                  key={r.slug}
-                  to={`/login/${r.slug}`}
-                  className="group rounded-xl border border-brdr bg-surface px-4 py-3 transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card"
-                >
-                  <div className="text-sm font-semibold text-navy group-hover:text-brand-strong">
-                    {r.label}
-                  </div>
-                  <div className="truncate text-xs text-muted">{r.tagline}</div>
-                </Link>
-              ))}
-            </div>
-
-            <div className="mt-4">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
-                Staff portals
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {staffRoles.map((r) => (
-                  <Link
-                    key={r.slug}
-                    to={`/login/${r.slug}`}
-                    className="rounded-lg border border-brdr bg-surface px-3 py-1.5 text-xs font-medium text-navy transition hover:border-brand/40 hover:text-brand-strong"
-                  >
-                    {r.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between text-xs">
-              <Link to="/forgot-password" className="font-medium text-brand-strong hover:underline">
-                Forgot password?
-              </Link>
-              <span className="text-muted">Two-step verified access</span>
-            </div>
-          </div>
+        <motion.div variants={fadeUp} initial="hidden" animate="show" id="signin">
+          <SignInCard />
         </motion.div>
       </main>
 
-      <footer className="relative border-t border-brdr bg-surface/60 py-6 text-center text-xs text-muted">
+      <NoticeBoard />
+
+      <footer
+        id="contact"
+        className="relative border-t border-brdr bg-surface/60 py-6 text-center text-xs text-muted"
+      >
         Advantage Pro · Vectra Technosoft · since 1998
       </footer>
     </div>
+  );
+}
+
+function Navbar() {
+  return (
+    <header className="sticky top-0 z-40 border-b border-brdr/70 bg-surface/80 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+        <a href="#top" className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface shadow-card ring-1 ring-black/5">
+            <Logo size={38} />
+          </span>
+          <div className="leading-tight">
+            <div className="text-[15px] font-semibold text-ink">Advantage Pro</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted">
+              Learning Management
+            </div>
+          </div>
+        </a>
+        <nav className="hidden items-center gap-6 md:flex">
+          {NAV_LINKS.map((l) => (
+            <a
+              key={l.label}
+              href={l.href}
+              className="text-sm font-medium text-muted transition-colors hover:text-brand-strong"
+            >
+              {l.label}
+            </a>
+          ))}
+        </nav>
+        <a
+          href="#signin"
+          className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-strong"
+        >
+          Sign in
+        </a>
+      </div>
+    </header>
+  );
+}
+
+/** One sign-in for everyone — the backend routes each account to its own portal. */
+function SignInCard() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      const user = await login(identifier, password);
+      navigate(`/${slugForRole(user.role)}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid credentials.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-3xl border border-brdr bg-surface p-8 shadow-lift">
+      <div className="text-xs font-semibold uppercase tracking-wider text-brand-strong">
+        Welcome back
+      </div>
+      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+        Sign in to your workspace
+      </h2>
+      <p className="mt-1 text-sm text-muted">
+        One sign-in for everyone — we&apos;ll take you straight to your portal.
+      </p>
+
+      <form className="mt-6 flex flex-col gap-3" onSubmit={submit}>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted" htmlFor="landing-id">
+            Email or Registration ID
+          </label>
+          <Input
+            id="landing-id"
+            autoComplete="username"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="e.g. s101@example.com or S101"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted" htmlFor="landing-pw">
+            Password
+          </label>
+          <Input
+            id="landing-pw"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </div>
+        {error && (
+          <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
+            {error}
+          </p>
+        )}
+        <Button type="submit" className="mt-1 w-full" disabled={!identifier || !password || busy}>
+          {busy ? "Signing in…" : "Sign in securely"}
+        </Button>
+      </form>
+
+      <div className="mt-4 flex items-center justify-between text-xs">
+        <Link to="/forgot-password" className="font-medium text-brand-strong hover:underline">
+          Forgot password?
+        </Link>
+        <span className="text-muted">New student? Check your setup email.</span>
+      </div>
+
+      <div className="mt-5 border-t border-brdr pt-4">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+          Prefer your role page?
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {ROLES.map((r) => (
+            <Link
+              key={r.slug}
+              to={`/login/${r.slug}`}
+              className="text-xs font-medium text-navy/70 hover:text-brand-strong hover:underline"
+            >
+              {r.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Public notice board curated by the MIS desk — pinned notes with YouTube thumbnails. */
+function NoticeBoard() {
+  const links = useQuery({ queryKey: ["utility-links-public"], queryFn: utilityApi.list });
+  const items = links.data ?? [];
+
+  return (
+    <section id="utility-links" className="relative mx-auto max-w-6xl px-6 pb-16">
+      <div className="mb-6 flex items-end justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-ink">Utility links</h2>
+          <p className="mt-1 text-sm text-muted">
+            Fresh from the MIS desk — sessions, playlists and resources worth your time.
+          </p>
+        </div>
+      </div>
+
+      <div className="relative rounded-3xl border-4 border-[#d9b98a] bg-gradient-to-br from-[#f7ead2] to-[#f0dcba] p-6 shadow-card sm:p-8">
+        {/* corkboard texture dots */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-3xl opacity-[0.15]"
+          style={{ backgroundImage: "radial-gradient(#8a6a3b 1px, transparent 1px)", backgroundSize: "18px 18px" }}
+        />
+        {items.length === 0 ? (
+          <p className="relative py-10 text-center text-sm text-[#7a5c33]">
+            The board is empty for now — check back soon.
+          </p>
+        ) : (
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-80px" }}
+            className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {items.slice(0, 9).map((l, i) => {
+              const thumb = youtubeThumb(l.url);
+              return (
+                <motion.a
+                  key={l.id}
+                  variants={staggerItem}
+                  href={l.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  whileHover={{ rotate: 0, y: -4, scale: 1.02 }}
+                  className={cn(
+                    "group relative block rounded-xl bg-surface p-3 shadow-lift transition-shadow",
+                    i % 3 === 0 ? "rotate-[-1.2deg]" : i % 3 === 1 ? "rotate-[0.8deg]" : "rotate-[-0.5deg]",
+                  )}
+                >
+                  {/* pushpin */}
+                  <span className="absolute -top-2 left-1/2 z-10 h-4 w-4 -translate-x-1/2 rounded-full bg-logoRed shadow-[0_2px_4px_rgba(0,0,0,0.35)] ring-2 ring-white/60" />
+                  {thumb ? (
+                    <img src={thumb} alt="" className="h-36 w-full rounded-lg object-cover" />
+                  ) : (
+                    <div className="flex h-36 w-full items-center justify-center rounded-lg bg-sky">
+                      <ExternalLink className="text-brand-strong" />
+                    </div>
+                  )}
+                  <div className="flex items-start gap-2 px-1 pb-1 pt-3">
+                    {thumb && <Youtube size={16} className="mt-0.5 shrink-0 text-danger" />}
+                    <span className="text-sm font-semibold leading-snug text-ink group-hover:text-brand-strong">
+                      {l.title}
+                    </span>
+                  </div>
+                </motion.a>
+              );
+            })}
+          </motion.div>
+        )}
+      </div>
+    </section>
   );
 }

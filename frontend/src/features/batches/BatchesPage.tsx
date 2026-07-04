@@ -79,8 +79,10 @@ export function BatchesPage({ role }: { role: RoleDef }) {
                 );
               }}
             >
-              <Input placeholder="Code (e.g. FS)" value={cCode} onChange={(e) => setCCode(e.target.value)} />
-              <Input placeholder="Name" value={cName} onChange={(e) => setCName(e.target.value)} />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input placeholder="Code (e.g. FS)" value={cCode} onChange={(e) => setCCode(e.target.value)} />
+                <Input placeholder="Name" value={cName} onChange={(e) => setCName(e.target.value)} />
+              </div>
               <Button type="submit" variant="soft" disabled={!cCode || !cName || createCourse.isPending}>
                 Add course
               </Button>
@@ -99,8 +101,10 @@ export function BatchesPage({ role }: { role: RoleDef }) {
                 });
               }}
             >
-              <Input placeholder="Batch ID (e.g. FS-2026A)" value={b.code} onChange={(e) => setB({ ...b, code: e.target.value })} />
-              <Input placeholder="Name" value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input placeholder="Batch ID (e.g. FS-2026A)" value={b.code} onChange={(e) => setB({ ...b, code: e.target.value })} />
+                <Input placeholder="Name" value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} />
+              </div>
               <Select value={b.course} onChange={(e) => setB({ ...b, course: e.target.value })}>
                 <option value="">Select course…</option>
                 {courses.data?.map((c) => (

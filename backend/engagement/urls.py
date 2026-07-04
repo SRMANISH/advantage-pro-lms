@@ -8,6 +8,8 @@ from .views import (
     LinkedInReportView,
     NextPlanListView,
     NextPlanView,
+    UtilityLinkDetailView,
+    UtilityLinksView,
 )
 
 urlpatterns = [
@@ -24,4 +26,6 @@ urlpatterns = [
         name="engagement-r-google",
     ),
     path("engagement/next-plans/", NextPlanListView.as_view(), name="engagement-next-plans"),
+    path("utility-links/", UtilityLinksView.as_view(), name="utility-links"),
+    path("utility-links/<uuid:pk>/", UtilityLinkDetailView.as_view(), name="utility-link-detail"),
 ]

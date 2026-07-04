@@ -81,6 +81,7 @@ class Command(BaseCommand):
 
         students = self._seed_students(batch, users["student1"])
         self._seed_login_attendance(batch, students)
+        self._seed_utility_links(users["mis1"])
 
         if not Video.objects.filter(batch=batch).exists():
             self._seed_content(batch, faculty, students)
@@ -160,6 +161,24 @@ class Command(BaseCommand):
                         reference_id=f"{batch.id}:{day.isoformat()}",
                         defaults={"batch": batch, "date": day},
                     )
+
+    # --- utility links (public notice board, curated by MIS) ---
+    def _seed_utility_links(self, mis):
+        from engagement.models import UtilityLink
+
+        links = [
+            (
+                "Full Stack crash course — session recording",
+                "https://www.youtube.com/watch?v=nu_pCVPKzTk",
+                True,
+            ),
+            ("React in 100 seconds", "https://www.youtube.com/watch?v=Tn6-PIqc4UM", False),
+            ("How the internet works", "https://www.youtube.com/watch?v=x3c1ih2NJEg", False),
+        ]
+        for title, url, pinned in links:
+            UtilityLink.objects.get_or_create(
+                title=title, defaults={"url": url, "pinned": pinned, "created_by": mis}
+            )
 
     # --- content ---
     def _seed_content(self, batch, faculty, students):

@@ -72,6 +72,55 @@ def test_me_after_login_and_logout(client, faculty):
 
 
 @pytest.mark.django_db
+def test_unified_login_without_role_routes_by_account_role(client, faculty):
+    # No role in the body -> backend uses the account's own role (unified sign-in).
+    resp = client.post(
+        LOGIN_URL,
+        {"username": "fac1", "password": PASSWORD},
+        content_type="application/json",
+    )
+    assert resp.status_code == 200
+    assert resp.json()["role"] == Role.FACULTY
+
+
+@pytest.mark.django_db
+def test_unified_login_accepts_email(client, db):
+    get_user_model().objects.create_user(
+        username="mis9",
+        password=PASSWORD,
+        role=Role.MIS,
+        status=UserStatus.ACTIVE,
+        email="mis9@example.com",
+    )
+    resp = client.post(
+        LOGIN_URL,
+        {"username": "mis9@example.com", "password": PASSWORD},
+        content_type="application/json",
+    )
+    assert resp.status_code == 200
+    assert resp.json()["role"] == Role.MIS
+
+
+@pytest.mark.django_db
+def test_unified_login_ambiguous_email_asks_for_registration_id(client, db):
+    for name in ("dup1", "dup2"):
+        get_user_model().objects.create_user(
+            username=name,
+            password=PASSWORD,
+            role=Role.STUDENT,
+            status=UserStatus.ACTIVE,
+            email="same@example.com",
+        )
+    resp = client.post(
+        LOGIN_URL,
+        {"username": "same@example.com", "password": PASSWORD},
+        content_type="application/json",
+    )
+    assert resp.status_code == 401
+    assert "Registration ID" in resp.json()["detail"]
+
+
+@pytest.mark.django_db
 def test_login_is_rate_limited(client, faculty):
     # The login page is throttled (10/min) — the 11th attempt is blocked (brute-force guard).
     last = None

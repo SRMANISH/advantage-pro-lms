@@ -78,3 +78,21 @@ class CourseNextPlan(TimeStampedModel):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["student", "batch"], name="uniq_next_plan")]
         indexes = [models.Index(fields=["student"])]
+
+
+class UtilityLink(TimeStampedModel):
+    """MIS-curated notice-board links (YouTube sessions, resources) shown publicly on the
+    landing page. MIS manages them; anyone can read."""
+
+    title = models.CharField(max_length=200)
+    url = models.URLField(max_length=500)
+    pinned = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["-pinned", "-created_at"]
+
+    def __str__(self) -> str:
+        return self.title

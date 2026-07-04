@@ -1,7 +1,8 @@
-"""Engagement APIs: student status + actions, and Admin/MIS reports."""
+"""Engagement APIs: student status + actions, Admin/MIS reports, and utility links."""
 
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -11,10 +12,56 @@ from core.permissions import has_any_role
 from core.roles import Role
 from notifications.services import admins_and_mis, notify_many
 
-from .models import CourseNextPlan, GoogleReview, LinkedInFollow
+from .models import CourseNextPlan, GoogleReview, LinkedInFollow, UtilityLink
 from .services import has_completed_course
 
 ReportRoles = has_any_role(Role.ADMIN, Role.MIS)
+UtilityManageRoles = has_any_role(Role.MIS)
+
+
+class UtilityLinkSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    url = serializers.URLField(max_length=500)
+    pinned = serializers.BooleanField(required=False, default=False)
+
+
+def _link_row(link) -> dict:
+    return {
+        "id": link.id,
+        "title": link.title,
+        "url": link.url,
+        "pinned": link.pinned,
+        "created_at": link.created_at,
+    }
+
+
+class UtilityLinksView(APIView):
+    """Public notice board: anyone reads; MIS posts."""
+
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [UtilityManageRoles()]
+
+    def get(self, request):
+        return Response([_link_row(link) for link in UtilityLink.objects.all()[:50]])
+
+    def post(self, request):
+        serializer = UtilityLinkSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        link = UtilityLink.objects.create(created_by=request.user, **serializer.validated_data)
+        record_action(actor=request.user, action="utility_link_added", target=link)
+        return Response(_link_row(link), status=201)
+
+
+class UtilityLinkDetailView(APIView):
+    permission_classes = [UtilityManageRoles]
+
+    def delete(self, request, pk):
+        link = UtilityLink.objects.filter(pk=pk).first()
+        if not link:
+            return Response({"detail": "Link not found."}, status=404)
+        record_action(actor=request.user, action="utility_link_removed", target=link)
+        link.delete()
+        return Response(status=204)
 
 
 def _completed_students():
