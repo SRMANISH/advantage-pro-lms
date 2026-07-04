@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, SectionHeading } from "../../design-system";
+import { Badge, Button, Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import {
   CERT_FOLLOW_UP_STATUSES,
@@ -39,7 +39,7 @@ export function CertFollowUpPage({ role }: { role: RoleDef }) {
 
       <Card>
         {rows.isLoading ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <TableSkeleton rows={5} cols={6} />
         ) : data.length > 0 ? (
           <div className="overflow-hidden rounded-lg border border-brdr">
             <table className="w-full text-sm">

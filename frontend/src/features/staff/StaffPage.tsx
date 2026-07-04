@@ -8,8 +8,12 @@ import {
   Card,
   EmptyState,
   Input,
+  ListSkeleton,
+  Paginator,
   SectionHeading,
   Select,
+  TableToolbar,
+  useTableTools,
   useToast,
 } from "../../design-system";
 import { useAuth } from "../auth/auth";
@@ -40,6 +44,7 @@ export function StaffPage({ role }: { role: RoleDef }) {
     : ALL_STAFF_ROLES.filter((r) => r.value === "counselor");
 
   const staff = useQuery({ queryKey: ["staff"], queryFn: staffApi.list });
+  const table = useTableTools(staff.data, ["username", "full_name", "role"], 8);
   const [form, setForm] = useState({ ...empty, role: roleOptions[0]?.value ?? "" });
   const [error, setError] = useState("");
 
@@ -117,9 +122,17 @@ export function StaffPage({ role }: { role: RoleDef }) {
 
       <Card>
         <h2 className="mb-3 text-base font-medium text-ink">Existing staff</h2>
-        {staff.data && staff.data.length > 0 ? (
-          <div className="flex flex-col divide-y divide-brdr">
-            {staff.data.map((s) => (
+        {staff.isLoading ? (
+          <ListSkeleton items={3} />
+        ) : staff.data && staff.data.length > 0 ? (
+          <>
+            <TableToolbar
+              query={table.query}
+              onQuery={table.setQuery}
+              placeholder="Search staff by name, ID or role…"
+            />
+            <div className="flex flex-col divide-y divide-brdr">
+              {table.rows.map((s) => (
               <div key={s.id} className="flex items-center justify-between py-2 text-sm">
                 <div>
                   <span className="font-medium text-ink">{s.full_name || s.username}</span>
@@ -135,7 +148,14 @@ export function StaffPage({ role }: { role: RoleDef }) {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+            <Paginator
+              page={table.page}
+              pageCount={table.pageCount}
+              onPage={table.setPage}
+              total={table.total}
+            />
+          </>
         ) : (
           <EmptyState title="No staff accounts yet" />
         )}

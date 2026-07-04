@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, SectionHeading } from "../../design-system";
+import {
+  Button,
+  Card,
+  ListSkeleton,
+  ProgressRing,
+  SectionHeading,
+  TableSkeleton,
+} from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { attendanceApi, FOLLOW_UP_STATUSES, type FollowUpStatus } from "./api";
@@ -40,19 +47,27 @@ function MyAttendance() {
   return (
     <div className="grid gap-4">
       {rows.isLoading ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <ListSkeleton items={2} />
       ) : rows.data && rows.data.length > 0 ? (
         rows.data.map((r) => (
           <Card key={r.batch}>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-base font-medium text-ink">{r.batch_name}</h2>
-              <span className="text-lg font-medium text-navy">{r.percent}%</span>
+            <div className="flex flex-wrap items-center gap-6">
+              <ProgressRing value={r.percent} label="attendance" />
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-semibold text-ink">{r.batch_name}</h2>
+                <p className="mt-1 text-sm text-muted">
+                  You are present on{" "}
+                  <span className="font-semibold text-ink">{r.present}</span> of{" "}
+                  <span className="font-semibold text-ink">{r.total}</span> active days.
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  Attendance is based on your daily login — sign in each day to keep it up.
+                </p>
+                <div className="mt-3 max-w-sm">
+                  <Bar percent={r.percent} />
+                </div>
+              </div>
             </div>
-            <Bar percent={r.percent} />
-            <p className="mt-2 text-xs text-muted">
-              Present on {r.present} of {r.total} active days — attendance is based on your daily
-              login.
-            </p>
           </Card>
         ))
       ) : (
@@ -190,7 +205,7 @@ function DailyLoginPanel({ batchId, canFollowUp }: { batchId: string; canFollowU
       </div>
 
       {daily.isLoading ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <TableSkeleton rows={5} cols={4} />
       ) : rows.length > 0 ? (
         <>
           <p className="mb-2 text-xs text-muted">

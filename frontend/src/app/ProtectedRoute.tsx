@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import type { ReactNode } from "react";
 
+import { Spinner } from "../design-system";
 import { useAuth } from "../features/auth/auth";
 import { slugForRole, type RoleDef } from "./roles";
 
@@ -13,7 +14,11 @@ export function ProtectedRoute({ role, children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="p-10 text-sm text-muted">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-appbg">
+        <Spinner size={28} />
+      </div>
+    );
   }
   if (!user) {
     return <Navigate to={`/login/${role.slug}`} replace />;

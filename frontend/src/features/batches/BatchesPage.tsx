@@ -2,7 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, Input, SectionHeading, Select } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  ListSkeleton,
+  SectionHeading,
+  Select,
+} from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { batchesApi, type Batch, type BatchState } from "./api";
@@ -127,7 +136,7 @@ export function BatchesPage({ role }: { role: RoleDef }) {
           {user?.role === "faculty" ? "Your batches" : "All batches"}
         </h2>
         {batches.isLoading ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <ListSkeleton items={3} />
         ) : batches.data && batches.data.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {batches.data.map((batch) => (

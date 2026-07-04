@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  ListSkeleton,
+  SectionHeading,
+} from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { certificationApi, type CertRow } from "./api";
 
@@ -17,7 +25,7 @@ export function CertificatePage({ role }: { role: RoleDef }) {
       />
 
       {rows.isLoading ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <ListSkeleton items={2} />
       ) : rows.data && rows.data.length > 0 ? (
         <div className="grid gap-4">
           {rows.data.map((r) => (

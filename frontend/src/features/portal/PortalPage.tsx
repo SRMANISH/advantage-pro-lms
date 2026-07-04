@@ -1,5 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Award,
+  BookOpen,
+  CalendarCheck,
+  CheckCircle2,
+  ClipboardCheck,
+  ClipboardList,
+  FileText,
+  Flame,
+  GraduationCap,
+  MessagesSquare,
+  Users,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
@@ -63,6 +77,14 @@ function Hero({
     >
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/25 blur-3xl" />
+        {/* Logo-geometry accents: concentric ring + rising bars */}
+        <svg className="absolute -right-8 bottom-[-30px] h-56 w-56 opacity-[0.16]" viewBox="0 0 200 200" fill="none">
+          <circle cx="100" cy="100" r="88" stroke="white" strokeWidth="2" />
+          <circle cx="100" cy="100" r="64" stroke="white" strokeWidth="1" strokeDasharray="4 6" />
+          <rect x="70" y="110" width="14" height="34" rx="3" fill="white" />
+          <rect x="92" y="92" width="14" height="52" rx="3" fill="white" />
+          <rect x="114" y="72" width="14" height="72" rx="3" fill="white" />
+        </svg>
       </div>
       <div className="relative flex flex-wrap items-center justify-between gap-6">
         <div className="max-w-xl">
@@ -177,11 +199,20 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
             label="Attendance"
             value={k.attendance_pct ?? 0}
             suffix="%"
+            icon={CalendarCheck}
+            tone="green"
             footer={<Sparkline data={trendValues} />}
           />
-          <StatCard label="Pending tasks" value={k.pending_tasks ?? 0} />
-          <StatCard label="Upcoming tests" value={k.upcoming_tests ?? 0} />
-          <StatCard label="Login streak" value={k.streak_days ?? 0} suffix=" days" />
+          <StatCard label="Pending tasks" value={k.pending_tasks ?? 0} icon={FileText} tone="amber" />
+          <StatCard label="Upcoming tests" value={k.upcoming_tests ?? 0} icon={ClipboardList} tone="violet" />
+          <StatCard
+            label="Login streak"
+            value={k.streak_days ?? 0}
+            suffix=" days"
+            icon={Flame}
+            tone="rose"
+            delta={k.streak_days && k.streak_days >= 3 ? "keep it up!" : undefined}
+          />
         </KpiGrid>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
@@ -208,14 +239,16 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           highlight={{ label: "Assigned batches", value: String(t.batches ?? 0) }}
         />
         <KpiGrid>
-          <StatCard label="Batches" value={t.batches ?? 0} />
-          <StatCard label="Students" value={t.students ?? 0} />
+          <StatCard label="Batches" value={t.batches ?? 0} icon={Users} tone="azure" />
+          <StatCard label="Students" value={t.students ?? 0} icon={GraduationCap} tone="navy" />
           <StatCard
             label="Unanswered doubts"
             value={a.unanswered_doubts ?? 0}
+            icon={MessagesSquare}
+            tone="amber"
             deltaTone={a.unanswered_doubts ? "down" : "up"}
           />
-          <StatCard label="To grade" value={a.submissions_to_grade ?? 0} />
+          <StatCard label="To grade" value={a.submissions_to_grade ?? 0} icon={ClipboardCheck} tone="violet" />
         </KpiGrid>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
@@ -248,12 +281,14 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           highlight={{ label: "Active batches", value: String(t.active_batches ?? 0) }}
         />
         <KpiGrid>
-          <StatCard label="Total students" value={t.students ?? 0} />
-          <StatCard label="Active batches" value={t.active_batches ?? 0} />
-          <StatCard label="Courses" value={t.courses ?? 0} />
+          <StatCard label="Total students" value={t.students ?? 0} icon={GraduationCap} tone="azure" />
+          <StatCard label="Active batches" value={t.active_batches ?? 0} icon={Users} tone="green" />
+          <StatCard label="Courses" value={t.courses ?? 0} icon={BookOpen} tone="violet" />
           <StatCard
             label="Certificates pending"
             value={a.certificate_pending ?? 0}
+            icon={Award}
+            tone="amber"
             deltaTone={a.certificate_pending ? "down" : "up"}
           />
         </KpiGrid>
@@ -287,14 +322,16 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           highlight={{ label: "Absentees today", value: String(k.absentees_today ?? 0) }}
         />
         <KpiGrid>
-          <StatCard label="Active students" value={k.active_students ?? 0} />
-          <StatCard label="Logged in today" value={k.logged_in_today ?? 0} />
+          <StatCard label="Active students" value={k.active_students ?? 0} icon={GraduationCap} tone="azure" />
+          <StatCard label="Logged in today" value={k.logged_in_today ?? 0} icon={CheckCircle2} tone="green" />
           <StatCard
             label="Absentees today"
             value={k.absentees_today ?? 0}
+            icon={AlertTriangle}
+            tone="rose"
             deltaTone={k.absentees_today ? "down" : "up"}
           />
-          <StatCard label="Batches" value={data.totals?.batches ?? 0} />
+          <StatCard label="Batches" value={data.totals?.batches ?? 0} icon={Users} tone="navy" />
         </KpiGrid>
         <TrendCard data={data.trend} title="Platform activity" />
       </div>
@@ -314,18 +351,22 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           highlight={{ label: "Overdue", value: String(k.overdue ?? 0) }}
         />
         <KpiGrid>
-          <StatCard label="Open" value={k.open ?? 0} />
+          <StatCard label="Open" value={k.open ?? 0} icon={MessagesSquare} tone="azure" />
           <StatCard
             label="Unanswered"
             value={k.unanswered ?? 0}
+            icon={AlertTriangle}
+            tone="amber"
             deltaTone={k.unanswered ? "down" : "up"}
           />
           <StatCard
             label="Overdue"
             value={k.overdue ?? 0}
+            icon={Flame}
+            tone="rose"
             deltaTone={k.overdue ? "down" : "up"}
           />
-          <StatCard label="Resolved" value={k.resolved ?? 0} deltaTone="up" />
+          <StatCard label="Resolved" value={k.resolved ?? 0} icon={CheckCircle2} tone="green" deltaTone="up" />
         </KpiGrid>
         <Card>
           <SectionHeading title="Forum status" />

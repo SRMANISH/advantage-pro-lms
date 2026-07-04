@@ -2,7 +2,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  FileUpload,
+  Input,
+  ListSkeleton,
+  SectionHeading,
+  cn,
+  useToast,
+} from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -160,11 +171,15 @@ function TaskGrading({ task }: { task: TaskItem }) {
 }
 
 function GradeRow({ submission, onGraded }: { submission: Submission; onGraded: () => void }) {
+  const toast = useToast();
   const [score, setScore] = useState(submission.score?.toString() ?? "");
   const [feedback, setFeedback] = useState(submission.feedback);
   const grade = useMutation({
     mutationFn: () => tasksApi.grade(submission.id, { score: Number(score), feedback }),
-    onSuccess: onGraded,
+    onSuccess: () => {
+      onGraded();
+      toast.show("Submission graded — student notified.", "success");
+    },
   });
 
   return (
@@ -203,7 +218,7 @@ function StudentTasks() {
   return (
     <div className="grid gap-4">
       {tasks.isLoading ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <ListSkeleton items={3} />
       ) : tasks.data && tasks.data.length > 0 ? (
         tasks.data.map((t) => <StudentTaskCard key={t.id} task={t} />)
       ) : (
@@ -215,24 +230,50 @@ function StudentTasks() {
   );
 }
 
+// Assignment-card status: drives the left rail colour + badge.
+const TASK_STATUS = {
+  graded: { rail: "border-l-success", badge: "success" as const, label: "Graded" },
+  submitted: { rail: "border-l-brand", badge: "info" as const, label: "Submitted" },
+  late: { rail: "border-l-warning", badge: "warning" as const, label: "Submitted late" },
+  overdue: { rail: "border-l-danger", badge: "danger" as const, label: "Overdue" },
+  pending: { rail: "border-l-brdr", badge: "neutral" as const, label: "Pending" },
+};
+
 function StudentTaskCard({ task }: { task: TaskItem }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const submit = useMutation({
     mutationFn: () => tasksApi.submit(task.id, { text, file }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      toast.show("Task submitted.", "success");
+    },
   });
 
   const mine = task.my_submission;
+  const statusKey = mine
+    ? mine.score != null
+      ? "graded"
+      : mine.is_late
+        ? "late"
+        : "submitted"
+    : task.is_overdue
+      ? "overdue"
+      : "pending";
+  const status = TASK_STATUS[statusKey];
 
   return (
-    <Card>
-      <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-base font-medium text-ink">{task.title}</h2>
-        {task.deadline && (
-          <Badge>{task.is_overdue ? "overdue" : `due ${task.deadline.slice(0, 10)}`}</Badge>
-        )}
+    <Card className={cn("border-l-4", status.rail)}>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-semibold text-ink">{task.title}</h2>
+        <div className="flex items-center gap-2">
+          {task.deadline && (
+            <span className="text-xs text-muted">due {task.deadline.slice(0, 10)}</span>
+          )}
+          <Badge tone={status.badge}>{status.label}</Badge>
+        </div>
       </div>
       {task.description && <p className="mb-2 text-sm text-muted">{task.description}</p>}
 
@@ -257,7 +298,12 @@ function StudentTaskCard({ task }: { task: TaskItem }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
+          <FileUpload
+            file={file}
+            onFile={setFile}
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg,.zip"
+            hint="Attach your work (optional) — PDF, docs or images"
+          />
           <Button
             className="w-fit"
             onClick={() => submit.mutate()}

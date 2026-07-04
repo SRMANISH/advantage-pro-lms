@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  ListSkeleton,
+  SectionHeading,
+} from "../../design-system";
 import { batchesApi } from "../batches/api";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -188,7 +196,7 @@ function StudentTests() {
     <Card>
       <h2 className="mb-3 text-base font-medium text-ink">Your tests</h2>
       {tests.isLoading ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <ListSkeleton items={3} />
       ) : tests.data && tests.data.length > 0 ? (
         <div className="flex flex-col divide-y divide-brdr">
           {tests.data.map((t) => (
@@ -236,7 +244,7 @@ function TakeTest({ id, onDone }: { id: string; onDone: () => void }) {
     },
   });
 
-  if (test.isLoading || !test.data) return <p className="text-sm text-muted">Loading…</p>;
+  if (test.isLoading || !test.data) return <ListSkeleton items={2} />;
   const t = test.data;
 
   return (

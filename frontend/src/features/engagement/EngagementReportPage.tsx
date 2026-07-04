@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Card, EmptyState, SectionHeading } from "../../design-system";
+import { Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { engagementApi } from "./api";
 
@@ -35,7 +35,7 @@ export function EngagementReportPage({ role }: { role: RoleDef }) {
       <Card>
         <h2 className="mb-3 text-base font-medium text-ink">Course next-plan responses</h2>
         {plans.isLoading ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <TableSkeleton rows={4} cols={6} />
         ) : plans.data && plans.data.length > 0 ? (
           <div className="overflow-x-auto rounded-lg border border-brdr">
             <table className="w-full text-sm">

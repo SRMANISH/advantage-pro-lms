@@ -16,6 +16,14 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+// Module-level bridge so non-React code (e.g. the axios interceptor) can raise toasts.
+let globalShow: ToastContextValue["show"] | null = null;
+
+/** Show a toast from anywhere (no hook needed). No-op before the provider mounts. */
+export function toast(message: string, tone: ToastTone = "info") {
+  globalShow?.(message, tone);
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -24,6 +32,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => [...prev, { id, message, tone }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
+  globalShow = show;
 
   return (
     <ToastContext.Provider value={{ show }}>

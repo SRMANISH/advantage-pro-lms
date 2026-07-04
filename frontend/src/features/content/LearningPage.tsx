@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, SectionHeading } from "../../design-system";
+import { Badge, Button, Card, EmptyState, ListSkeleton, SectionHeading } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { UpsellPrompt } from "../upsell/UpsellPrompt";
@@ -42,7 +42,7 @@ export function LearningPage({ role }: { role: RoleDef }) {
           <Card>
             <h2 className="mb-3 text-base font-medium text-ink">Class videos</h2>
             {videos.isLoading ? (
-              <p className="text-sm text-muted">Loading…</p>
+              <ListSkeleton items={3} />
             ) : videos.data && videos.data.length > 0 ? (
               <div className="flex flex-col divide-y divide-brdr">
                 {videos.data.map((v) => (

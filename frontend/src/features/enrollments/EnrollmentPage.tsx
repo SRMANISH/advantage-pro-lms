@@ -8,9 +8,13 @@ import {
   Card,
   EmptyState,
   FileUpload,
+  Paginator,
   SectionHeading,
   TableShell,
+  TableSkeleton,
+  TableToolbar,
   THead,
+  useTableTools,
 } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { enrollmentsApi, type ImportResult } from "./api";
@@ -25,6 +29,12 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const students = useQuery({ queryKey: ["enrollments"], queryFn: enrollmentsApi.list });
+  const table = useTableTools(students.data, [
+    "registration_number",
+    "student_name",
+    "batch_code",
+    "email",
+  ]);
   const [setupLinks, setSetupLinks] = useState<Record<string, string>>({});
   const resend = useMutation({
     mutationFn: (studentId: string) => enrollmentsApi.resendSetup(studentId),
@@ -146,9 +156,15 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
 
       <SectionHeading title="Enrolled students" />
       {students.isLoading ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <TableSkeleton rows={6} cols={6} />
       ) : students.data && students.data.length > 0 ? (
-        <TableShell>
+        <>
+          <TableToolbar
+            query={table.query}
+            onQuery={table.setQuery}
+            placeholder="Search by ID, name, batch or email…"
+          />
+          <TableShell>
           <THead>
             <tr>
               <th className="px-3 py-2">Registration ID</th>
@@ -160,7 +176,7 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
             </tr>
           </THead>
           <tbody>
-            {students.data.map((s) => (
+            {table.rows.map((s) => (
               <tr key={s.id} className="border-t border-brdr">
                 <td className="px-3 py-2 font-medium text-ink">{s.registration_number}</td>
                 <td className="px-3 py-2">{s.student_name}</td>
@@ -190,8 +206,15 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
                 </td>
               </tr>
             ))}
-          </tbody>
-        </TableShell>
+            </tbody>
+          </TableShell>
+          <Paginator
+            page={table.page}
+            pageCount={table.pageCount}
+            onPage={table.setPage}
+            total={table.total}
+          />
+        </>
       ) : (
         <EmptyState
           title="No students enrolled yet"

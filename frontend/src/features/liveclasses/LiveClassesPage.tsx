@@ -141,20 +141,40 @@ function Row({
   onJoin: () => void;
   onCancel: () => void;
 }) {
-  const when = new Date(live.scheduled_at).toLocaleString();
+  const dt = new Date(live.scheduled_at);
+  const time = dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const cancelled = live.status === "cancelled";
+  const past = !cancelled && dt.getTime() < Date.now();
   return (
-    <div className="flex items-center justify-between py-3">
-      <div>
-        <div className="flex items-center gap-2">
-          <span className={`text-sm font-medium ${cancelled ? "text-muted line-through" : "text-ink"}`}>
-            {live.title}
+    <div className="flex items-center justify-between gap-4 py-3">
+      <div className="flex min-w-0 items-center gap-4">
+        <div
+          className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl ${
+            cancelled ? "bg-appbg text-muted" : past ? "bg-sky text-navy" : "bg-brand/10 text-brand-strong"
+          }`}
+        >
+          <span className="text-lg font-bold leading-none">{dt.getDate()}</span>
+          <span className="text-[10px] font-medium uppercase">
+            {dt.toLocaleString([], { month: "short" })}
           </span>
-          {cancelled && <Badge>cancelled</Badge>}
         </div>
-        <div className="text-xs text-muted">
-          {live.batch_code} · {when} · {live.platform}
-          {cancelled && live.cancel_reason ? ` · ${live.cancel_reason}` : ""}
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`text-sm font-semibold ${cancelled ? "text-muted line-through" : "text-ink"}`}>
+              {live.title}
+            </span>
+            {cancelled ? (
+              <Badge tone="danger">cancelled</Badge>
+            ) : past ? (
+              <Badge tone="neutral">completed</Badge>
+            ) : (
+              <Badge tone="success">upcoming</Badge>
+            )}
+          </div>
+          <div className="truncate text-xs text-muted">
+            {live.batch_code} · {time} · {live.platform}
+            {cancelled && live.cancel_reason ? ` · ${live.cancel_reason}` : ""}
+          </div>
         </div>
       </div>
       {cancelled ? null : isStudent ? (

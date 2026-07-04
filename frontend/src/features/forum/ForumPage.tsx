@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, Input, SectionHeading } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  ListSkeleton,
+  SectionHeading,
+} from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { forumApi, type ThreadStatus } from "./api";
@@ -137,7 +145,7 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
   const resolve = useMutation({ mutationFn: () => forumApi.resolve(id), onSuccess: invalidate });
   const escalate = useMutation({ mutationFn: () => forumApi.escalate(id), onSuccess: invalidate });
 
-  if (thread.isLoading || !thread.data) return <p className="text-sm text-muted">Loading…</p>;
+  if (thread.isLoading || !thread.data) return <ListSkeleton items={2} />;
   const t = thread.data;
   const canEscalate = RESPONDERS.has(user?.role ?? "") && t.status !== "resolved" && t.status !== "escalated";
 

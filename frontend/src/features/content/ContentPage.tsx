@@ -1,8 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, EmptyState, Input, SectionHeading, Select } from "../../design-system";
+import {
+  Button,
+  Card,
+  EmptyState,
+  FileUpload,
+  Input,
+  SectionHeading,
+  Select,
+  useToast,
+} from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -29,20 +38,19 @@ export function ContentPage({ role }: { role: RoleDef }) {
     queryFn: () => contentApi.listMaterials(batchId || undefined),
   });
 
+  const toast = useToast();
   const [vTitle, setVTitle] = useState("");
   const [vFile, setVFile] = useState<File | null>(null);
-  const vRef = useRef<HTMLInputElement>(null);
   const [mTitle, setMTitle] = useState("");
   const [mFile, setMFile] = useState<File | null>(null);
-  const mRef = useRef<HTMLInputElement>(null);
 
   const uploadVideo = useMutation({
     mutationFn: () => contentApi.uploadVideo(batchId, vTitle, vFile!),
     onSuccess: () => {
       setVTitle("");
       setVFile(null);
-      if (vRef.current) vRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["videos"] });
+      toast.show("Video uploaded — students notified.", "success");
     },
   });
   const uploadMaterial = useMutation({
@@ -50,8 +58,8 @@ export function ContentPage({ role }: { role: RoleDef }) {
     onSuccess: () => {
       setMTitle("");
       setMFile(null);
-      if (mRef.current) mRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["materials"] });
+      toast.show("Note uploaded.", "success");
     },
   });
 
@@ -84,12 +92,11 @@ export function ContentPage({ role }: { role: RoleDef }) {
               <h2 className="mb-3 text-base font-medium text-ink">Upload class video</h2>
               <div className="flex flex-col gap-2">
                 <Input placeholder="Title" value={vTitle} onChange={(e) => setVTitle(e.target.value)} />
-                <input
-                  ref={vRef}
-                  type="file"
+                <FileUpload
                   accept="video/*"
-                  onChange={(e) => setVFile(e.target.files?.[0] ?? null)}
-                  className="text-sm"
+                  file={vFile}
+                  onFile={setVFile}
+                  hint="MP4, WebM or MOV — up to 512 MB"
                 />
                 <Button
                   onClick={() => uploadVideo.mutate()}
@@ -105,11 +112,11 @@ export function ContentPage({ role }: { role: RoleDef }) {
             <h2 className="mb-3 text-base font-medium text-ink">Upload note / material</h2>
             <div className="flex flex-col gap-2">
               <Input placeholder="Title" value={mTitle} onChange={(e) => setMTitle(e.target.value)} />
-              <input
-                ref={mRef}
-                type="file"
-                onChange={(e) => setMFile(e.target.files?.[0] ?? null)}
-                className="text-sm"
+              <FileUpload
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg,.zip"
+                file={mFile}
+                onFile={setMFile}
+                hint="PDF, docs, slides or images — up to 25 MB"
               />
               <Button
                 variant="soft"

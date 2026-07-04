@@ -2,7 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Card, EmptyState, SectionHeading } from "../../design-system";
+import {
+  Card,
+  EmptyState,
+  ListSkeleton,
+  Paginator,
+  SectionHeading,
+  TableSkeleton,
+  TableToolbar,
+  useTableTools,
+} from "../../design-system";
 import { attendanceApi } from "../attendance/api";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -46,7 +55,7 @@ function MyPerformance() {
   return (
     <div className="grid gap-4">
       {rows.isLoading ? (
-        <p className="text-sm text-muted">Loading…</p>
+        <ListSkeleton items={2} />
       ) : rows.data && rows.data.length > 0 ? (
         rows.data.map((r) => (
           <Card key={r.batch}>
@@ -77,6 +86,7 @@ function BatchBoard() {
     queryFn: () => performanceApi.batch(batchId),
     enabled: !!batchId,
   });
+  const table = useTableTools(board.data, ["registration_number", "student_name"]);
 
   return (
     <div className="grid gap-4">
@@ -99,8 +109,16 @@ function BatchBoard() {
       {batchId && (
         <Card>
           <h2 className="mb-3 text-base font-medium text-ink">Ranked performance</h2>
-          {board.data && board.data.length > 0 ? (
-            <div className="overflow-hidden rounded-lg border border-brdr">
+          {board.isLoading ? (
+            <TableSkeleton rows={6} cols={8} />
+          ) : board.data && board.data.length > 0 ? (
+            <>
+              <TableToolbar
+                query={table.query}
+                onQuery={table.setQuery}
+                placeholder="Search by Registration ID or name…"
+              />
+              <div className="overflow-hidden rounded-lg border border-brdr">
               <table className="w-full text-sm">
                 <thead className="bg-sky text-navy">
                   <tr>
@@ -115,7 +133,7 @@ function BatchBoard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {board.data.map((r) => (
+                  {table.rows.map((r) => (
                     <tr key={r.student} className="border-t border-brdr">
                       <td className="px-3 py-2">{r.rank}</td>
                       <td className="px-3 py-2">{r.registration_number}</td>
@@ -129,7 +147,14 @@ function BatchBoard() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+              <Paginator
+                page={table.page}
+                pageCount={table.pageCount}
+                onPage={table.setPage}
+                total={table.total}
+              />
+            </>
           ) : (
             <EmptyState title="No students in this batch" />
           )}

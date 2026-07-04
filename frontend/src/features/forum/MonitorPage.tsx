@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, SectionHeading } from "../../design-system";
+import { Badge, Button, Card, EmptyState, ListSkeleton, SectionHeading } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { forumApi } from "./api";
 
@@ -29,7 +29,7 @@ export function MonitorPage({ role }: { role: RoleDef }) {
 
       <Card>
         {monitor.isLoading ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <ListSkeleton items={4} />
         ) : monitor.data && monitor.data.threads.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {monitor.data.threads.map((t) => (

@@ -189,6 +189,12 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
 
   return (
     <div className="ap-appbg flex min-h-screen">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-xl focus:bg-navy focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+      >
+        Skip to content
+      </a>
       {roleDef.value === "student" && <EngagementPrompts />}
 
       <aside className="hidden w-64 shrink-0 md:block">
@@ -288,7 +294,7 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
           </div>
         </header>
 
-        <main className="flex-1 px-5 py-6 md:px-8 md:py-8">
+        <main id="main-content" className="flex-1 px-5 py-6 md:px-8 md:py-8">
           <motion.div
             key={location.pathname}
             variants={pageVariants}

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, EmptyState, SectionHeading, useToast } from "../../design-system";
+import { Button, Card, EmptyState, ListSkeleton, SectionHeading, useToast } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { devicesApi } from "./api";
 
@@ -28,7 +28,7 @@ export function DevicesPage({ role }: { role: RoleDef }) {
 
       <Card>
         {requests.isLoading ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <ListSkeleton items={3} />
         ) : requests.data && requests.data.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {requests.data.map((r) => (

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Card, EmptyState, SectionHeading } from "../../design-system";
+import { Card, EmptyState, ListSkeleton, SectionHeading } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { activityApi } from "./api";
 
@@ -18,7 +18,7 @@ export function ActivityPage({ role }: { role: RoleDef }) {
       />
       <Card>
         {rows.isLoading ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <ListSkeleton items={4} />
         ) : rows.data && rows.data.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {rows.data.map((r) => (
