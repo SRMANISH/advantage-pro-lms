@@ -83,6 +83,40 @@ def student_summary(student, batch) -> dict:
     }
 
 
+def batch_attendance_summaries(batch, students=None) -> dict:
+    """Login-attendance summary per student in a **single** grouped query.
+
+    Returns ``{student_id: {"present", "total", "percent"}}``. This is the set-based
+    counterpart to :func:`student_summary`, used by the performance board, the attendance
+    report and the low-attendance escalation so none of them fan out to one query per
+    student.
+    """
+    from django.db.models import Count
+
+    from accounts.models import User
+
+    if students is None:
+        students = User.objects.filter(enrollments__batch=batch).distinct()
+    ids = [s.id for s in students]
+    total = expected_days(batch)
+    present = dict(
+        AttendanceEvent.objects.filter(
+            batch=batch, source=AttendanceSource.LOGIN, student_id__in=ids
+        )
+        .values("student_id")
+        .annotate(days=Count("date", distinct=True))
+        .values_list("student_id", "days")
+    )
+    return {
+        sid: {
+            "present": present.get(sid, 0),
+            "total": total,
+            "percent": round(present.get(sid, 0) / total * 100) if total else 0,
+        }
+        for sid in ids
+    }
+
+
 def get_followup(student, batch) -> AbsenceFollowUp | None:
     return AbsenceFollowUp.objects.filter(student=student, batch=batch).first()
 

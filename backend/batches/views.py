@@ -1,7 +1,9 @@
 """Course & batch APIs with role-scoped access and a guarded lifecycle."""
 
+from django.db import transaction
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 
@@ -23,6 +25,15 @@ from .serializers import (
 
 # Counselor/Tech Support/Student reach batch data through their own modules later.
 StaffOrFaculty = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.FACULTY)
+
+
+class CertificatesExistError(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = (
+        "This batch has issued certificates and cannot be deleted — those are legal "
+        "academic records. Archive the batch instead of deleting it."
+    )
+    default_code = "certificates_exist"
 
 
 class FacultyListView(ListAPIView):
@@ -95,6 +106,10 @@ class BatchViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
+        from certification.models import Certificate
+
+        if Certificate.objects.filter(enrollment__batch=instance).exists():
+            raise CertificatesExistError()
         record_action(
             actor=self.request.user,
             action="batch_deleted",
@@ -131,22 +146,23 @@ class BatchViewSet(viewsets.ModelViewSet):
                 {"detail": f"Cannot move a batch from {batch.state} to {to_state}."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        batch.state = to_state
-        batch.save(update_fields=["state", "updated_at"])
-        # Course-end video access closure (Admin completing the batch — matrix allows AD + MIS).
-        if to_state == BatchState.COMPLETED:
-            from content.models import VideoAccessRevocation
+        with transaction.atomic():
+            batch.state = to_state
+            batch.save(update_fields=["state", "updated_at"])
+            # Course-end video closure (Admin completing the batch — matrix allows AD + MIS).
+            if to_state == BatchState.COMPLETED:
+                from content.models import VideoAccessRevocation
 
-            VideoAccessRevocation.objects.get_or_create(
-                student=None,
-                batch=batch,
-                defaults={"revoked_by": request.user, "reason": "course-end closure"},
+                VideoAccessRevocation.objects.get_or_create(
+                    student=None,
+                    batch=batch,
+                    defaults={"revoked_by": request.user, "reason": "course-end closure"},
+                )
+            record_action(
+                actor=request.user,
+                action="batch_transitioned",
+                target=batch,
+                metadata={"to_state": to_state},
+                ip_address=get_client_ip(request),
             )
-        record_action(
-            actor=request.user,
-            action="batch_transitioned",
-            target=batch,
-            metadata={"to_state": to_state},
-            ip_address=get_client_ip(request),
-        )
         return Response(self.get_serializer(batch).data)

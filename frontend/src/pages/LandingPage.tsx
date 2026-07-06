@@ -1,13 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ExternalLink, Youtube } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { ROLES, slugForRole } from "../app/roles";
-import { Button, Input, Logo, cn, fadeUp, staggerContainer, staggerItem } from "../design-system";
+import { Button, Input, Logo, fadeUp, staggerContainer, staggerItem } from "../design-system";
 import { useAuth } from "../features/auth/auth";
-import { utilityApi, youtubeThumb } from "../features/utility/api";
 
 const FEATURES = [
   { title: "Learn your way", body: "Live classes and recorded lessons you can revisit anytime." },
@@ -15,9 +12,9 @@ const FEATURES = [
   { title: "See your progress", body: "Attendance, scores, streaks and rank in one clear view." },
 ];
 
-const NAV_LINKS = [
+const NAV_LINKS: Array<{ label: string; href?: string; to?: string }> = [
   { label: "Features", href: "#features" },
-  { label: "Utility links", href: "#utility-links" },
+  { label: "Utility links", to: "/utility-links" },
   { label: "Contact", href: "#contact" },
 ];
 
@@ -75,8 +72,6 @@ export function LandingPage() {
         </motion.div>
       </main>
 
-      <NoticeBoard />
-
       <footer
         id="contact"
         className="relative border-t border-brdr bg-surface/60 py-6 text-center text-xs text-muted"
@@ -103,15 +98,25 @@ function Navbar() {
           </div>
         </a>
         <nav className="hidden items-center gap-6 md:flex">
-          {NAV_LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              className="text-sm font-medium text-muted transition-colors hover:text-brand-strong"
-            >
-              {l.label}
-            </a>
-          ))}
+          {NAV_LINKS.map((l) =>
+            l.to ? (
+              <Link
+                key={l.label}
+                to={l.to}
+                className="text-sm font-medium text-muted transition-colors hover:text-brand-strong"
+              >
+                {l.label}
+              </Link>
+            ) : (
+              <a
+                key={l.label}
+                href={l.href}
+                className="text-sm font-medium text-muted transition-colors hover:text-brand-strong"
+              >
+                {l.label}
+              </a>
+            ),
+          )}
         </nav>
         <a
           href="#signin"
@@ -222,77 +227,3 @@ function SignInCard() {
   );
 }
 
-/** Public notice board curated by the MIS desk — pinned notes with YouTube thumbnails. */
-function NoticeBoard() {
-  const links = useQuery({ queryKey: ["utility-links-public"], queryFn: utilityApi.list });
-  const items = links.data ?? [];
-
-  return (
-    <section id="utility-links" className="relative mx-auto max-w-6xl px-6 pb-16">
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-ink">Utility links</h2>
-          <p className="mt-1 text-sm text-muted">
-            Fresh from the MIS desk — sessions, playlists and resources worth your time.
-          </p>
-        </div>
-      </div>
-
-      <div className="relative rounded-3xl border-4 border-[#d9b98a] bg-gradient-to-br from-[#f7ead2] to-[#f0dcba] p-6 shadow-card sm:p-8">
-        {/* corkboard texture dots */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-3xl opacity-[0.15]"
-          style={{ backgroundImage: "radial-gradient(#8a6a3b 1px, transparent 1px)", backgroundSize: "18px 18px" }}
-        />
-        {items.length === 0 ? (
-          <p className="relative py-10 text-center text-sm text-[#7a5c33]">
-            The board is empty for now — check back soon.
-          </p>
-        ) : (
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-            className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {items.slice(0, 9).map((l, i) => {
-              const thumb = youtubeThumb(l.url);
-              return (
-                <motion.a
-                  key={l.id}
-                  variants={staggerItem}
-                  href={l.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  whileHover={{ rotate: 0, y: -4, scale: 1.02 }}
-                  className={cn(
-                    "group relative block rounded-xl bg-surface p-3 shadow-lift transition-shadow",
-                    i % 3 === 0 ? "rotate-[-1.2deg]" : i % 3 === 1 ? "rotate-[0.8deg]" : "rotate-[-0.5deg]",
-                  )}
-                >
-                  {/* pushpin */}
-                  <span className="absolute -top-2 left-1/2 z-10 h-4 w-4 -translate-x-1/2 rounded-full bg-logoRed shadow-[0_2px_4px_rgba(0,0,0,0.35)] ring-2 ring-white/60" />
-                  {thumb ? (
-                    <img src={thumb} alt="" className="h-36 w-full rounded-lg object-cover" />
-                  ) : (
-                    <div className="flex h-36 w-full items-center justify-center rounded-lg bg-sky">
-                      <ExternalLink className="text-brand-strong" />
-                    </div>
-                  )}
-                  <div className="flex items-start gap-2 px-1 pb-1 pt-3">
-                    {thumb && <Youtube size={16} className="mt-0.5 shrink-0 text-danger" />}
-                    <span className="text-sm font-semibold leading-snug text-ink group-hover:text-brand-strong">
-                      {l.title}
-                    </span>
-                  </div>
-                </motion.a>
-              );
-            })}
-          </motion.div>
-        )}
-      </div>
-    </section>
-  );
-}

@@ -5,6 +5,7 @@ Security-sensitive and environment-specific values are read from the environment
 """
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 import environ
 
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    "django_q",
     # Local
     "core",
     "accounts",
@@ -216,3 +218,47 @@ LMS_ADAPTERS = {
     "whatsapp": env("LMS_WHATSAPP_ADAPTER", default="core.adapters.local.ConsoleWhatsAppAdapter"),
     "scheduler": env("LMS_SCHEDULER_ADAPTER", default="core.adapters.local.ImmediateScheduler"),
 }
+
+# --- Provider credentials (only read by the adapter you actually configure above) ---
+# SMTP (core.adapters.smtp.SmtpEmailAdapter) — Django's own EMAIL_* settings.
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@advantagepro.example")
+
+# MSG91 (core.adapters.msg91.Msg91SmsAdapter)
+MSG91_AUTH_KEY = env("MSG91_AUTH_KEY", default="")
+MSG91_SENDER_ID = env("MSG91_SENDER_ID", default="")
+MSG91_ROUTE = env("MSG91_ROUTE", default="4")
+MSG91_COUNTRY = env("MSG91_COUNTRY", default="91")
+
+# Meta WhatsApp Cloud API (core.adapters.whatsapp_cloud.WhatsAppCloudAdapter)
+WHATSAPP_ACCESS_TOKEN = env("WHATSAPP_ACCESS_TOKEN", default="")
+WHATSAPP_PHONE_NUMBER_ID = env("WHATSAPP_PHONE_NUMBER_ID", default="")
+WHATSAPP_TEMPLATE_NAME = env("WHATSAPP_TEMPLATE_NAME", default="")
+WHATSAPP_TEMPLATE_LANG = env("WHATSAPP_TEMPLATE_LANG", default="en")
+
+# Background queue (django-q2). Dev/CI (no REDIS_URL): tasks execute inline/synchronously
+# so tests stay deterministic without a worker. Prod (REDIS_URL set): true async via a
+# `python manage.py qcluster` worker process against Redis.
+Q_CLUSTER = {
+    "name": "AdvantagePro",
+    "workers": env.int("Q_CLUSTER_WORKERS", default=2),
+    "retry": 90,
+    "timeout": 60,
+    "queue_limit": 50,
+    "bulk": 10,
+    "orm": "default",
+    "sync": REDIS_URL == "",
+}
+if REDIS_URL:
+    _redis_bits = urlparse(REDIS_URL)
+    Q_CLUSTER["redis"] = {
+        "host": _redis_bits.hostname or "localhost",
+        "port": _redis_bits.port or 6379,
+        "db": int((_redis_bits.path or "/0").lstrip("/") or 0),
+        "password": _redis_bits.password,
+    }

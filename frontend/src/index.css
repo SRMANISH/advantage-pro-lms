@@ -48,15 +48,23 @@
     radial-gradient(900px 500px at -10% 110%, #eaf6ff 0%, transparent 55%), #f5fbff;
 }
 
-/* Vibrant azure→royal gradient for hero cards + the login brand panel. */
+/* Vibrant, layered mesh gradient for hero cards + the login brand panel — several soft
+   radial glows over a diagonal base so the surface reads as designed, not a flat fill. */
 .ap-hero {
-  background-color: #1f6fd0;
-  background-image: linear-gradient(130deg, #06a6e6 0%, #1f6fd0 52%, #17408f 100%);
+  background-color: #14357c;
+  background-image:
+    radial-gradient(115% 140% at 100% 0%, rgba(6, 166, 230, 0.55) 0%, rgba(6, 166, 230, 0) 55%),
+    radial-gradient(90% 120% at 0% 100%, rgba(110, 46, 160, 0.32) 0%, rgba(110, 46, 160, 0) 60%),
+    radial-gradient(140% 160% at 15% -10%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 45%),
+    linear-gradient(135deg, #0c8fd4 0%, #1c5fc0 45%, #102f70 100%);
   color: #fff;
 }
 .ap-brand-panel {
-  background-color: #17408f;
-  background-image: linear-gradient(140deg, #06a6e6 0%, #1a56b8 52%, #123a86 100%);
+  background-color: #123a86;
+  background-image:
+    radial-gradient(120% 140% at 100% 0%, rgba(6, 166, 230, 0.45) 0%, rgba(6, 166, 230, 0) 55%),
+    radial-gradient(100% 130% at 0% 100%, rgba(110, 46, 160, 0.28) 0%, rgba(110, 46, 160, 0) 60%),
+    linear-gradient(140deg, #06a6e6 0%, #1a56b8 52%, #0f2f68 100%);
 }
 .ap-hero-soft {
   background-color: #eef6fe;

@@ -8,6 +8,11 @@ django-environ==0.14.0
 drf-spectacular==0.29.0
 argon2-cffi==25.1.0
 openpyxl==3.1.5
+# Background task queue (async notification fan-out). Runs inline in dev (Q_CLUSTER sync),
+# and via `python manage.py qcluster` against Redis in production.
+django-q2>=1.7,<2
+# HTTP client used by the MSG91 / WhatsApp Cloud provider adapters.
+requests>=2.31,<3
 
 # --- Deploy-time infrastructure (install on the server; optional in local dev) ---
 # PostgreSQL driver (set DATABASE_URL=postgres://...).

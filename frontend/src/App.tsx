@@ -56,6 +56,9 @@ const ChangePasswordPage = lazy(() =>
 const UtilityLinksPage = lazy(() =>
   import("./features/utility/UtilityLinksPage").then((m) => ({ default: m.UtilityLinksPage })),
 );
+const UtilityLinksBoardPage = lazy(() =>
+  import("./pages/UtilityLinksBoardPage").then((m) => ({ default: m.UtilityLinksBoardPage })),
+);
 
 // Route guards mirror the updated permission matrix (and PortalLayout NAV). UI hiding only;
 // the backend enforces the matrix on every endpoint.
@@ -94,6 +97,7 @@ export default function App() {
         <Route path="/showcase" element={<ShowcasePage />} />
         <Route path="/setup/:token" element={<SetupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/utility-links" element={<UtilityLinksBoardPage />} />
         {ROLES.map((role) => (
           <Route
             key={`login-${role.slug}`}

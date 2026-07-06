@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
-from attendance.services import student_summary
+from attendance.services import batch_attendance_summaries
 from batches.models import Batch
 from core.permissions import has_any_role
 from core.roles import Role
@@ -72,10 +72,11 @@ class AttendanceReport(APIView):
         batch, error = _batch_for(request)
         if error:
             return error
-        students = User.objects.filter(enrollments__batch=batch).distinct()
+        students = list(User.objects.filter(enrollments__batch=batch).distinct())
+        summaries = batch_attendance_summaries(batch, students)  # one grouped query
         rows = []
         for s in students:
-            summary = student_summary(s, batch)
+            summary = summaries.get(s.id, {"present": 0, "total": 0, "percent": 0})
             rows.append(
                 (s.username, s.full_name, summary["present"], summary["total"], summary["percent"])
             )

@@ -6,6 +6,7 @@ from .base import *  # noqa: F401,F403
 from .base import (
     ALLOWED_HOSTS,
     MIDDLEWARE,
+    REDIS_URL,
     SECRET_KEY,
     SENTRY_DSN,
     SENTRY_TRACES_SAMPLE_RATE,
@@ -34,6 +35,12 @@ if SECRET_KEY in ("", "dev-insecure-secret-change-me"):
 if not ALLOWED_HOSTS or ALLOWED_HOSTS == ["localhost", "127.0.0.1"]:
     raise ImproperlyConfigured(
         "DJANGO_ALLOWED_HOSTS must be set to your real host(s) in production."
+    )
+if not REDIS_URL:
+    raise ImproperlyConfigured(
+        "REDIS_URL must be set in production — it backs shared rate-limiting/caching "
+        "across workers and the background task queue (qcluster). Without it, login "
+        "throttling is per-process and notifications send synchronously in-request."
     )
 
 # HTTPS / transport security

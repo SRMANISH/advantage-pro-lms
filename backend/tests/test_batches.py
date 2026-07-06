@@ -130,6 +130,22 @@ def test_only_admin_can_delete_batch(users, course):
 
 
 @pytest.mark.django_db
+def test_cannot_delete_batch_with_certificates(users, course):
+    from certification.models import Certificate
+    from enrollments.models import Enrollment
+
+    batch = make_batch(course, state=BatchState.COMPLETED)
+    enr = Enrollment.objects.create(
+        student=users["student"], batch=batch, registration_number="stu"
+    )
+    Certificate.objects.create(enrollment=enr, certificate_id="CERT-1")
+
+    resp = client_for(users["admin"]).delete(f"{BATCHES_URL}{batch.id}/")
+    assert resp.status_code == 409
+    assert Batch.objects.filter(id=batch.id).exists()
+
+
+@pytest.mark.django_db
 def test_admin_assigns_faculty_and_faculty_cannot(users, course):
     own = make_batch(course, code="OWN")
     own.faculty.add(users["faculty"])

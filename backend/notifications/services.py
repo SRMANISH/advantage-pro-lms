@@ -1,23 +1,22 @@
-"""Provider-agnostic notification service: in-app + email/SMS/WhatsApp via adapters."""
+"""Provider-agnostic notification service: in-app (sync) + email/SMS/WhatsApp (queued)."""
 
 from __future__ import annotations
 
-from core.adapters.registry import get_email, get_sms, get_whatsapp
-
+from .dispatch import queue_external
 from .models import Notification
 
 
 def notify(user, kind, message, *, link="", subject=None, channels=("in_app",)):
-    """Deliver a notification to one user across the requested channels."""
+    """Deliver a notification to one user.
+
+    The in-app row is written synchronously so the notification bell updates at once; the
+    external channels (email/SMS/WhatsApp) are handed to the queue (see ``dispatch``) so a
+    large fan-out never blocks the request and gets retries on provider failure.
+    """
     note = None
     if "in_app" in channels:
         note = Notification.objects.create(recipient=user, kind=kind, message=message, link=link)
-    if "email" in channels and getattr(user, "email", ""):
-        get_email().send(user.email, subject or kind, message)
-    if "sms" in channels and getattr(user, "phone", ""):
-        get_sms().send(user.phone, message)
-    if "whatsapp" in channels and getattr(user, "phone", ""):
-        get_whatsapp().send(user.phone, message)
+    queue_external(user.id, channels, subject or kind, message)
     return note
 
 

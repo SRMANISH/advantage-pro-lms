@@ -59,6 +59,53 @@ _KINDS = {
     "document": (DOCUMENT_EXTENSIONS, DOCUMENT_TYPES, "MAX_DOCUMENT_UPLOAD_MB", 25),
 }
 
+# Magic-byte signatures per extension: (offset, expected bytes). We don't trust the
+# client-declared content-type alone (spoofable), so we peek at the file's actual header.
+# Extensions with no reliable signature (plain text, csv, md) are intentionally omitted and
+# fall back to the extension + declared-type checks. A pure-Python check keeps us off the
+# native libmagic dependency (which is painful on Windows).
+_SIGNATURES: dict[str, list[tuple[int, bytes]]] = {
+    ".pdf": [(0, b"%PDF")],
+    ".png": [(0, b"\x89PNG\r\n\x1a\n")],
+    ".jpg": [(0, b"\xff\xd8\xff")],
+    ".jpeg": [(0, b"\xff\xd8\xff")],
+    ".gif": [(0, b"GIF87a"), (0, b"GIF89a")],
+    ".zip": [(0, b"PK\x03\x04"), (0, b"PK\x05\x06")],
+    # OOXML office files are ZIP containers.
+    ".docx": [(0, b"PK\x03\x04")],
+    ".pptx": [(0, b"PK\x03\x04")],
+    ".xlsx": [(0, b"PK\x03\x04")],
+    # Legacy OLE2 office files.
+    ".doc": [(0, b"\xd0\xcf\x11\xe0")],
+    ".ppt": [(0, b"\xd0\xcf\x11\xe0")],
+    ".xls": [(0, b"\xd0\xcf\x11\xe0")],
+    # ISO-BMFF (MP4 family): a box type at offset 4.
+    ".mp4": [(4, b"ftyp")],
+    ".m4v": [(4, b"ftyp")],
+    ".mov": [(4, b"ftyp"), (4, b"moov"), (4, b"mdat"), (4, b"free"), (4, b"wide"), (4, b"skip")],
+    # Matroska / WebM (EBML) and Ogg.
+    ".mkv": [(0, b"\x1a\x45\xdf\xa3")],
+    ".webm": [(0, b"\x1a\x45\xdf\xa3")],
+    ".ogg": [(0, b"OggS")],
+}
+
+
+def _content_matches_extension(upload, ext: str) -> bool:
+    """True if the file's leading bytes match a known signature for ``ext`` (or none is known)."""
+    signatures = _SIGNATURES.get(ext)
+    if not signatures:
+        return True
+    try:
+        head = upload.read(32)
+    finally:
+        try:
+            upload.seek(0)
+        except (AttributeError, OSError):
+            pass
+    if not head:
+        return False
+    return any(head[offset : offset + len(sig)] == sig for offset, sig in signatures)
+
 
 def validate_upload(upload, kind: str):
     """Validate an uploaded file by size, extension, and content type. Returns it on success."""
@@ -80,5 +127,11 @@ def validate_upload(upload, kind: str):
     content_type = (getattr(upload, "content_type", "") or "").lower()
     if content_type and content_type != _NEUTRAL and content_type not in types:
         raise serializers.ValidationError(f"Unsupported content type '{content_type}'.")
+
+    if not _content_matches_extension(upload, ext):
+        raise serializers.ValidationError(
+            "The file's contents do not match its extension. Please upload a genuine "
+            f"'{ext}' file."
+        )
 
     return upload

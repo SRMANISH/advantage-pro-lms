@@ -63,7 +63,7 @@ def _escalate_incomplete_tests() -> int:
 
 def _escalate_low_attendance() -> int:
     from accounts.models import User
-    from attendance.services import student_summary
+    from attendance.services import batch_attendance_summaries
     from batches.models import Batch, BatchState
     from core.roles import Role
     from notifications.services import notify_many
@@ -73,9 +73,10 @@ def _escalate_low_attendance() -> int:
     count = 0
     for batch in Batch.objects.filter(state=BatchState.ACTIVE):
         faculty = list(batch.faculty.all())
-        students = User.objects.filter(role=Role.STUDENT, enrollments__batch=batch).distinct()
+        students = list(User.objects.filter(role=Role.STUDENT, enrollments__batch=batch).distinct())
+        summaries = batch_attendance_summaries(batch, students)  # one query for the batch
         for student in students:
-            summary = student_summary(student, batch)
+            summary = summaries.get(student.id, {"total": 0, "percent": 0})
             if summary["total"] == 0 or summary["percent"] >= 50:
                 continue
             if _already("low_attendance", student, batch.id):

@@ -11,16 +11,18 @@ import {
   FileText,
   Flame,
   GraduationCap,
+  type LucideIcon,
   MessagesSquare,
   Users,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import type { RoleDef } from "../../app/roles";
 import {
   Badge,
   Card,
+  CountUp,
   EmptyState,
   LazyChart,
   SectionHeading,
@@ -53,6 +55,40 @@ export function PortalPage({ role }: { role: RoleDef }) {
 
 /* ---------- shared building blocks ---------- */
 
+/** White-on-gradient progress ring for the hero highlight (percent values). */
+function HeroRing({ percent }: { percent: number }) {
+  const size = 116;
+  const stroke = 9;
+  const pct = Math.max(0, Math.min(100, percent));
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const [sweep, setSweep] = useState(0);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setSweep(pct));
+    return () => cancelAnimationFrame(id);
+  }, [pct]);
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} stroke="rgba(255,255,255,0.22)" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          stroke="white"
+          strokeDasharray={c}
+          strokeDashoffset={c - (sweep / 100) * c}
+          style={{ transition: "stroke-dashoffset 900ms cubic-bezier(0.22,1,0.36,1)" }}
+        />
+      </svg>
+      <span className="absolute text-2xl font-semibold">{Math.round(pct)}%</span>
+    </div>
+  );
+}
+
 function Hero({
   eyebrow,
   title,
@@ -66,7 +102,7 @@ function Hero({
   subtitle: string;
   ctaLabel?: string;
   ctaTo?: string;
-  highlight?: { label: string; value: string };
+  highlight?: { label: string; value: string; percent?: number; sub?: string; icon?: LucideIcon };
 }) {
   return (
     <motion.div
@@ -76,17 +112,19 @@ function Hero({
       className="ap-hero relative overflow-hidden rounded-3xl p-7 text-white shadow-lift"
     >
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/25 blur-3xl" />
-        {/* Logo-geometry accents: concentric ring + rising bars */}
-        <svg className="absolute -right-8 bottom-[-30px] h-56 w-56 opacity-[0.16]" viewBox="0 0 200 200" fill="none">
-          <circle cx="100" cy="100" r="88" stroke="white" strokeWidth="2" />
-          <circle cx="100" cy="100" r="64" stroke="white" strokeWidth="1" strokeDasharray="4 6" />
-          <rect x="70" y="110" width="14" height="34" rx="3" fill="white" />
-          <rect x="92" y="92" width="14" height="52" rx="3" fill="white" />
-          <rect x="114" y="72" width="14" height="72" rx="3" fill="white" />
-        </svg>
+        {/* A warm glow sits behind the highlight so bold white text has depth to sit on. */}
+        <div className="absolute -right-16 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-28 -left-10 h-64 w-64 rounded-full bg-violet/25 blur-3xl" />
+        {/* Subtle dot-grid texture for tactility */}
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)",
+            backgroundSize: "22px 22px",
+          }}
+        />
       </div>
-      <div className="relative flex flex-wrap items-center justify-between gap-6">
+      <div className="relative flex flex-wrap items-stretch justify-between gap-6">
         <div className="max-w-xl">
           <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
             {eyebrow}
@@ -103,11 +141,38 @@ function Hero({
           )}
         </div>
         {highlight && (
-          <div className="rounded-2xl border border-white/15 bg-white/5 px-6 py-5 text-right backdrop-blur">
-            <div className="text-[11px] uppercase tracking-wider text-white/55">
-              {highlight.label}
-            </div>
-            <div className="mt-1 text-4xl font-semibold">{highlight.value}</div>
+          <div className="flex items-center gap-6">
+            <span aria-hidden className="hidden h-16 w-px bg-white/20 sm:block" />
+            {highlight.percent != null ? (
+              <div className="flex flex-col items-center">
+                <HeroRing percent={highlight.percent} />
+                <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wider text-white/75">
+                  {highlight.label}
+                </div>
+                {highlight.sub && (
+                  <div className="mt-0.5 text-xs text-white/60">{highlight.sub}</div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-start">
+                {highlight.icon && (
+                  <span className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-white">
+                    <highlight.icon size={17} aria-hidden />
+                  </span>
+                )}
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-white/60">
+                  {highlight.label}
+                </div>
+                <div className="mt-0.5 text-[2.75rem] font-bold leading-none tracking-tight text-white">
+                  {Number.isFinite(Number(highlight.value)) ? (
+                    <CountUp value={Number(highlight.value)} />
+                  ) : (
+                    highlight.value
+                  )}
+                </div>
+                {highlight.sub && <div className="mt-1.5 text-xs text-white/60">{highlight.sub}</div>}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -128,18 +193,31 @@ function KpiGrid({ children }: { children: ReactNode }) {
   );
 }
 
-function TrendCard({ data, title }: { data: DashboardData["trend"]; title: string }) {
+function TrendCard({
+  data,
+  title,
+  subtitle,
+  explain,
+}: {
+  data: DashboardData["trend"];
+  title: string;
+  subtitle: string;
+  explain: string;
+}) {
   if (!data || data.length === 0) return null;
   return (
     <Card>
-      <SectionHeading title={title} subtitle="Distinct login-days per week" />
+      <SectionHeading title={title} subtitle={subtitle} />
       <LazyChart
         kind="area"
         data={data}
         xKey="label"
-        series={[{ key: "value", label: "Logins", color: BRAND }]}
+        series={[{ key: "value", label: "Login days", color: BRAND }]}
         height={240}
       />
+      <p className="mt-2 rounded-lg bg-sky/50 px-3 py-2 text-xs leading-relaxed text-navy">
+        {explain}
+      </p>
     </Card>
   );
 }
@@ -192,7 +270,12 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           subtitle="Keep your streak going — your batch content is below."
           ctaLabel="Continue learning"
           ctaTo={`/${slug}/videos`}
-          highlight={{ label: "Videos completed", value: `${videoPct}%` }}
+          highlight={{
+            label: "Videos completed",
+            value: `${videoPct}%`,
+            percent: videoPct,
+            sub: `${v.completed} of ${v.total} videos watched`,
+          }}
         />
         <KpiGrid>
           <StatCard
@@ -216,7 +299,12 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
         </KpiGrid>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <TrendCard data={data.trend} title="Your activity" />
+            <TrendCard
+              data={data.trend}
+              title="Your activity"
+              subtitle="How many days you signed in, week by week (last 6 weeks)"
+              explain="What this shows: each point is the number of days you logged in that week. Every login day counts toward your attendance — so taller weeks mean better attendance."
+            />
           </div>
           <UpNext items={data.up_next} />
         </div>
@@ -236,7 +324,7 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           subtitle="Your batches, doubts and live classes at a glance."
           ctaLabel="Open batches"
           ctaTo={`/${slug}/batches`}
-          highlight={{ label: "Assigned batches", value: String(t.batches ?? 0) }}
+          highlight={{ label: "Assigned batches", value: String(t.batches ?? 0), icon: Users }}
         />
         <KpiGrid>
           <StatCard label="Batches" value={t.batches ?? 0} icon={Users} tone="azure" />
@@ -252,7 +340,12 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
         </KpiGrid>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <TrendCard data={data.trend} title="Batch activity" />
+            <TrendCard
+              data={data.trend}
+              title="Batch activity"
+              subtitle="Student login-days across your batches, week by week"
+              explain="What this shows: how often your students signed in each week. A falling line means rising absentees — worth a look at the Attendance page."
+            />
           </div>
           <UpNext items={data.up_next} />
         </div>
@@ -278,7 +371,7 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           subtitle="Live view of batches, learners and follow-ups across the institute."
           ctaLabel={cta.label}
           ctaTo={cta.to}
-          highlight={{ label: "Active batches", value: String(t.active_batches ?? 0) }}
+          highlight={{ label: "Active batches", value: String(t.active_batches ?? 0), icon: Users }}
         />
         <KpiGrid>
           <StatCard label="Total students" value={t.students ?? 0} icon={GraduationCap} tone="azure" />
@@ -294,12 +387,26 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
         </KpiGrid>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <TrendCard data={data.trend} title="Platform activity" />
+            <TrendCard
+              data={data.trend}
+              title="Platform activity"
+              subtitle="Student login-days across all batches, week by week"
+              explain="What this shows: total days students signed in per week, platform-wide. Steady or rising = healthy engagement; a drop is your early warning."
+            />
           </div>
           <Card>
-            <SectionHeading title="Batch states" />
+            <SectionHeading
+              title="Batch states"
+              subtitle="Where every batch is in its lifecycle"
+            />
             {data.batch_states && data.batch_states.some((s) => s.value > 0) ? (
-              <LazyChart kind="donut" data={data.batch_states} height={240} />
+              <>
+                <LazyChart kind="donut" data={data.batch_states} height={220} />
+                <p className="mt-2 rounded-lg bg-sky/50 px-3 py-2 text-xs leading-relaxed text-navy">
+                  Draft = being set up · Active = running now · Completed = finished (video
+                  access closed, certificates in follow-up).
+                </p>
+              </>
             ) : (
               <p className="py-6 text-center text-sm text-muted">No batches yet.</p>
             )}
@@ -319,7 +426,11 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           subtitle="Spot absentees early and keep learners on track with MIS."
           ctaLabel="Review attendance"
           ctaTo={`/${slug}/attendance`}
-          highlight={{ label: "Absentees today", value: String(k.absentees_today ?? 0) }}
+          highlight={{
+            label: "Absentees today",
+            value: String(k.absentees_today ?? 0),
+            icon: AlertTriangle,
+          }}
         />
         <KpiGrid>
           <StatCard label="Active students" value={k.active_students ?? 0} icon={GraduationCap} tone="azure" />
@@ -333,7 +444,12 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           />
           <StatCard label="Batches" value={data.totals?.batches ?? 0} icon={Users} tone="navy" />
         </KpiGrid>
-        <TrendCard data={data.trend} title="Platform activity" />
+        <TrendCard
+          data={data.trend}
+          title="Login trend"
+          subtitle="Student login-days per week — your follow-up radar"
+          explain="What this shows: how many days students signed in each week. Falling weeks mean growing absentees — those students are your follow-up list."
+        />
       </div>
     );
   }
@@ -348,7 +464,7 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           subtitle="Answer what you can and keep faculty on the response window."
           ctaLabel="Open doubt monitor"
           ctaTo={`/${slug}/monitor`}
-          highlight={{ label: "Overdue", value: String(k.overdue ?? 0) }}
+          highlight={{ label: "Overdue", value: String(k.overdue ?? 0), icon: Flame }}
         />
         <KpiGrid>
           <StatCard label="Open" value={k.open ?? 0} icon={MessagesSquare} tone="azure" />
@@ -369,15 +485,22 @@ function Dashboard({ role, data, name }: { role: RoleDef; data: DashboardData; n
           <StatCard label="Resolved" value={k.resolved ?? 0} icon={CheckCircle2} tone="green" deltaTone="up" />
         </KpiGrid>
         <Card>
-          <SectionHeading title="Forum status" />
+          <SectionHeading title="Forum status" subtitle="Every doubt, by its current stage" />
           {data.forum_status && data.forum_status.some((s) => s.value > 0) ? (
-            <LazyChart
-              kind="bar"
-              data={data.forum_status}
-              xKey="name"
-              series={[{ key: "value", label: "Threads", color: BRAND }]}
-              height={240}
-            />
+            <>
+              <LazyChart
+                kind="bar"
+                data={data.forum_status}
+                xKey="name"
+                series={[{ key: "value", label: "Doubts", color: BRAND }]}
+                height={220}
+              />
+              <p className="mt-2 rounded-lg bg-sky/50 px-3 py-2 text-xs leading-relaxed text-navy">
+                Open = waiting for a first reply · Answered = replied, not yet closed ·
+                Escalated = pushed to faculty · Resolved = done. Your goal: keep Open near zero
+                within the response window.
+              </p>
+            </>
           ) : (
             <p className="py-6 text-center text-sm text-muted">No doubts yet.</p>
           )}
