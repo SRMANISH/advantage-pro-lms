@@ -1,16 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { cn } from "../../design-system";
-import { notificationsApi } from "./api";
+import { notificationsApi, type NotificationItem } from "./api";
+
+const BASE_POLL_MS = 20_000;
+const MAX_POLL_MS = 5 * 60_000;
+
+/** A cheap signature of "has anything changed" — id + read-state per item. */
+export function signatureOf(items: NotificationItem[]): string {
+  return items.map((n) => `${n.id}:${n.read}`).join(",");
+}
+
+/** Doubles the interval per quiet poll (nothing changed), capped at MAX_POLL_MS. */
+export function nextPollInterval(quietStreak: number): number {
+  return Math.min(BASE_POLL_MS * 2 ** quietStreak, MAX_POLL_MS);
+}
 
 export function NotificationBell() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const quietStreak = useRef(0);
+  const lastSignature = useRef("");
 
   // Keyboard path for closing the dropdown (the backdrop is pointer-only).
   useEffect(() => {
@@ -23,9 +38,29 @@ export function NotificationBell() {
   const list = useQuery({
     queryKey: ["notifications"],
     queryFn: notificationsApi.list,
-    refetchInterval: 20000,
+    // Backoff: an idle session polls less over time; any change (or opening the bell,
+    // below) resets to the base cadence so real activity is still picked up promptly.
+    refetchInterval: (query) => {
+      const signature = signatureOf(query.state.data ?? []);
+      if (signature !== lastSignature.current) {
+        lastSignature.current = signature;
+        quietStreak.current = 0;
+      } else {
+        quietStreak.current += 1;
+      }
+      return nextPollInterval(quietStreak.current);
+    },
   });
   const items = list.data ?? [];
+
+  // Opening the bell is a sign of active engagement — check now and reset the backoff.
+  useEffect(() => {
+    if (open) {
+      quietStreak.current = 0;
+      list.refetch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const unread = items.filter((n) => !n.read).length;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["notifications"] });
