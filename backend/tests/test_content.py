@@ -272,3 +272,17 @@ def test_play_streams_with_range_for_authorized_student(world):
     )
     assert resp.status_code == 206
     assert resp["Content-Range"].startswith("bytes 0-3/")
+
+
+@pytest.mark.django_db
+def test_play_uses_xaccel_redirect_when_configured(world, settings):
+    """In production (MEDIA_XACCEL_PREFIX set) the app hands streaming to nginx."""
+    settings.MEDIA_XACCEL_PREFIX = "/protected"
+    video = Video.objects.create(
+        batch=world["batch"], title="V", storage_key="videos/a/x.mp4", content_type="video/mp4"
+    )
+    resp = client_for(world["student"]).get(f"{VIDEOS_URL}{video.id}/play/")
+    assert resp.status_code == 200
+    assert resp["X-Accel-Redirect"] == "/protected/videos/a/x.mp4"
+    # The app must NOT have streamed any bytes itself.
+    assert not resp.get("Content-Range")

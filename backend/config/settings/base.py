@@ -157,6 +157,12 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = env.int("FILE_UPLOAD_MAX_MEMORY_SIZE", default=10 
 MAX_VIDEO_UPLOAD_MB = env.int("MAX_VIDEO_UPLOAD_MB", default=512)
 MAX_DOCUMENT_UPLOAD_MB = env.int("MAX_DOCUMENT_UPLOAD_MB", default=25)
 
+# Media delivery: when set (e.g. "/protected"), gated video/material endpoints return an
+# nginx ``X-Accel-Redirect`` instead of streaming through the app worker. Configure a
+# matching internal nginx location: `location /protected/ { internal; alias <MEDIA_ROOT>/; }`.
+# Empty in dev/CI, so the app streams the bytes itself.
+MEDIA_XACCEL_PREFIX = env("MEDIA_XACCEL_PREFIX", default="")
+
 # Data retention (days) for purge_old_data — activity data only, never academic records.
 RETENTION_AUDIT_DAYS = env.int("RETENTION_AUDIT_DAYS", default=365)
 RETENTION_NOTIFICATION_DAYS = env.int("RETENTION_NOTIFICATION_DAYS", default=180)

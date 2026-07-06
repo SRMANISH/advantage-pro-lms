@@ -1,6 +1,7 @@
 """Video & material APIs: upload (faculty), list (role-scoped), gated streaming, progress."""
 
-from django.http import StreamingHttpResponse
+from django.conf import settings
+from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -71,6 +72,29 @@ def _stream(fileobj, content_type: str, range_header: str | None) -> StreamingHt
     return resp
 
 
+def _deliver(request, storage_key: str, content_type: str):
+    """Authorize in Django, then hand the actual byte-serving to the reverse proxy.
+
+    When ``MEDIA_XACCEL_PREFIX`` is set (production, behind nginx) we return an
+    ``X-Accel-Redirect`` so nginx streams the file from an internal location and the
+    gunicorn worker is freed immediately — the fix for workers being pinned by concurrent
+    viewers. In dev / CI (no prefix) we stream from the app, which is fine at low
+    concurrency. An object-storage adapter that returns real signed URLs can slot in here
+    the same way (redirect to the signed URL).
+    """
+    prefix = getattr(settings, "MEDIA_XACCEL_PREFIX", "")
+    if prefix:
+        resp = HttpResponse(content_type=content_type)
+        # nginx: `location <prefix> { internal; alias /path/to/media/; }`
+        resp["X-Accel-Redirect"] = f"{prefix.rstrip('/')}/{storage_key}"
+        resp["X-Accel-Buffering"] = "no"
+        resp["Content-Disposition"] = "inline"
+        resp["Accept-Ranges"] = "bytes"
+        return resp
+    fileobj = get_storage().open(storage_key)
+    return _stream(fileobj, content_type, request.headers.get("Range"))
+
+
 def _scoped(qs, user):
     ids = accessible_batch_ids(user)
     return qs if ids is None else qs.filter(batch_id__in=list(ids))
@@ -124,8 +148,7 @@ class VideoViewSet(viewsets.ModelViewSet):
                 {"detail": "Your video access for this course has been closed."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        fileobj = get_storage().open(video.storage_key)
-        return _stream(fileobj, video.content_type, request.headers.get("Range"))
+        return _deliver(request, video.storage_key, video.content_type)
 
     @action(detail=True, methods=["post"])
     def progress(self, request, pk=None):
@@ -186,8 +209,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
                 {"detail": "Your access for this course has been closed."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        fileobj = get_storage().open(material.storage_key)
-        return _stream(fileobj, material.content_type, request.headers.get("Range"))
+        return _deliver(request, material.storage_key, material.content_type)
 
 
 class RevokeVideoAccessView(APIView):

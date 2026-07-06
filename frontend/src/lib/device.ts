@@ -1,5 +1,3 @@
-const KEY = "ap_device_id";
-
 /** Stable, device/browser-specific signals (no PII, low-entropy but consistent). */
 function collectSignals(): string {
   const nav = navigator as Navigator & { deviceMemory?: number };
@@ -48,17 +46,19 @@ async function sha256Hex(input: string): Promise<string> {
 }
 
 /**
- * A stable per-browser device identifier for the student device policy.
+ * A per-browser device identifier for the student device policy.
  *
- * Derived from device/browser signals (so it is consistent across sessions rather than a
- * throwaway random value) and then persisted. To strengthen this into spoof-resistant
- * identification, swap the body for a FingerprintJS visitorId — call sites already await,
- * so no other change is needed.
+ * The id is **always derived fresh from the live device/browser signals** — we deliberately
+ * do not persist it and read it back as identity. That means copying a stored value to
+ * another machine does not transfer the binding: the other machine computes its own
+ * fingerprint from its own signals and is treated as a new device (which is the whole point
+ * of the anti-sharing policy). A browser/OS change legitimately re-triggers verification.
+ *
+ * This is a **deterrent, not tamper-proof identification** — a determined user can still
+ * spoof the underlying signals. For stronger, evasion-resistant identification, drop in a
+ * FingerprintJS Pro visitorId here (call sites already await, so nothing else changes) and
+ * pair it with the server-side IP/UA drift signals on the device-change request.
  */
 export async function getDeviceId(): Promise<string> {
-  const cached = localStorage.getItem(KEY);
-  if (cached) return cached;
-  const id = `fp_${await sha256Hex(collectSignals())}`;
-  localStorage.setItem(KEY, id);
-  return id;
+  return `fp_${await sha256Hex(collectSignals())}`;
 }
