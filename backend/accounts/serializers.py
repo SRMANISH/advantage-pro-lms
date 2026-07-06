@@ -13,6 +13,8 @@ class LoginSerializer(serializers.Serializer):
     # omitted (unified sign-in) the backend routes by the account's own role.
     role = serializers.ChoiceField(choices=Role.choices, required=False, allow_blank=True)
     device_id = serializers.CharField(required=False, allow_blank=True, default="")
+    # Present on the resubmit once the first call reports totp_required (staff-only 2FA).
+    totp_code = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class DeviceRequestSerializer(serializers.Serializer):

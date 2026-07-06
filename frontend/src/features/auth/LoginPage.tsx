@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import type { RoleDef } from "../../app/roles";
 import { Button, Input, Logo } from "../../design-system";
+import { TotpRequiredError } from "./api";
 import { useAuth } from "./auth";
 
 interface LoginPageProps {
@@ -41,6 +42,8 @@ export function LoginPage({ role }: LoginPageProps) {
   const navigate = useNavigate();
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [needsTotp, setNeedsTotp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [quote, setQuote] = useState(0);
@@ -55,10 +58,15 @@ export function LoginPage({ role }: LoginPageProps) {
     setError(null);
     setSubmitting(true);
     try {
-      await login(loginId, password, role.value);
+      await login(loginId, password, role.value, needsTotp ? totpCode : undefined);
       navigate(`/${role.slug}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Invalid credentials for this portal.");
+      if (e instanceof TotpRequiredError) {
+        setNeedsTotp(true);
+        setError(needsTotp ? e.message : null); // only show as an error on a retry
+      } else {
+        setError(e instanceof Error ? e.message : "Invalid credentials for this portal.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -161,8 +169,25 @@ export function LoginPage({ role }: LoginPageProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                disabled={needsTotp}
               />
             </div>
+
+            {needsTotp && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted" htmlFor="totp-code">
+                  Authenticator code
+                </label>
+                <Input
+                  id="totp-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                  placeholder="6-digit code"
+                />
+              </div>
+            )}
 
             {error && (
               <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
@@ -170,8 +195,12 @@ export function LoginPage({ role }: LoginPageProps) {
               </p>
             )}
 
-            <Button type="submit" className="mt-2 w-full" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in securely"}
+            <Button
+              type="submit"
+              className="mt-2 w-full"
+              disabled={submitting || (needsTotp && !totpCode)}
+            >
+              {submitting ? "Signing in…" : needsTotp ? "Verify code" : "Sign in securely"}
             </Button>
           </form>
 

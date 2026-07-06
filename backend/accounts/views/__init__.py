@@ -22,6 +22,7 @@ from .setup import (
     SetupVerifyPhoneView,
 )
 from .staff import StaffAccountsView, UserRoleView, UserStatusView
+from .totp import TOTPConfirmView, TOTPDisableView, TOTPEnrollView, TOTPStatusView
 
 __all__ = [
     "CSRFView",
@@ -44,4 +45,8 @@ __all__ = [
     "UserRoleView",
     "DeviceRequestListView",
     "DeviceRequestDecideView",
+    "TOTPStatusView",
+    "TOTPEnrollView",
+    "TOTPConfirmView",
+    "TOTPDisableView",
 ]

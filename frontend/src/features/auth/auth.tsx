@@ -6,7 +6,7 @@ import { authApi, type AuthUser } from "./api";
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (username: string, password: string, role?: string) => Promise<AuthUser>;
+  login: (username: string, password: string, role?: string, totpCode?: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
 
@@ -21,9 +21,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 60_000,
   });
 
-  const login = async (username: string, password: string, role?: string) => {
+  const login = async (username: string, password: string, role?: string, totpCode?: string) => {
     await authApi.csrf();
-    const user = await authApi.login(username, password, role);
+    const user = await authApi.login(username, password, role, totpCode);
     qc.setQueryData(["me"], user);
     return user;
   };

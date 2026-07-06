@@ -130,3 +130,20 @@ class DeviceChangeRequest(TimeStampedModel):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["status"])]
+
+
+class TOTPDevice(TimeStampedModel):
+    """One authenticator-app secret per account — optional, staff-only by convention.
+
+    ``confirmed`` only flips to True after one correct code during enrollment, so a
+    mistyped or abandoned enrollment can never silently lock the account's login (an
+    unconfirmed device is never consulted at login time).
+    """
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="totp_device")
+    secret = models.CharField(max_length=32)
+    confirmed = models.BooleanField(default=False)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return f"totp<{self.user_id}>"

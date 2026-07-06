@@ -19,6 +19,7 @@ import {
   PlayCircle,
   Radio,
   Settings,
+  ShieldCheck,
   Smartphone,
   Sparkles,
   TriangleAlert,
@@ -295,6 +296,15 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
                       >
                         <KeyRound size={15} className="text-muted" /> Change password
                       </Link>
+                      {roleDef.value !== "student" && (
+                        <Link
+                          to={`/${roleDef.slug}/security`}
+                          onClick={() => setMenuOpen(false)}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-sky"
+                        >
+                          <ShieldCheck size={15} className="text-muted" /> Two-factor authentication
+                        </Link>
+                      )}
                       <button
                         onClick={() => void logout()}
                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-sky"

@@ -17,7 +17,8 @@ from core.utils import get_client_ip
 from notifications.services import admins_and_mis, notify_many
 
 from .. import device
-from ..models import User, UserStatus
+from .. import totp as totp_service
+from ..models import TOTPDevice, User, UserStatus
 from ..serializers import LoginSerializer, UserSerializer
 from ..throttling import LoginRateThrottle
 
@@ -98,6 +99,28 @@ class LoginView(APIView):
                 {"detail": "This account is not active."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
+        # Optional staff 2FA: students are never prompted. An unconfirmed device (an
+        # abandoned enrollment) is never consulted, so it can't lock anyone out.
+        if user.role != Role.STUDENT:
+            totp = TOTPDevice.objects.filter(user=user, confirmed=True).first()
+            if totp:
+                code = serializer.validated_data.get("totp_code", "")
+                if not totp_service.verify(totp, code):
+                    record_action(
+                        actor=user,
+                        action="login_totp_required" if not code else "login_totp_failed",
+                        ip_address=ip,
+                    )
+                    detail = (
+                        "Enter the 6-digit code from your authenticator app."
+                        if not code
+                        else "Invalid authenticator code."
+                    )
+                    return Response(
+                        {"detail": detail, "totp_required": True},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
 
         # Device policy applies to students: bound device always works (so a finished
         # student can still log in to certify); device *changes* close at course end.

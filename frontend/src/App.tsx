@@ -43,6 +43,9 @@ const LiveClassesPage = lazy(() =>
   import("./features/liveclasses/LiveClassesPage").then((m) => ({ default: m.LiveClassesPage })),
 );
 const ChannelsPage = lazy(() => import("./features/channels/ChannelsPage").then((m) => ({ default: m.ChannelsPage })));
+const SecurityPage = lazy(() =>
+  import("./features/auth/SecurityPage").then((m) => ({ default: m.SecurityPage })),
+);
 const PermissionsPage = lazy(() =>
   import("./features/permissions/PermissionsPage").then((m) => ({ default: m.PermissionsPage })),
 );
@@ -83,6 +86,8 @@ const MONITOR_ROLES = new Set(["mis", "tech_support"]);
 const LIVE_ROLES = new Set(["admin", "mis", "faculty", "student"]);
 const SETTINGS_ROLES = new Set(["super_admin"]);
 const REPORT_ROLES = new Set(["super_admin", "admin", "mis", "counselor", "faculty"]);
+// TOTP 2FA is a staff feature — every role except student.
+const STAFF_ROLES_ALL = new Set(["super_admin", "admin", "mis", "counselor", "tech_support", "faculty"]);
 
 function RouteFallback() {
   return (
@@ -115,6 +120,17 @@ export default function App() {
             element={
               <ProtectedRoute role={role}>
                 <PortalPage role={role} />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        {ROLES.filter((role) => STAFF_ROLES_ALL.has(role.value)).map((role) => (
+          <Route
+            key={`security-${role.slug}`}
+            path={`/${role.slug}/security`}
+            element={
+              <ProtectedRoute role={role}>
+                <SecurityPage role={role} />
               </ProtectedRoute>
             }
           />
