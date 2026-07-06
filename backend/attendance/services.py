@@ -8,9 +8,19 @@ do not count toward the attendance metric.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.utils import timezone
 
 from .models import AbsenceFollowUp, AttendanceEvent, AttendanceSource, FollowUpStatus
+
+# Django's ``date__week_day`` lookup: 1=Sunday, 2=Monday, …, 7=Saturday.
+_WEEKDAYS = (2, 3, 4, 5, 6)
+
+
+def _count_weekends() -> bool:
+    return bool(getattr(settings, "ATTENDANCE_COUNT_WEEKENDS", True))
 
 
 def record_attendance(student, batch, source: str, reference_id) -> None:
@@ -49,22 +59,41 @@ def record_login_attendance(student, device_id: str = "") -> int:
 
 
 def expected_days(batch, upto=None) -> int:
-    """Elapsed active days of the batch up to today (inclusive)."""
+    """Elapsed active days of the batch up to today (inclusive).
+
+    With ``ATTENDANCE_COUNT_WEEKENDS = False`` Saturdays/Sundays are excluded (and the
+    present-day counters exclude weekend logins to match), so the percentage stays a
+    weekday-over-weekday ratio.
+    """
     upto = upto or timezone.localdate()
     end = min(upto, batch.end_date)
     if end < batch.start_date:
         return 0
-    return (end - batch.start_date).days + 1
+    if _count_weekends():
+        return (end - batch.start_date).days + 1
+    return _weekdays_between(batch.start_date, end)
+
+
+def _weekdays_between(start, end) -> int:
+    """Number of Monday–Friday days in [start, end] inclusive."""
+    total = (end - start).days + 1
+    full_weeks, remainder = divmod(total, 7)
+    count = full_weeks * 5
+    day = start + timedelta(days=full_weeks * 7)
+    for _ in range(remainder):
+        if day.weekday() < 5:
+            count += 1
+        day += timedelta(days=1)
+    return count
 
 
 def login_present_days(student, batch) -> int:
     """Distinct days the student logged in while in this batch."""
-    return (
-        AttendanceEvent.objects.filter(student=student, batch=batch, source=AttendanceSource.LOGIN)
-        .values("date")
-        .distinct()
-        .count()
-    )
+    qs = AttendanceEvent.objects.filter(student=student, batch=batch, source=AttendanceSource.LOGIN)
+    if not _count_weekends():
+        # django-stubs mistypes week_day__in as dates; ints are the documented values.
+        qs = qs.filter(date__week_day__in=_WEEKDAYS)  # type: ignore[misc]
+    return qs.values("date").distinct().count()
 
 
 def logged_in_on(student, batch, day) -> bool:
@@ -99,11 +128,14 @@ def batch_attendance_summaries(batch, students=None) -> dict:
         students = User.objects.filter(enrollments__batch=batch).distinct()
     ids = [s.id for s in students]
     total = expected_days(batch)
+    present_qs = AttendanceEvent.objects.filter(
+        batch=batch, source=AttendanceSource.LOGIN, student_id__in=ids
+    )
+    if not _count_weekends():
+        # django-stubs mistypes week_day__in as dates; ints are the documented values.
+        present_qs = present_qs.filter(date__week_day__in=_WEEKDAYS)  # type: ignore[misc]
     present = dict(
-        AttendanceEvent.objects.filter(
-            batch=batch, source=AttendanceSource.LOGIN, student_id__in=ids
-        )
-        .values("student_id")
+        present_qs.values("student_id")
         .annotate(days=Count("date", distinct=True))
         .values_list("student_id", "days")
     )

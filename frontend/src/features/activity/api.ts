@@ -11,9 +11,9 @@ export interface ActivityRow {
 }
 
 export const activityApi = {
-  async list(): Promise<ActivityRow[]> {
+  async list(from?: string, to?: string): Promise<ActivityRow[]> {
     const { data } = await api.get<ActivityRow[] | Paginated<ActivityRow>>("/activity/", {
-      params: { page_size: 100 },
+      params: { page_size: 100, ...(from ? { from } : {}), ...(to ? { to } : {}) },
     });
     return unwrap(data);
   },

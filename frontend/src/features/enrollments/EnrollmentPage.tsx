@@ -15,7 +15,9 @@ import {
   TableToolbar,
   THead,
   useTableTools,
+  useToast,
 } from "../../design-system";
+import { contentApi } from "../content/api";
 import { PortalLayout } from "../portal/PortalLayout";
 import { enrollmentsApi, type ImportResult } from "./api";
 
@@ -25,8 +27,22 @@ const TEMPLATE =
 
 export function EnrollmentPage({ role }: { role: RoleDef }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  // MIS may revoke/restore an individual student's video access (matrix
+  // REVOKE_VIDEO_INDIVIDUAL); the roster is the natural place to do it per student.
+  const isMis = role.value === "mis";
+  const revokeVideos = useMutation({
+    mutationFn: (vars: { studentId: string; batchId: string }) =>
+      contentApi.revokeStudentVideoAccess(vars.studentId, vars.batchId),
+    onSuccess: () => toast.show("Video access revoked for this student.", "success"),
+  });
+  const restoreVideos = useMutation({
+    mutationFn: (vars: { studentId: string; batchId: string }) =>
+      contentApi.restoreStudentVideoAccess(vars.studentId, vars.batchId),
+    onSuccess: () => toast.show("Video access restored for this student.", "success"),
+  });
 
   const students = useQuery({ queryKey: ["enrollments"], queryFn: enrollmentsApi.list });
   const table = useTableTools(students.data, [
@@ -173,6 +189,7 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
               <th className="px-3 py-2">Email</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Setup</th>
+              {isMis && <th className="px-3 py-2">Videos</th>}
             </tr>
           </THead>
           <tbody>
@@ -204,6 +221,28 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
                       </Button>
                     ))}
                 </td>
+                {isMis && (
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          revokeVideos.mutate({ studentId: s.student, batchId: s.batch })
+                        }
+                      >
+                        Revoke
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          restoreVideos.mutate({ studentId: s.student, batchId: s.batch })
+                        }
+                      >
+                        Restore
+                      </Button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
             </tbody>

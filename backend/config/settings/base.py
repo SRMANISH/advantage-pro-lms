@@ -149,6 +149,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Business rules (config-driven; editable per the dynamic principle).
 FORUM_RESPONSE_WINDOW_HOURS = env.int("FORUM_RESPONSE_WINDOW_HOURS", default=3)
 LIVE_CLASS_DURATION_MINUTES = env.int("LIVE_CLASS_DURATION_MINUTES", default=120)
+# Attendance denominator: when False, Saturdays/Sundays don't count as expected days (and
+# weekend logins don't count as present days), so weekend gaps don't drag percentages down.
+ATTENDANCE_COUNT_WEEKENDS = env.bool("ATTENDANCE_COUNT_WEEKENDS", default=True)
+# Student import: hard cap per file so one upload can't stall a worker (split larger lists).
+MAX_IMPORT_ROWS = env.int("MAX_IMPORT_ROWS", default=5000)
 
 # Upload limits. DATA_UPLOAD_MAX_MEMORY_SIZE caps non-file POST bodies; the per-file hard
 # caps (video/document) are enforced by core.uploads.validate_upload.

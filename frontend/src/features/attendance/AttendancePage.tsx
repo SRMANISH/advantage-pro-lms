@@ -178,8 +178,15 @@ function DailyLoginPanel({ batchId, canFollowUp }: { batchId: string; canFollowU
     enabled: !!batchId,
   });
   const setStatus = useMutation({
-    mutationFn: ({ studentId, status }: { studentId: string; status: FollowUpStatus }) =>
-      attendanceApi.setFollowUpStatus(batchId, studentId, status),
+    mutationFn: ({
+      studentId,
+      status,
+      note,
+    }: {
+      studentId: string;
+      status: FollowUpStatus;
+      note?: string;
+    }) => attendanceApi.setFollowUpStatus(batchId, studentId, status, note),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance-daily", batchId, date] }),
   });
 
@@ -235,23 +242,43 @@ function DailyLoginPanel({ batchId, canFollowUp }: { batchId: string; canFollowU
                     </td>
                     {canFollowUp && (
                       <td className="px-3 py-2">
-                        <select
-                          className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
-                          value={r.follow_up_status}
-                          disabled={r.logged_in}
-                          onChange={(e) =>
-                            setStatus.mutate({
-                              studentId: r.student,
-                              status: e.target.value as FollowUpStatus,
-                            })
-                          }
-                        >
-                          {FOLLOW_UP_STATUSES.map((s) => (
-                            <option key={s.value} value={s.value}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+                            value={r.follow_up_status}
+                            disabled={r.logged_in}
+                            onChange={(e) =>
+                              setStatus.mutate({
+                                studentId: r.student,
+                                status: e.target.value as FollowUpStatus,
+                              })
+                            }
+                          >
+                            {FOLLOW_UP_STATUSES.map((s) => (
+                              <option key={s.value} value={s.value}>
+                                {s.label}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            aria-label={`Follow-up note for ${r.student_name}`}
+                            placeholder="Add note…"
+                            defaultValue={r.follow_up_note}
+                            disabled={r.logged_in}
+                            className="h-9 w-40 rounded-lg border border-brdr bg-surface px-2 text-sm"
+                            onBlur={(e) => {
+                              const note = e.target.value.trim();
+                              if (note && note !== r.follow_up_note) {
+                                setStatus.mutate({
+                                  studentId: r.student,
+                                  status: r.follow_up_status,
+                                  note,
+                                });
+                              }
+                            }}
+                          />
+                        </div>
                       </td>
                     )}
                   </tr>

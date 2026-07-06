@@ -34,7 +34,10 @@ export const liveApi = {
   async checkIn(id: string): Promise<{ ok: boolean; meeting_link: string }> {
     return (await api.post(`/liveclasses/${id}/check-in/`)).data;
   },
-  async cancel(id: string, reason?: string): Promise<void> {
-    await api.post(`/liveclasses/${id}/cancel/`, { reason: reason ?? "" });
+  async cancel(id: string, reason?: string, confirmShortNotice?: boolean): Promise<void> {
+    await api.post(`/liveclasses/${id}/cancel/`, {
+      reason: reason ?? "",
+      ...(confirmShortNotice ? { confirm_short_notice: true } : {}),
+    });
   },
 };

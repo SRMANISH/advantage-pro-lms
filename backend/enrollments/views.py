@@ -1,5 +1,6 @@
 """Student enrolment: bulk import (all-or-nothing) and a role-scoped list."""
 
+from django.conf import settings
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -40,6 +41,16 @@ class EnrollmentImportView(APIView):
             rows = parse_rows(uploaded)
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        max_rows = int(getattr(settings, "MAX_IMPORT_ROWS", 5000))
+        if len(rows) > max_rows:
+            return Response(
+                {
+                    "detail": f"Too many rows ({len(rows)}). Import at most {max_rows} rows "
+                    "per file — split larger lists into multiple uploads."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         errors, prepared = validate_and_build(rows)
         if errors:

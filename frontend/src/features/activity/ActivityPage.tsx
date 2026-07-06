@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
 import { Card, EmptyState, ListSkeleton, SectionHeading } from "../../design-system";
@@ -8,7 +9,12 @@ import { activityApi } from "./api";
 const prettyAction = (a: string) => a.replace(/_/g, " ");
 
 export function ActivityPage({ role }: { role: RoleDef }) {
-  const rows = useQuery({ queryKey: ["activity"], queryFn: activityApi.list });
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const rows = useQuery({
+    queryKey: ["activity", from, to],
+    queryFn: () => activityApi.list(from || undefined, to || undefined),
+  });
 
   return (
     <PortalLayout role={role}>
@@ -17,6 +23,39 @@ export function ActivityPage({ role }: { role: RoleDef }) {
         subtitle={`Recent actions${role.value === "faculty" ? " for your batches" : " across the platform"}.`}
       />
       <Card>
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+          <label className="text-muted" htmlFor="activity-from">
+            From
+          </label>
+          <input
+            id="activity-from"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+          />
+          <label className="text-muted" htmlFor="activity-to">
+            To
+          </label>
+          <input
+            id="activity-to"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+          />
+          {(from || to) && (
+            <button
+              className="text-xs text-brand-strong underline"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
         {rows.isLoading ? (
           <ListSkeleton items={4} />
         ) : rows.data && rows.data.length > 0 ? (
@@ -34,7 +73,7 @@ export function ActivityPage({ role }: { role: RoleDef }) {
             ))}
           </div>
         ) : (
-          <EmptyState title="No activity yet" />
+          <EmptyState title="No activity in this window" />
         )}
       </Card>
     </PortalLayout>

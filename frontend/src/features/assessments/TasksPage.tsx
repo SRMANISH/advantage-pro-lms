@@ -143,11 +143,16 @@ function ManageTasks() {
 function TaskGrading({ task }: { task: TaskItem }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [toGradeOnly, setToGradeOnly] = useState(false);
   const subs = useQuery({
     queryKey: ["submissions", task.id],
     queryFn: () => tasksApi.submissions(task.id),
     enabled: open,
   });
+
+  const all = subs.data ?? [];
+  const ungraded = all.filter((s) => s.score == null);
+  const visible = toGradeOnly ? ungraded : all;
 
   return (
     <div className="rounded-lg border border-brdr p-3">
@@ -157,12 +162,22 @@ function TaskGrading({ task }: { task: TaskItem }) {
       </button>
       {open && (
         <div className="mt-3 flex flex-col gap-3">
-          {subs.data && subs.data.length > 0 ? (
-            subs.data.map((s) => (
+          {all.length > 0 && (
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={toGradeOnly}
+                onChange={(e) => setToGradeOnly(e.target.checked)}
+              />
+              To grade only ({ungraded.length})
+            </label>
+          )}
+          {visible.length > 0 ? (
+            visible.map((s) => (
               <GradeRow key={s.id} submission={s} onGraded={() => qc.invalidateQueries({ queryKey: ["submissions", task.id] })} />
             ))
           ) : (
-            <EmptyState title="No submissions yet" />
+            <EmptyState title={toGradeOnly ? "Everything is graded 🎉" : "No submissions yet"} />
           )}
         </div>
       )}

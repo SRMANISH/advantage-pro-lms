@@ -5,6 +5,7 @@ plus actions on their assigned batches; MIS see all activity.
 """
 
 from django.db.models import Q
+from django.utils.dateparse import parse_date
 from rest_framework.generics import ListAPIView
 
 from core.pagination import StandardResultsPagination
@@ -24,6 +25,13 @@ class ActivityLogView(ListAPIView):
 
     def get_queryset(self):
         qs = AuditLog.objects.select_related("actor")
+        # Optional date window (?from=YYYY-MM-DD&to=YYYY-MM-DD); invalid values are ignored.
+        date_from = parse_date(self.request.query_params.get("from") or "")
+        date_to = parse_date(self.request.query_params.get("to") or "")
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
         user = self.request.user
         if user.role == Role.MIS:
             return qs

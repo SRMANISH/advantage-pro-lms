@@ -52,6 +52,16 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
   const cancel = useMutation({
     mutationFn: (id: string) => liveApi.cancel(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["liveclasses"] }),
+    onError: (err: unknown, id) => {
+      // <24h cancellations need an explicit confirmation (backend flags short_notice).
+      const data = (err as { response?: { data?: { short_notice?: boolean; detail?: string } } })
+        ?.response?.data;
+      if (data?.short_notice && window.confirm(data.detail ?? "Cancel this class?")) {
+        liveApi
+          .cancel(id, "", true)
+          .then(() => qc.invalidateQueries({ queryKey: ["liveclasses"] }));
+      }
+    },
   });
 
   return (

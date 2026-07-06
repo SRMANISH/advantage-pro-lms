@@ -61,4 +61,7 @@ export const contentApi = {
   async revokeStudentVideoAccess(studentId: string, batchId?: string): Promise<void> {
     await api.post("/video-access/revoke/", { student_id: studentId, batch_id: batchId });
   },
+  async restoreStudentVideoAccess(studentId: string, batchId?: string): Promise<void> {
+    await api.post("/video-access/restore/", { student_id: studentId, batch_id: batchId });
+  },
 };

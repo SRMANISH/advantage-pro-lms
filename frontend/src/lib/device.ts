@@ -48,17 +48,26 @@ async function sha256Hex(input: string): Promise<string> {
 /**
  * A per-browser device identifier for the student device policy.
  *
- * The id is **always derived fresh from the live device/browser signals** — we deliberately
- * do not persist it and read it back as identity. That means copying a stored value to
- * another machine does not transfer the binding: the other machine computes its own
- * fingerprint from its own signals and is treated as a new device (which is the whole point
- * of the anti-sharing policy). A browser/OS change legitimately re-triggers verification.
+ * Primary source is the FingerprintJS OSS visitorId — a richer, more stable fingerprint
+ * (canvas/audio/font entropy, resilient to minor browser updates) than our hand-rolled
+ * signal hash, which remains as the fallback when the library can't load (offline chunk,
+ * old browser). Either way the id is **always derived fresh from live device signals** —
+ * never persisted and read back — so copying a stored value to another machine does not
+ * transfer the binding; the other machine computes its own fingerprint and is treated as a
+ * new device (the point of the anti-sharing policy).
  *
- * This is a **deterrent, not tamper-proof identification** — a determined user can still
- * spoof the underlying signals. For stronger, evasion-resistant identification, drop in a
- * FingerprintJS Pro visitorId here (call sites already await, so nothing else changes) and
- * pair it with the server-side IP/UA drift signals on the device-change request.
+ * Still a **deterrent, not tamper-proof identification** — a determined user can spoof
+ * signals. The evasion-resistant upgrade is FingerprintJS Pro plus the server-side IP/UA
+ * drift checks on the device-change request.
  */
 export async function getDeviceId(): Promise<string> {
+  try {
+    const FingerprintJS = await import("@fingerprintjs/fingerprintjs");
+    const agent = await FingerprintJS.load();
+    const { visitorId } = await agent.get();
+    if (visitorId) return `fpjs_${visitorId}`;
+  } catch {
+    // fall through to the signal hash
+  }
   return `fp_${await sha256Hex(collectSignals())}`;
 }

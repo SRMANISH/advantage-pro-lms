@@ -1,5 +1,7 @@
 """Live class APIs: schedule (Admin/MIS), list (scoped), join + check-in (student)."""
 
+from datetime import timedelta
+
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -84,6 +86,23 @@ class LiveClassViewSet(viewsets.ModelViewSet):
         live = self.get_object()
         if live.status == LiveClassStatus.CANCELLED:
             return Response({"detail": "Already cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+        # Cancelling with <24h notice needs an explicit confirmation (the procedure asks for
+        # a day's notice) and is recorded as short-notice for accountability.
+        short_notice = live.scheduled_at <= timezone.now() + timedelta(hours=24)
+        confirmed = str(request.data.get("confirm_short_notice", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if short_notice and not confirmed:
+            return Response(
+                {
+                    "detail": "This class starts in less than 24 hours. Confirm the "
+                    "short-notice cancellation — students will be notified immediately.",
+                    "short_notice": True,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         live.status = LiveClassStatus.CANCELLED
         live.cancelled_at = timezone.now()
         live.cancel_reason = request.data.get("reason", "")
@@ -93,6 +112,7 @@ class LiveClassViewSet(viewsets.ModelViewSet):
             actor=request.user,
             action="live_class_cancelled",
             target=live,
+            metadata={"short_notice": short_notice},
             ip_address=get_client_ip(request),
         )
         return Response({"ok": True})
