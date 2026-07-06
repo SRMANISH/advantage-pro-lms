@@ -12,12 +12,15 @@ from django.utils import timezone
 from .models import Escalation
 
 
-def _already(kind: str, student, ref) -> bool:
-    return Escalation.objects.filter(kind=kind, student=student, reference_id=str(ref)).exists()
+def _first_time(kind: str, student, ref) -> bool:
+    """Atomically record the alert and report whether this call actually created it.
 
-
-def _mark(kind: str, student, ref) -> None:
-    Escalation.objects.create(kind=kind, student=student, reference_id=str(ref))
+    ``get_or_create`` (not a separate exists-check + create) so two overlapping cron runs
+    can't both pass the check and then have the second ``create()`` crash on the unique
+    constraint — Django retries the get internally on the race instead of raising.
+    """
+    _, created = Escalation.objects.get_or_create(kind=kind, student=student, reference_id=str(ref))
+    return created
 
 
 def _escalate_incomplete_tests() -> int:
@@ -40,9 +43,10 @@ def _escalate_incomplete_tests() -> int:
         attempted = set(TestAttempt.objects.filter(test=test).values_list("student_id", flat=True))
         students = User.objects.filter(role=Role.STUDENT, enrollments__batch=test.batch).distinct()
         for student in students:
-            if student.id in attempted or _already("test_incomplete", student, test.id):
+            if student.id in attempted:
                 continue
-            _mark("test_incomplete", student, test.id)
+            if not _first_time("test_incomplete", student, test.id):
+                continue
             notify(
                 student,
                 "test_incomplete",
@@ -79,9 +83,8 @@ def _escalate_low_attendance() -> int:
             summary = summaries.get(student.id, {"total": 0, "percent": 0})
             if summary["total"] == 0 or summary["percent"] >= 50:
                 continue
-            if _already("low_attendance", student, batch.id):
+            if not _first_time("low_attendance", student, batch.id):
                 continue
-            _mark("low_attendance", student, batch.id)
             notify_many(
                 faculty + counselors + mis,
                 "low_attendance",

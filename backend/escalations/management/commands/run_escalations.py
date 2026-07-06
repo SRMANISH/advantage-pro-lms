@@ -2,6 +2,7 @@
 
 from django.core.management.base import BaseCommand
 
+from core.cron import LockHeld, cron_lock
 from escalations.services import run_escalations
 
 
@@ -9,7 +10,12 @@ class Command(BaseCommand):
     help = "Send incomplete-test reminders and 50%-attendance alerts."
 
     def handle(self, *args, **options):
-        result = run_escalations()
+        try:
+            with cron_lock("run_escalations"):
+                result = run_escalations()
+        except LockHeld as exc:
+            self.stdout.write(self.style.WARNING(str(exc)))
+            return
         self.stdout.write(
             self.style.SUCCESS(
                 f"Escalations: {result['test_reminders']} test reminder(s), "

@@ -41,6 +41,10 @@ class AttendanceEvent(TimeStampedModel):
             models.Index(fields=["student", "batch"]),
             models.Index(fields=["batch"]),
             models.Index(fields=["batch", "source", "date"]),
+            # Serves login_present_days()'s per-student lookup at scale (batch,source,date
+            # above already serves the grouped per-batch query in
+            # batch_attendance_summaries()).
+            models.Index(fields=["student", "batch", "source", "date"]),
         ]
 
 

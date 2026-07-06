@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "core.request_id.RequestIDMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -123,6 +124,7 @@ REST_FRAMEWORK = {
         "user": env("THROTTLE_USER", default="240/min"),
         "login": env("THROTTLE_LOGIN", default="10/min"),
     },
+    "EXCEPTION_HANDLER": "core.exceptions.exception_handler",
 }
 
 SPECTACULAR_SETTINGS = {
@@ -196,19 +198,27 @@ if REDIS_URL:
 else:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
-# Structured logging to stdout (the platform/process manager collects it).
+# Structured logging to stdout (the platform/process manager collects it). Every line
+# carries the request id (core.request_id) so one request's logs can be grepped together.
 LOG_LEVEL = env("LOG_LEVEL", default="INFO")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {"()": "core.request_id.RequestIDLogFilter"},
+    },
     "formatters": {
         "verbose": {
-            "format": "{asctime} {levelname} {name} {message}",
+            "format": "{asctime} {levelname} {name} [{request_id}] {message}",
             "style": "{",
         },
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+            "filters": ["request_id"],
+        },
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {

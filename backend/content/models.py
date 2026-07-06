@@ -58,6 +58,9 @@ class VideoProgress(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(fields=["video", "student"], name="uniq_video_student")
         ]
+        # Serves a student's completed-video count across batches (dashboards, exports)
+        # without joining through Video for every row.
+        indexes = [models.Index(fields=["student", "completed"])]
 
 
 class VideoAccessRevocation(TimeStampedModel):

@@ -7,6 +7,7 @@ Never touches academic or legal records. Use --dry-run to preview counts.
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
+from core.cron import LockHeld, cron_lock
 from core.retention import purge_old_data
 
 
@@ -21,11 +22,16 @@ class Command(BaseCommand):
         parser.add_argument("--dry-run", action="store_true")
 
     def handle(self, *args, **options):
-        result = purge_old_data(
-            audit_days=options["audit_days"],
-            notification_days=options["notification_days"],
-            dry_run=options["dry_run"],
-        )
+        try:
+            with cron_lock("purge_old_data"):
+                result = purge_old_data(
+                    audit_days=options["audit_days"],
+                    notification_days=options["notification_days"],
+                    dry_run=options["dry_run"],
+                )
+        except LockHeld as exc:
+            self.stdout.write(self.style.WARNING(str(exc)))
+            return
         verb = "Would purge" if result["dry_run"] else "Purged"
         self.stdout.write(
             self.style.SUCCESS(

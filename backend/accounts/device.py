@@ -1,8 +1,10 @@
-"""Device policy: first login binds the device; changes need faculty approval.
+"""Device policy: first login binds the device; changes need approval.
 
-Per the plan a student is tied to the device they first sign in from. A login from a
-new device is blocked and the student's faculty are alerted to approve the change.
-(The 'only during a live class' constraint connects fully once live classes land.)
+A student is tied to the device they first sign in from. A login from a new device is
+blocked and raises an approval request: during one of the student's live classes, their
+Faculty approve it; outside class hours, MIS does. After the student's course ends, the
+bound device still works (so they can sign in to look up their Certificate ID), but
+device *changes* are closed for good.
 """
 
 from __future__ import annotations
