@@ -1,17 +1,18 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * E2E smoke suite against the real dev servers (Django API + Vite SPA).
+ * E2E suite against the real dev servers (Django API + Vite SPA).
  *
  * `npm run e2e` boots both servers automatically (or reuses ones you already have
  * running) against the dev database — the same seed_demo accounts as DEMO_GUIDE.md.
- * Student flows are exercised with staff accounts where device-binding would block a
- * fresh browser profile.
+ * workers: 1 — specs mutate shared dev data (FS-DEMO doubts/tests/tasks); running them
+ * one at a time keeps the suite deterministic against that single shared database.
  */
 export default defineConfig({
   testDir: "./e2e",
   timeout: 45_000,
-  fullyParallel: false, // shared dev DB — keep runs deterministic
+  fullyParallel: false,
+  workers: 1,
   retries: 0,
   reporter: [["list"]],
   use: {

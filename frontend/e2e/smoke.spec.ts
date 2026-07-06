@@ -1,10 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Money-flow smoke: public landing renders, the utility-links board is reachable, and a
- * staff account can sign in through the real API to a working dashboard. (Student login
- * is device-bound — a fresh browser profile would be held for approval by design — so
- * the signed-in path uses faculty; the form/API path is identical.)
+ * Basic smoke: public landing renders, the utility-links board is reachable, and a staff
+ * account can sign in to a working dashboard. Deeper flows (doubt lifecycle, device
+ * policy, tests/tasks, certification) each have their own spec.
  */
 
 test("landing page renders with sign-in entry point", async ({ page }) => {
@@ -24,7 +23,7 @@ test("faculty signs in and reaches their dashboard", async ({ page }) => {
   await page.locator("#password").fill("Demo!passLMS1");
   await page.getByRole("button", { name: /sign in securely/i }).click();
 
-  await page.waitForURL("**/faculty", { timeout: 15_000 });
+  await page.waitForURL((url) => url.pathname === "/faculty", { timeout: 15_000 });
   // The portal shell renders the role's nav — proof the session + /me round-trip worked.
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Content", exact: true })).toBeVisible();
