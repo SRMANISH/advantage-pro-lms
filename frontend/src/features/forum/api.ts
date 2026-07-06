@@ -1,9 +1,18 @@
 import { api, unwrap, type Paginated } from "../../lib/api";
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  content_type: string;
+  download_url: string;
+  created_at: string;
+}
+
 export interface ReplyItem {
   id: string;
   author_name: string;
   body: string;
+  attachments: Attachment[];
   created_at: string;
 }
 
@@ -23,6 +32,7 @@ export interface ThreadItem {
 }
 
 export interface ThreadDetail extends ThreadItem {
+  attachments: Attachment[];
   replies: ReplyItem[];
 }
 
@@ -68,10 +78,29 @@ export const forumApi = {
   async get(id: string): Promise<ThreadDetail> {
     return (await api.get<ThreadDetail>(`/threads/${id}/`)).data;
   },
-  async create(payload: { batch: string; title: string; body: string }): Promise<ThreadItem> {
+  async create(payload: {
+    batch: string;
+    title: string;
+    body: string;
+    file?: File | null;
+  }): Promise<ThreadItem> {
+    if (payload.file) {
+      const form = new FormData();
+      form.append("batch", payload.batch);
+      form.append("title", payload.title);
+      form.append("body", payload.body);
+      form.append("file", payload.file);
+      return (await api.post<ThreadItem>("/threads/", form)).data;
+    }
     return (await api.post<ThreadItem>("/threads/", payload)).data;
   },
-  async reply(id: string, body: string): Promise<ThreadDetail> {
+  async reply(id: string, body: string, file?: File | null): Promise<ThreadDetail> {
+    if (file) {
+      const form = new FormData();
+      form.append("body", body);
+      form.append("file", file);
+      return (await api.post<ThreadDetail>(`/threads/${id}/reply/`, form)).data;
+    }
     return (await api.post<ThreadDetail>(`/threads/${id}/reply/`, { body })).data;
   },
   async resolve(id: string): Promise<void> {

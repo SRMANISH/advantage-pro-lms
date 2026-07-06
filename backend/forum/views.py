@@ -1,10 +1,15 @@
 """Doubt forum APIs: per-batch threads, replies, resolve, keyword search."""
 
+import uuid
+
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Count, Q
+from django.http import FileResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,19 +17,37 @@ from rest_framework.views import APIView
 from audit.services import record_action
 from batches.models import Batch
 from content.access import can_access_batch
+from core.adapters.registry import get_storage
 from core.pagination import StandardResultsPagination
 from core.permissions import has_any_role
 from core.roles import Role
+from core.uploads import validate_upload
 from enrollments.models import Enrollment
 from notifications.services import notify, notify_many
 
-from .models import Reply, Thread, ThreadStatus
+from .models import Reply, Thread, ThreadAttachment, ThreadStatus
 from .serializers import (
     ReplyCreateSerializer,
     ThreadCreateSerializer,
     ThreadDetailSerializer,
     ThreadSerializer,
 )
+
+
+def _store_attachment(thread, reply, upload, user) -> None:
+    """Validate + persist one uploaded file as a forum attachment."""
+    validate_upload(upload, "document")
+    key = f"forum/{uuid.uuid4()}/{upload.name}"
+    get_storage().save(key, upload)
+    ThreadAttachment.objects.create(
+        thread=thread,
+        reply=reply,
+        storage_key=key,
+        filename=upload.name,
+        content_type=getattr(upload, "content_type", "") or "application/octet-stream",
+        uploaded_by=user,
+    )
+
 
 # Updated procedure: forum is MIS / Tech Support / Faculty / Student. Admin and Super
 # Admin no longer moderate. Tech Support can reply and resolve, not just monitor.
@@ -53,6 +76,7 @@ def _forum_batch_ids(user):
 class ThreadViewSet(viewsets.ModelViewSet):
     permission_classes = [ForumRoles]
     pagination_class = StandardResultsPagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -64,7 +88,7 @@ class ThreadViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = Thread.objects.select_related("batch", "author")
         if self.action == "retrieve":
-            qs = qs.prefetch_related("replies__author")
+            qs = qs.prefetch_related("replies__author", "replies__attachments", "attachments")
         if self.action == "list":
             qs = qs.annotate(reply_count=Count("replies", distinct=True))
         batch = self.request.query_params.get("batch")
@@ -79,7 +103,12 @@ class ThreadViewSet(viewsets.ModelViewSet):
         return qs.order_by("-created_at")
 
     def perform_create(self, serializer):
-        thread = serializer.save(author=self.request.user)
+        # Validate any attachment before persisting so a bad file rejects the whole post.
+        upload = self.request.FILES.get("file")
+        with transaction.atomic():
+            thread = serializer.save(author=self.request.user)
+            if upload:
+                _store_attachment(thread, None, upload, self.request.user)
         record_action(actor=self.request.user, action="doubt_posted", target=thread)
         notify_many(
             list(thread.batch.faculty.all()),
@@ -96,9 +125,13 @@ class ThreadViewSet(viewsets.ModelViewSet):
             return Response({"detail": "You cannot reply here."}, status=status.HTTP_403_FORBIDDEN)
         serializer = ReplyCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        Reply.objects.create(
-            thread=thread, author=request.user, body=serializer.validated_data["body"]
-        )
+        upload = request.FILES.get("file")
+        with transaction.atomic():
+            reply = Reply.objects.create(
+                thread=thread, author=request.user, body=serializer.validated_data["body"]
+            )
+            if upload:
+                _store_attachment(thread, reply, upload, request.user)
         # A reply from a responder (faculty/TS/MIS) marks the doubt answered.
         if thread.status == ThreadStatus.OPEN and request.user.role in RESPONDER_ROLES:
             thread.status = ThreadStatus.ANSWERED
@@ -225,3 +258,24 @@ class ForumBatchesView(APIView):
         else:
             qs = Batch.objects.none()
         return Response([{"id": str(b.id), "code": b.code, "name": b.name} for b in qs])
+
+
+class AttachmentDownloadView(APIView):
+    """Serve a forum attachment, gated by the same batch access as the forum itself."""
+
+    permission_classes = [ForumRoles]
+
+    def get(self, request, pk):
+        att = ThreadAttachment.objects.select_related("thread__batch").filter(pk=pk).first()
+        if not att:
+            return Response({"detail": "Attachment not found."}, status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+        # Tech Support / MIS see every batch's forum; others need normal batch access.
+        if user.role not in ALL_FORUM and not can_access_batch(user, att.thread.batch):
+            return Response({"detail": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
+        fileobj = get_storage().open(att.storage_key)
+        return FileResponse(
+            fileobj,
+            content_type=att.content_type or "application/octet-stream",
+            filename=att.filename,
+        )

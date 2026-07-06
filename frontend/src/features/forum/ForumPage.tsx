@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Paperclip } from "lucide-react";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
@@ -13,12 +14,31 @@ import {
 } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
-import { forumApi, type ThreadStatus } from "./api";
+import { forumApi, type Attachment, type ThreadStatus } from "./api";
 
 const RESPONDERS = new Set(["faculty", "tech_support", "mis"]);
 
 function StatusBadge({ status }: { status: ThreadStatus }) {
   return <Badge>{status}</Badge>;
+}
+
+function Attachments({ items }: { items: Attachment[] }) {
+  if (!items?.length) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-2">
+      {items.map((a) => (
+        <a
+          key={a.id}
+          href={a.download_url}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-sky px-2.5 py-1 text-xs font-medium text-brand-strong hover:underline"
+        >
+          <Paperclip size={13} /> {a.filename}
+        </a>
+      ))}
+    </div>
+  );
 }
 
 export function ForumPage({ role }: { role: RoleDef }) {
@@ -42,10 +62,12 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
   const batches = useQuery({ queryKey: ["forum-batches"], queryFn: forumApi.batches });
 
   const [form, setForm] = useState({ batch: "", title: "", body: "" });
+  const [file, setFile] = useState<File | null>(null);
   const create = useMutation({
-    mutationFn: () => forumApi.create(form),
+    mutationFn: () => forumApi.create({ ...form, file }),
     onSuccess: () => {
       setForm({ batch: "", title: "", body: "" });
+      setFile(null);
       qc.invalidateQueries({ queryKey: ["threads"] });
     },
   });
@@ -81,6 +103,15 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
               value={form.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })}
             />
+            <label className="text-xs text-muted">
+              Attach a screenshot or file (optional)
+              <input
+                type="file"
+                accept=".png,.jpg,.jpeg,.gif,.pdf,.txt,.zip,.docx,.xlsx"
+                className="mt-1 block w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-sky file:px-3 file:py-1.5 file:text-brand-strong"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
             <Button
               className="w-fit"
               onClick={() => create.mutate()}
@@ -130,15 +161,17 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
   const { user } = useAuth();
   const thread = useQuery({ queryKey: ["thread", id], queryFn: () => forumApi.get(id) });
   const [body, setBody] = useState("");
+  const [replyFile, setReplyFile] = useState<File | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["thread", id] });
     qc.invalidateQueries({ queryKey: ["threads"] });
   };
   const reply = useMutation({
-    mutationFn: () => forumApi.reply(id, body),
+    mutationFn: () => forumApi.reply(id, body, replyFile),
     onSuccess: () => {
       setBody("");
+      setReplyFile(null);
       invalidate();
     },
   });
@@ -171,7 +204,8 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
         </div>
       </div>
       <p className="mb-1 text-sm text-ink">{t.body}</p>
-      <p className="mb-4 text-xs text-muted">
+      <Attachments items={t.attachments} />
+      <p className="mb-4 mt-1 text-xs text-muted">
         {t.author_name} · {t.batch_code}
       </p>
 
@@ -179,6 +213,7 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
         {t.replies.map((r) => (
           <div key={r.id} className="py-2">
             <div className="text-sm text-ink">{r.body}</div>
+            <Attachments items={r.attachments} />
             <div className="text-xs text-muted">{r.author_name}</div>
           </div>
         ))}
@@ -191,6 +226,15 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />
+        <label className="text-xs text-muted">
+          Attach a file (optional)
+          <input
+            type="file"
+            accept=".png,.jpg,.jpeg,.gif,.pdf,.txt,.zip,.docx,.xlsx"
+            className="mt-1 block w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-sky file:px-3 file:py-1.5 file:text-brand-strong"
+            onChange={(e) => setReplyFile(e.target.files?.[0] ?? null)}
+          />
+        </label>
         <Button className="w-fit" onClick={() => reply.mutate()} disabled={!body || reply.isPending}>
           {reply.isPending ? "Replying…" : "Reply"}
         </Button>

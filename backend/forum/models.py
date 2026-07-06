@@ -44,3 +44,25 @@ class Reply(TimeStampedModel):
 
     class Meta:
         ordering = ["created_at"]
+
+
+class ThreadAttachment(TimeStampedModel):
+    """A file (screenshot, log, PDF…) attached to a doubt or a reply.
+
+    ``reply`` is null for thread-level attachments. Stored via the storage adapter under an
+    unguessable key and only served through the gated download view.
+    """
+
+    thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name="attachments")
+    reply = models.ForeignKey(
+        Reply, null=True, blank=True, on_delete=models.CASCADE, related_name="attachments"
+    )
+    storage_key = models.CharField(max_length=300)
+    filename = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=100, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["created_at"]

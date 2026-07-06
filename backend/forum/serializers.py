@@ -2,15 +2,28 @@ from rest_framework import serializers
 
 from content.access import can_access_batch
 
-from .models import Reply, Thread
+from .models import Reply, Thread, ThreadAttachment
+
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    download_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ThreadAttachment
+        fields = ["id", "filename", "content_type", "download_url", "created_at"]
+        read_only_fields = fields
+
+    def get_download_url(self, obj) -> str:
+        return f"/api/v1/attachments/{obj.id}/"
 
 
 class ReplySerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
+    attachments = AttachmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Reply
-        fields = ["id", "author_name", "body", "created_at"]
+        fields = ["id", "author_name", "body", "attachments", "created_at"]
         read_only_fields = fields
 
     def get_author_name(self, obj) -> str:
@@ -44,9 +57,14 @@ class ThreadSerializer(serializers.ModelSerializer):
 
 class ThreadDetailSerializer(ThreadSerializer):
     replies = ReplySerializer(many=True, read_only=True)
+    attachments = serializers.SerializerMethodField()
 
     class Meta(ThreadSerializer.Meta):
-        fields = [*ThreadSerializer.Meta.fields, "replies"]
+        fields = [*ThreadSerializer.Meta.fields, "attachments", "replies"]
+
+    def get_attachments(self, obj):
+        # Thread-level attachments only; reply attachments ride along on each reply.
+        return AttachmentSerializer(obj.attachments.filter(reply__isnull=True), many=True).data
 
 
 class ThreadCreateSerializer(serializers.ModelSerializer):
