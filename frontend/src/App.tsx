@@ -43,6 +43,9 @@ const LiveClassesPage = lazy(() =>
   import("./features/liveclasses/LiveClassesPage").then((m) => ({ default: m.LiveClassesPage })),
 );
 const ChannelsPage = lazy(() => import("./features/channels/ChannelsPage").then((m) => ({ default: m.ChannelsPage })));
+const PermissionsPage = lazy(() =>
+  import("./features/permissions/PermissionsPage").then((m) => ({ default: m.PermissionsPage })),
+);
 const CertificatePage = lazy(() =>
   import("./features/certification/CertificatePage").then((m) => ({ default: m.CertificatePage })),
 );
@@ -321,6 +324,17 @@ export default function App() {
             element={
               <ProtectedRoute role={role}>
                 <ChannelsPage role={role} />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        {ROLES.filter((role) => SETTINGS_ROLES.has(role.value)).map((role) => (
+          <Route
+            key={`permissions-${role.slug}`}
+            path={`/${role.slug}/permissions`}
+            element={
+              <ProtectedRoute role={role}>
+                <PermissionsPage role={role} />
               </ProtectedRoute>
             }
           />

@@ -1,9 +1,11 @@
 """Single source of truth for the role -> action permission matrix.
 
 This mirrors section 6 of the execution plan. It is enforced server-side on every
-endpoint (see core/permissions.py). It is intentionally code-defined for now; a later
-module promotes it to a DB-backed, Super-Admin-editable matrix without changing callers
-(``can`` stays the contract).
+endpoint (see core/permissions.py). The code-defined ``MATRIX`` below is the **default**;
+Super Admin can replace individual actions' role sets at runtime via
+``core.models.PermissionOverride`` (edited through /api/v1/permissions/matrix/). Callers
+are unchanged — ``can`` stays the contract and consults the effective (default+override)
+matrix through a short cache.
 
 Conditions noted in the updated operating procedure (handled by object-level checks in
 their own modules):
@@ -90,11 +92,53 @@ MATRIX: dict[str, frozenset[str]] = {
 }
 
 
+# Every defined action, in definition order (drives the Super Admin permissions screen).
+ALL_ACTIONS: list[str] = [value for name, value in vars(Action).items() if not name.startswith("_")]
+
+# Actions Super Admin can never be removed from — otherwise an edit could lock everyone
+# out of the permissions screen (or of undoing a bad role change) permanently.
+LOCKED_SA_ACTIONS = frozenset({Action.MANAGE_SETTINGS, Action.CHANGE_USER_ROLE})
+
+_CACHE_KEY = "core.permission-overrides"
+_CACHE_TTL_SECONDS = 60
+
+
+def _overrides() -> dict[str, frozenset[str]]:
+    """DB overrides as {action: roles}, cached briefly. Empty when unreadable (e.g.
+    before the first migrate), so the code-defined defaults always keep working."""
+    from django.core.cache import cache
+
+    data = cache.get(_CACHE_KEY)
+    if data is None:
+        try:
+            from core.models import PermissionOverride
+
+            data = {
+                o.action: frozenset(o.roles)
+                for o in PermissionOverride.objects.all()
+                if o.action in MATRIX
+            }
+        except Exception:  # pragma: no cover - table missing / DB unavailable
+            return {}
+        cache.set(_CACHE_KEY, data, _CACHE_TTL_SECONDS)
+    return data
+
+
+def invalidate_matrix_cache() -> None:
+    """Drop the cached overrides (called after every matrix edit, and per-test)."""
+    from django.core.cache import cache
+
+    cache.delete(_CACHE_KEY)
+
+
 def can(role: str, action: str) -> bool:
     """Return True if ``role`` is permitted to perform ``action``."""
-    return role in MATRIX.get(action, frozenset())
+    return role in roles_for(action)
 
 
 def roles_for(action: str) -> frozenset[str]:
-    """Return the set of roles permitted to perform ``action``."""
+    """Return the effective set of roles permitted to perform ``action``."""
+    override = _overrides().get(action)
+    if override is not None:
+        return override
     return MATRIX.get(action, frozenset())

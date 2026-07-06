@@ -85,6 +85,7 @@ const NAV: NavEntry[] = [
   { to: "escalations", label: "Escalations", Icon: TriangleAlert, roles: ESCALATIONS, group: "Operations" },
   { to: "reports", label: "Reports", Icon: Download, roles: REPORTS, group: "Operations" },
   { to: "channels", label: "Channels", Icon: Settings, roles: role("super_admin"), group: "Operations" },
+  { to: "permissions", label: "Permissions", Icon: KeyRound, roles: role("super_admin"), group: "Operations" },
 ];
 
 const GROUP_ORDER = ["Overview", "People & batches", "Learning", "Tracking", "Completion", "Operations"];
