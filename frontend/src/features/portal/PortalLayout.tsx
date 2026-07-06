@@ -105,6 +105,14 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
   // Close the mobile drawer on navigation.
   useEffect(() => setOpen(false), [location.pathname]);
 
+  // Keyboard path for closing the profile menu (the backdrop is pointer-only).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   const sidebar = (
     <div className="ap-sidebar flex h-full flex-col border-r border-white/60 text-ink">
       <Link to={`/${roleDef.slug}`} className="flex items-center gap-3 px-5 py-5">
@@ -264,7 +272,11 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
               <AnimatePresence>
                 {menuOpen && (
                   <>
-                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                    <div
+                      aria-hidden="true"
+                      className="fixed inset-0 z-10"
+                      onClick={() => setMenuOpen(false)}
+                    />
                     <motion.div
                       initial={{ opacity: 0, y: 6, scale: 0.98 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}

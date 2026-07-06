@@ -78,8 +78,11 @@ function ManageTests() {
   return (
     <div className="grid gap-6">
       <Card>
-        <label className="mb-1 block text-sm text-muted">Batch</label>
+        <label htmlFor="tests-batch" className="mb-1 block text-sm text-muted">
+          Batch
+        </label>
         <select
+          id="tests-batch"
           className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
           value={batchId}
           onChange={(e) => setBatchId(e.target.value)}

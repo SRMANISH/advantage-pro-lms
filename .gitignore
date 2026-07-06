@@ -33,3 +33,8 @@ _lms_plan.txt
 # Pytest scratch media (regenerated every test run)
 /backend/.pytest_media_content/
 /backend/.pytest_media_tasks/
+
+# Playwright artifacts
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/blob-report/

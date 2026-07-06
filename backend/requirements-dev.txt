@@ -13,3 +13,6 @@ mypy==2.1.0
 django-stubs==6.0.5
 django-stubs-ext==6.0.5
 djangorestframework-stubs==3.17.0
+
+# Load testing (optional; heavy deps). See backend/loadtest/locustfile.py.
+locust>=2.31,<3

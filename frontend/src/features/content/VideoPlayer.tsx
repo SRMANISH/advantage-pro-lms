@@ -43,6 +43,9 @@ export function VideoPlayer({ video, watermark }: { video: VideoItem; watermark:
 
   return (
     <div className="relative overflow-hidden rounded-lg bg-black">
+      {/* Faculty-uploaded lessons carry no caption files today; a captions pipeline is a
+          content-team item, not something the player can synthesise. */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={ref}
         src={video.play_url}

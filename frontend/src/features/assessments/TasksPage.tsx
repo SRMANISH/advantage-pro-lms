@@ -64,8 +64,11 @@ function ManageTasks() {
   return (
     <div className="grid gap-6">
       <Card>
-        <label className="mb-1 block text-sm text-muted">Batch</label>
+        <label htmlFor="tasks-batch" className="mb-1 block text-sm text-muted">
+          Batch
+        </label>
         <select
+          id="tasks-batch"
           className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
           value={batchId}
           onChange={(e) => setBatchId(e.target.value)}
@@ -96,8 +99,11 @@ function ManageTasks() {
           />
           <div className="mb-3 grid gap-2 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-muted">Deadline type</label>
+              <label htmlFor="task-deadline-type" className="mb-1 block text-xs text-muted">
+                Deadline type
+              </label>
               <select
+                id="task-deadline-type"
                 className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
                 value={form.deadline_type}
                 onChange={(e) =>
@@ -110,8 +116,11 @@ function ManageTasks() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-muted">Deadline (optional)</label>
+              <label htmlFor="task-deadline" className="mb-1 block text-xs text-muted">
+                Deadline (optional)
+              </label>
               <Input
+                id="task-deadline"
                 type="datetime-local"
                 value={form.deadline}
                 onChange={(e) => setForm({ ...form, deadline: e.target.value })}

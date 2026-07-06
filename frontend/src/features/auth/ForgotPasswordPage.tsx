@@ -86,8 +86,14 @@ export function ForgotPasswordPage() {
 
         {step === "identify" && (
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-muted">Email or Registration ID</label>
-            <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} />
+            <label htmlFor="forgot-identifier" className="text-xs text-muted">
+              Email or Registration ID
+            </label>
+            <Input
+              id="forgot-identifier"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+            />
             <Button onClick={start} disabled={!identifier || busy}>
               {busy ? "Sending…" : "Send email code"}
             </Button>

@@ -71,8 +71,10 @@ export function ContentPage({ role }: { role: RoleDef }) {
       />
 
       <Card className="mb-6">
-        <label className="mb-1 block text-sm text-muted">Batch</label>
-        <Select value={batchId} onChange={(e) => setBatchId(e.target.value)}>
+        <label htmlFor="content-batch" className="mb-1 block text-sm text-muted">
+          Batch
+        </label>
+        <Select id="content-batch" value={batchId} onChange={(e) => setBatchId(e.target.value)}>
           <option value="">All my batches</option>
           {batches.data?.map((b) => (
             <option key={b.id} value={b.id}>
