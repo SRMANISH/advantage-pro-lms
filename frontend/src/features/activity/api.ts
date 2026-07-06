@@ -1,4 +1,4 @@
-import { api } from "../../lib/api";
+import { api, unwrap, type Paginated } from "../../lib/api";
 
 export interface ActivityRow {
   id: string;
@@ -12,6 +12,9 @@ export interface ActivityRow {
 
 export const activityApi = {
   async list(): Promise<ActivityRow[]> {
-    return (await api.get<ActivityRow[]>("/activity/")).data;
+    const { data } = await api.get<ActivityRow[] | Paginated<ActivityRow>>("/activity/", {
+      params: { page_size: 100 },
+    });
+    return unwrap(data);
   },
 };

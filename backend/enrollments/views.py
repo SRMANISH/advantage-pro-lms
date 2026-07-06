@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 
 from accounts.setup import create_setup_token, send_setup_email
 from audit.services import record_action
+from core.pagination import StandardResultsPagination
 from core.permissions import MatrixPermission, has_any_role
 from core.permissions_matrix import Action
 from core.roles import Role
@@ -75,6 +76,7 @@ class EnrollmentImportView(APIView):
 class EnrollmentListView(ListAPIView):
     serializer_class = EnrollmentSerializer
     permission_classes = [has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.FACULTY)]
+    pagination_class = StandardResultsPagination
 
     def get_queryset(self):
         user = self.request.user

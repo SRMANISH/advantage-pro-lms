@@ -13,6 +13,19 @@ export const api = axios.create({
   xsrfHeaderName: "X-CSRFToken",
 });
 
+/** A DRF page envelope: `{ count, next, previous, results }`. */
+export interface Paginated<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+/** Accept either a plain array or a DRF paginated envelope and return the array. */
+export function unwrap<T>(data: T[] | Paginated<T>): T[] {
+  return Array.isArray(data) ? data : data.results;
+}
+
 // Global mutation-error surface: any failed write pops an error toast with the server's
 // detail. GETs and the auth flows (which render errors inline) are excluded.
 const QUIET = ["/auth/login/", "/auth/password/", "/auth/setup/"];

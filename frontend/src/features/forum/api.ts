@@ -1,4 +1,4 @@
-import { api } from "../../lib/api";
+import { api, unwrap, type Paginated } from "../../lib/api";
 
 export interface ReplyItem {
   id: string;
@@ -60,7 +60,10 @@ export interface MonitorResult {
 
 export const forumApi = {
   async list(q?: string): Promise<ThreadItem[]> {
-    return (await api.get<ThreadItem[]>(`/threads/${q ? `?q=${encodeURIComponent(q)}` : ""}`)).data;
+    const { data } = await api.get<ThreadItem[] | Paginated<ThreadItem>>("/threads/", {
+      params: { page_size: 100, ...(q ? { q } : {}) },
+    });
+    return unwrap(data);
   },
   async get(id: string): Promise<ThreadDetail> {
     return (await api.get<ThreadDetail>(`/threads/${id}/`)).data;

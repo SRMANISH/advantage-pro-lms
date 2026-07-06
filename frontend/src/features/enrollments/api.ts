@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { api } from "../../lib/api";
+import { api, unwrap, type Paginated } from "../../lib/api";
 
 export interface RowError {
   row: number;
@@ -45,7 +45,10 @@ export const enrollmentsApi = {
     }
   },
   async list(): Promise<EnrollmentRow[]> {
-    return (await api.get<EnrollmentRow[]>("/enrollments/")).data;
+    const { data } = await api.get<EnrollmentRow[] | Paginated<EnrollmentRow>>("/enrollments/", {
+      params: { page_size: 100 },
+    });
+    return unwrap(data);
   },
   async resendSetup(studentId: string): Promise<{ ok: boolean; url?: string }> {
     return (await api.post("/auth/setup/resend/", { student_id: studentId })).data;

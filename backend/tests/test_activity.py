@@ -44,4 +44,4 @@ def test_mis_sees_all_activity(db):
     AuditLog.objects.create(action="batch_created", target_type="batch", target_id="x")
     resp = client_for(user("mis", Role.MIS)).get(URL)
     assert resp.status_code == 200
-    assert any(r["action"] == "batch_created" for r in resp.json())
+    assert any(r["action"] == "batch_created" for r in resp.json()["results"])

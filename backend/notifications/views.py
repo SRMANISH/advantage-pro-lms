@@ -8,6 +8,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from audit.services import record_action
 from core.adapters.registry import get_email, get_sms, get_whatsapp
+from core.pagination import StandardResultsPagination
 from core.permissions import IsSuperAdmin
 
 from .models import Notification
@@ -17,6 +18,7 @@ from .serializers import NotificationSerializer
 class NotificationViewSet(ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsPagination
 
     def get_queryset(self):
         return Notification.objects.filter(recipient=self.request.user)

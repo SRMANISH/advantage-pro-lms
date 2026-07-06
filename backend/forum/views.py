@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from audit.services import record_action
 from batches.models import Batch
 from content.access import can_access_batch
+from core.pagination import StandardResultsPagination
 from core.permissions import has_any_role
 from core.roles import Role
 from enrollments.models import Enrollment
@@ -51,6 +52,7 @@ def _forum_batch_ids(user):
 
 class ThreadViewSet(viewsets.ModelViewSet):
     permission_classes = [ForumRoles]
+    pagination_class = StandardResultsPagination
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -72,7 +74,9 @@ class ThreadViewSet(viewsets.ModelViewSet):
         if q:
             qs = qs.filter(Q(title__icontains=q) | Q(body__icontains=q))
         ids = _forum_batch_ids(self.request.user)
-        return qs if ids is None else qs.filter(batch_id__in=list(ids))
+        qs = qs if ids is None else qs.filter(batch_id__in=list(ids))
+        # Stable ordering so pagination is deterministic (newest doubts first).
+        return qs.order_by("-created_at")
 
     def perform_create(self, serializer):
         thread = serializer.save(author=self.request.user)

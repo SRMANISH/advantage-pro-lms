@@ -36,7 +36,7 @@ def test_notify_creates_in_app_and_lists_only_own():
 
     resp = client_for(a).get(LIST_URL)
     assert resp.status_code == 200
-    messages = [n["message"] for n in resp.json()]
+    messages = [n["message"] for n in resp.json()["results"]]
     assert messages == ["for A"]
 
 
@@ -48,7 +48,7 @@ def test_mark_read_and_unread_count():
     c = client_for(a)
 
     assert c.get(f"{LIST_URL}unread-count/").json()["count"] == 2
-    note_id = c.get(LIST_URL).json()[0]["id"]
+    note_id = c.get(LIST_URL).json()["results"][0]["id"]
     assert c.post(f"{LIST_URL}{note_id}/read/").status_code == 200
     assert c.get(f"{LIST_URL}unread-count/").json()["count"] == 1
     assert c.post(f"{LIST_URL}mark-all-read/").status_code == 200

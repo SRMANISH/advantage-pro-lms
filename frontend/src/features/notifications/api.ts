@@ -1,4 +1,4 @@
-import { api } from "../../lib/api";
+import { api, unwrap, type Paginated } from "../../lib/api";
 
 export interface NotificationItem {
   id: string;
@@ -11,7 +11,11 @@ export interface NotificationItem {
 
 export const notificationsApi = {
   async list(): Promise<NotificationItem[]> {
-    return (await api.get<NotificationItem[]>("/notifications/")).data;
+    // The bell shows recent items; the first page (25) is the right amount.
+    const { data } = await api.get<NotificationItem[] | Paginated<NotificationItem>>(
+      "/notifications/",
+    );
+    return unwrap(data);
   },
   async markRead(id: string): Promise<void> {
     await api.post(`/notifications/${id}/read/`);

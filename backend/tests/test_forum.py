@@ -128,7 +128,7 @@ def test_forum_is_scoped_to_own_batch(world):
     )
     Thread.objects.create(batch=world["other"], author=other_student, title="Hidden", body="b")
 
-    titles = {t["title"] for t in client_for(world["student"]).get(THREADS).json()}
+    titles = {t["title"] for t in client_for(world["student"]).get(THREADS).json()["results"]}
     assert titles == {"Mine"}
 
 
@@ -141,5 +141,5 @@ def test_keyword_search(world):
         batch=world["batch"], author=world["student"], title="State management", body="y"
     )
     resp = client_for(world["fac"]).get(f"{THREADS}?q=routing")
-    titles = [t["title"] for t in resp.json()]
+    titles = [t["title"] for t in resp.json()["results"]]
     assert titles == ["Routing question"]
