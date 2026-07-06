@@ -2,7 +2,7 @@
 
 Detailed, scripted walkthroughs for **every flow**, using **different logins** so each
 demo feels real and shows role ownership + scoping. Accounts, URLs and setup are in
-[DEMO_GUIDE.md](DEMO_GUIDE.md). Password for everyone: **`Demo!passLMS1`**.
+[DEMO_GUIDE.md](DEMO_GUIDE.md). Password for **student1** is **`Adv123*`**; all others use **`Demo!passLMS1`**.
 
 ## How to run multi-actor flows
 The app uses session cookies, so **you can only be one role per browser profile**. To run a

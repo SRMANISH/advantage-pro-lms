@@ -31,7 +31,7 @@ email/SMS/WhatsApp messages print there in dev (console adapters).
 
 | Role | Login ID | Password | Email | Portal URL |
 |---|---|---|---|---|
-| Student | `student1` | `Demo!passLMS1` | student1@example.com | `/login/student` |
+| Student | `student1` | **`Adv123*`** | student1@example.com | `/login/student` |
 | Faculty | `faculty1` | `Demo!passLMS1` | faculty1@example.com | `/login/faculty` |
 | Admin | `admin1` | `Demo!passLMS1` | admin1@example.com | `/login/admin` |
 | MIS Executive | `mis1` | `Demo!passLMS1` | mis1@example.com | `/login/mis` |
