@@ -2,6 +2,7 @@
 
 import uuid
 
+from django.db import IntegrityError, transaction
 from django.db.models import Count
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -94,6 +95,10 @@ class TestViewSet(viewsets.ModelViewSet):
             return Response({"detail": "This test is not open yet."}, status=400)
         if test.close_at and now > test.close_at:
             return Response({"detail": "This test has closed."}, status=400)
+        # Fast path for the common (non-racing) repeat-submit; the unique constraint below
+        # is the actual guarantee — two simultaneous submits can both pass this check, but
+        # only one create() can win, and the loser gets the same friendly response instead
+        # of a raw IntegrityError.
         if TestAttempt.objects.filter(test=test, student=request.user).exists():
             return Response({"detail": "You have already attempted this test."}, status=400)
 
@@ -102,20 +107,24 @@ class TestViewSet(viewsets.ModelViewSet):
         chosen = {a["question"]: a["choice"] for a in serializer.validated_data["answers"]}
 
         questions = list(test.questions.prefetch_related("choices"))
-        attempt = TestAttempt.objects.create(
-            test=test, student=request.user, score=0, total=len(questions)
-        )
-        correct = 0
-        for q in questions:
-            choice = None
-            chosen_id = chosen.get(q.id)
-            if chosen_id:
-                choice = next((c for c in q.choices.all() if c.id == chosen_id), None)
-                if choice and choice.is_correct:
-                    correct += 1
-            AttemptAnswer.objects.create(attempt=attempt, question=q, choice=choice)
-        attempt.score = correct
-        attempt.save(update_fields=["score", "updated_at"])
+        try:
+            with transaction.atomic():
+                attempt = TestAttempt.objects.create(
+                    test=test, student=request.user, score=0, total=len(questions)
+                )
+                correct = 0
+                for q in questions:
+                    choice = None
+                    chosen_id = chosen.get(q.id)
+                    if chosen_id:
+                        choice = next((c for c in q.choices.all() if c.id == chosen_id), None)
+                        if choice and choice.is_correct:
+                            correct += 1
+                    AttemptAnswer.objects.create(attempt=attempt, question=q, choice=choice)
+                attempt.score = correct
+                attempt.save(update_fields=["score", "updated_at"])
+        except IntegrityError:
+            return Response({"detail": "You have already attempted this test."}, status=400)
         record_attendance(request.user, test.batch, "test", test.id)
         record_action(actor=request.user, action="test_submitted", target=test)
         return Response({"score": correct, "total": len(questions)}, status=status.HTTP_201_CREATED)
@@ -169,6 +178,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
         task = self.get_object()
+        # Fast path for the common (non-racing) repeat-submit; the unique constraint below
+        # is the actual guarantee against two simultaneous submits both getting through.
         if TaskSubmission.objects.filter(task=task, student=request.user).exists():
             return Response({"detail": "You have already submitted this task."}, status=400)
         serializer = TaskSubmitSerializer(data=request.data)
@@ -185,7 +196,10 @@ class TaskViewSet(viewsets.ModelViewSet):
             get_storage().save(key, upload)
             submission.file_key = key
             submission.content_type = getattr(upload, "content_type", "") or ""
-        submission.save()
+        try:
+            submission.save()
+        except IntegrityError:
+            return Response({"detail": "You have already submitted this task."}, status=400)
         record_attendance(request.user, task.batch, "task", task.id)
         record_action(actor=request.user, action="task_submitted", target=task)
         return Response({"ok": True, "is_late": late}, status=status.HTTP_201_CREATED)
