@@ -19,6 +19,8 @@ from .views import (
     SetupVerifyEmailView,
     SetupVerifyPhoneView,
     StaffAccountsView,
+    UserRoleView,
+    UserStatusView,
 )
 
 urlpatterns = [
@@ -46,6 +48,8 @@ urlpatterns = [
     path("password/resend/", ForgotPasswordResendView.as_view(), name="password-resend"),
     path("password/change/", ChangePasswordView.as_view(), name="password-change"),
     path("staff/", StaffAccountsView.as_view(), name="staff-accounts"),
+    path("users/<uuid:pk>/status/", UserStatusView.as_view(), name="user-status"),
+    path("users/<uuid:pk>/role/", UserRoleView.as_view(), name="user-role"),
     path("devices/requests/", DeviceRequestListView.as_view(), name="device-requests"),
     path(
         "devices/requests/<uuid:pk>/decide/",

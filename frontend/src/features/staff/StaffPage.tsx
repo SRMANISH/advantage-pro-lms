@@ -48,6 +48,8 @@ export function StaffPage({ role }: { role: RoleDef }) {
   const [form, setForm] = useState({ ...empty, role: roleOptions[0]?.value ?? "" });
   const [error, setError] = useState("");
 
+  const canSuspendFaculty = isSuperAdmin || user?.role === "admin";
+
   const create = useMutation({
     mutationFn: () => staffApi.create(form),
     onSuccess: () => {
@@ -60,6 +62,23 @@ export function StaffPage({ role }: { role: RoleDef }) {
       const detail = (e as { response?: { data?: { detail?: string; username?: string[] } } })
         ?.response?.data;
       setError(detail?.detail ?? detail?.username?.[0] ?? "Could not create the account.");
+    },
+  });
+
+  const setStatus = useMutation({
+    mutationFn: (vars: { id: string; suspend: boolean }) =>
+      staffApi.setStatus(vars.id, vars.suspend),
+    onSuccess: (u) => {
+      qc.invalidateQueries({ queryKey: ["staff"] });
+      toast.show(u.status === "suspended" ? "Account suspended." : "Account reactivated.", "success");
+    },
+  });
+
+  const setRole = useMutation({
+    mutationFn: (vars: { id: string; role: string }) => staffApi.setRole(vars.id, vars.role),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff"] });
+      toast.show("Role updated.", "success");
     },
   });
 
@@ -139,12 +158,37 @@ export function StaffPage({ role }: { role: RoleDef }) {
                   <span className="text-muted"> · {s.username}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge>{ROLE_LABEL[s.role] ?? s.role}</Badge>
+                  {isSuperAdmin && ROLE_LABEL[s.role] ? (
+                    <Select
+                      aria-label={`Role for ${s.username}`}
+                      className="h-8 py-1 text-xs"
+                      value={s.role}
+                      onChange={(e) => setRole.mutate({ id: s.id, role: e.target.value })}
+                    >
+                      {ALL_STAFF_ROLES.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <Badge>{ROLE_LABEL[s.role] ?? s.role}</Badge>
+                  )}
                   <span
                     className={s.status === "active" ? "text-xs text-muted" : "text-xs text-amber-600"}
                   >
                     {s.status}
                   </span>
+                  {canSuspendFaculty && s.role === "faculty" && s.status !== "pending" && (
+                    <Button
+                      variant="ghost"
+                      onClick={() =>
+                        setStatus.mutate({ id: s.id, suspend: s.status !== "suspended" })
+                      }
+                    >
+                      {s.status === "suspended" ? "Reactivate" : "Suspend"}
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

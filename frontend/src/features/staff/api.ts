@@ -25,4 +25,10 @@ export const staffApi = {
   async create(body: NewStaff): Promise<StaffUser> {
     return (await api.post<StaffUser>("/auth/staff/", body)).data;
   },
+  async setStatus(id: string, suspend: boolean): Promise<StaffUser> {
+    return (await api.post<StaffUser>(`/auth/users/${id}/status/`, { suspend })).data;
+  },
+  async setRole(id: string, role: string): Promise<StaffUser> {
+    return (await api.post<StaffUser>(`/auth/users/${id}/role/`, { role })).data;
+  },
 };
