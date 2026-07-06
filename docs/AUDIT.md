@@ -27,7 +27,8 @@ doc promises.
 
 Implemented and verified: role-bound portals ×7, batch-centric everything, Registration ID as
 recognition ID, Admin-only batch create/assign, MIS/CO attendance follow-up, login-based
- notes/tests/tasks, TS forum answer+remind+escalate, audit access MIS+FAC only, video closure
+attendance, device windows (FAC in-class / MIS outside), faculty video upload, MIS+FAC
+notes/tests/tasks, TS forum answer+remind+escalate, audit access MIS+FAC only, video closure
 AD+MIS, weekly cert reminders + MIS follow-up, LinkedIn/Google/next-plan flows, two-step forgot
 password, staff/Counsellor creation. Deductions: forum attachments/photos missing
 (`forum/models.py:Thread` text-only); suspend/deactivate + change-role have matrix actions but
