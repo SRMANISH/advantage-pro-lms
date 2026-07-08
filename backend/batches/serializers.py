@@ -9,7 +9,7 @@ from .models import Batch, BatchState, Course
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields = ["id", "code", "name", "description", "created_at"]
+        fields = ["id", "code", "name", "description", "duration", "fees", "created_at"]
         read_only_fields = ["id", "created_at"]
 
 

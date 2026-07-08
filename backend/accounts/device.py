@@ -26,12 +26,12 @@ def _student_faculty(student):
     )
 
 
-def _mis_users():
+def _tech_support_users():
     from core.roles import Role
 
     from .models import User
 
-    return list(User.objects.filter(role=Role.MIS))
+    return list(User.objects.filter(role=Role.TECH_SUPPORT))
 
 
 def course_ended(student) -> bool:
@@ -91,17 +91,19 @@ def handle_device_login(student, device_id: str, course_ended: bool = False) -> 
                 False,
                 "This is a new device. Your faculty can approve the change during the live class.",
             )
+        # Outside class hours the notification goes to Tech Support (procedure update:
+        # MIS receives no device notifications; they retain silent approval capability).
         notify_many(
-            _mis_users(),
+            _tech_support_users(),
             "new_device",
-            f"{who} tried to sign in from a new device outside class hours — MIS approval needed.",
+            f"{who} tried to sign in from a new device outside class hours — approval needed.",
             subject="New-device sign-in",
             channels=("in_app", "email"),
         )
     return (
         False,
-        "This is a new device. MIS must approve the change before you can sign in here "
-        "(or your faculty, during a live class).",
+        "This is a new device. Tech Support must approve the change before you can sign in "
+        "here (or your faculty, during a live class).",
     )
 
 

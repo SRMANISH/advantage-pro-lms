@@ -13,7 +13,9 @@ from .. import device
 from ..models import DeviceChangeRequest
 from ..serializers import DeviceRequestSerializer
 
-DeviceManageRoles = has_any_role(Role.FACULTY, Role.MIS)
+# Tech Support handles (and is notified about) outside-class device changes; MIS keeps
+# the capability but receives no notifications. Faculty decide during their live class.
+DeviceManageRoles = has_any_role(Role.FACULTY, Role.TECH_SUPPORT, Role.MIS)
 
 
 def _faculty_can_decide(staff, student) -> bool:
@@ -25,8 +27,8 @@ def _faculty_can_decide(staff, student) -> bool:
 def _window_block(decider, student) -> str | None:
     """Return an error message if the decider is acting outside their allowed window.
 
-    Faculty may decide only during one of their live classes the student is in; MIS may
-    decide only when no class is in session. Returns None when the action is allowed.
+    Faculty may decide only during one of their live classes the student is in; Tech
+    Support / MIS only when no class is in session. Returns None when allowed.
     """
     from liveclasses.services import (
         active_live_class_for_student,
@@ -36,7 +38,7 @@ def _window_block(decider, student) -> str | None:
     if decider.role == Role.FACULTY:
         if not is_live_class_active_for_faculty_student(decider, student):
             return "Faculty can approve a device change only during your live class."
-    elif decider.role == Role.MIS:
+    elif decider.role in {Role.TECH_SUPPORT, Role.MIS}:
         if active_live_class_for_student(student) is not None:
             return (
                 "A class is in session — device changes during class are approved by the faculty."

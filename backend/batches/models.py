@@ -10,6 +10,9 @@ class Course(TimeStampedModel):
     code = models.CharField(max_length=30, unique=True)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    # Defined by Super Admin along with the course itself (procedure update).
+    duration = models.CharField(max_length=60, blank=True)  # e.g. "3 months"
+    fees = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     class Meta:
         ordering = ["code"]

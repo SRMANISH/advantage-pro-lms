@@ -37,6 +37,7 @@ SA, AD, MIS, CO, TS, FAC, STU = (
 class Action:
     CREATE_EDIT_BATCH = "create_edit_batch"
     DELETE_BATCH = "delete_batch"
+    MANAGE_COURSES = "manage_courses"
     IMPORT_STUDENTS = "import_students"
     MANAGE_STAFF_ACCOUNTS = "manage_staff_accounts"
     CHANGE_USER_ROLE = "change_user_role"
@@ -66,9 +67,13 @@ class Action:
 # activity/audit, video revoke/closure, live-class scheduling).
 MATRIX: dict[str, frozenset[str]] = {
     Action.CREATE_EDIT_BATCH: frozenset({AD}),
-    Action.DELETE_BATCH: frozenset({AD}),
+    # Draft batches: Admin may delete. Once started (active/completed), only Super Admin —
+    # enforced with the state check in BatchViewSet.perform_destroy.
+    Action.DELETE_BATCH: frozenset({SA, AD}),
+    # Courses (incl. duration and fees) are defined by Super Admin alone.
+    Action.MANAGE_COURSES: frozenset({SA}),
     Action.IMPORT_STUDENTS: frozenset({AD, MIS}),
-    Action.MANAGE_STAFF_ACCOUNTS: frozenset({SA, AD}),
+    Action.MANAGE_STAFF_ACCOUNTS: frozenset({SA}),
     Action.CHANGE_USER_ROLE: frozenset({SA}),
     Action.ASSIGN_FACULTY: frozenset({AD}),
     Action.UPLOAD_VIDEOS: frozenset({FAC}),
@@ -80,11 +85,14 @@ MATRIX: dict[str, frozenset[str]] = {
     Action.MANAGE_ATTENDANCE: frozenset({SA, AD, MIS, CO, FAC, STU}),
     Action.EXPORT_REPORTS: frozenset({SA, AD, MIS, CO, FAC}),
     Action.ACCESS_AUDIT: frozenset({MIS, FAC}),
-    Action.MANAGE_FORUM: frozenset({MIS, TS, FAC, STU}),
+    # Forum: MIS has no doubt-forum access. Students ask; Faculty + Tech Support respond.
+    Action.MANAGE_FORUM: frozenset({TS, FAC, STU}),
     Action.SCHEDULE_LIVE_CLASSES: frozenset({FAC}),
     Action.REVOKE_VIDEO_INDIVIDUAL: frozenset({MIS}),
     Action.CLOSE_COURSE_VIDEO_ACCESS: frozenset({AD, MIS}),
-    Action.APPROVE_DEVICE_CHANGE: frozenset({FAC, MIS}),
+    # Device changes: Faculty during their live class; Tech Support (notified) or MIS
+    # (silent capability, no notifications) outside class hours.
+    Action.APPROVE_DEVICE_CHANGE: frozenset({FAC, TS, MIS}),
     Action.SEND_NOTIFICATIONS: frozenset({SA, AD, MIS, CO, TS, FAC}),
     Action.SUSPEND_STUDENT: frozenset({SA, AD, MIS}),
     Action.SUSPEND_FACULTY: frozenset({SA, AD}),

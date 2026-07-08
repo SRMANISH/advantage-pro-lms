@@ -49,17 +49,21 @@ def _store_attachment(thread, reply, upload, user) -> None:
     )
 
 
-# Updated procedure: forum is MIS / Tech Support / Faculty / Student. Admin and Super
-# Admin no longer moderate. Tech Support can reply and resolve, not just monitor.
-ForumRoles = has_any_role(Role.MIS, Role.TECH_SUPPORT, Role.FACULTY, Role.STUDENT)
-ALL_FORUM = {Role.MIS, Role.TECH_SUPPORT}  # read every batch's forum
-MONITOR_ROLES = {Role.MIS, Role.TECH_SUPPORT}
-RESPONDER_ROLES = {Role.FACULTY, Role.TECH_SUPPORT, Role.MIS}
+# Updated procedure: forum is Tech Support / Faculty / Student — MIS has no forum access.
+# Students ask; only Faculty and Tech Support respond (students cannot reply). The
+# response-window SLA (FORUM_RESPONSE_WINDOW_HOURS, default 3h) applies to both responder
+# roles, and both see the waiting time on every open doubt.
+ForumRoles = has_any_role(Role.TECH_SUPPORT, Role.FACULTY, Role.STUDENT)
+ALL_FORUM = {Role.TECH_SUPPORT}  # read every batch's forum
+MONITOR_ROLES = {Role.TECH_SUPPORT}
+RESPONDER_ROLES = {Role.FACULTY, Role.TECH_SUPPORT}
 
 
 def _can_reply(user, thread) -> bool:
-    # Tech Support helps across all batches; others use their normal batch access.
-    return user.role == Role.TECH_SUPPORT or can_access_batch(user, thread.batch)
+    # Only responders may reply: Tech Support across all batches; Faculty within theirs.
+    if user.role == Role.TECH_SUPPORT:
+        return True
+    return user.role == Role.FACULTY and can_access_batch(user, thread.batch)
 
 
 def _forum_batch_ids(user):
@@ -151,9 +155,7 @@ class ThreadViewSet(viewsets.ModelViewSet):
         thread = self.get_object()
         is_faculty_of_batch = thread.batch.faculty.filter(id=request.user.id).exists()
         is_author = thread.author_id == request.user.id
-        if not (
-            is_faculty_of_batch or is_author or request.user.role in {Role.TECH_SUPPORT, Role.MIS}
-        ):
+        if not (is_faculty_of_batch or is_author or request.user.role == Role.TECH_SUPPORT):
             return Response({"detail": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
         thread.resolved = True
         thread.status = ThreadStatus.RESOLVED
@@ -162,10 +164,10 @@ class ThreadViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def escalate(self, request, pk=None):
-        """Tech Support / MIS / batch faculty escalate an unresolved doubt."""
+        """Tech Support / batch faculty escalate an unresolved doubt."""
         thread = self.get_object()
         is_faculty_of_batch = thread.batch.faculty.filter(id=request.user.id).exists()
-        if not (is_faculty_of_batch or request.user.role in {Role.TECH_SUPPORT, Role.MIS}):
+        if not (is_faculty_of_batch or request.user.role == Role.TECH_SUPPORT):
             return Response({"detail": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
         thread.status = ThreadStatus.ESCALATED
         thread.save(update_fields=["status", "updated_at"])
@@ -199,10 +201,11 @@ class ThreadViewSet(viewsets.ModelViewSet):
 
 
 class ForumMonitorView(APIView):
-    """Tech Support / MIS doubt dashboard: unanswered doubts, overdue flags, and
-    status counts (new, unanswered, faculty-response-pending, answered-by-TS)."""
+    """Tech Support doubt dashboard: unanswered doubts, overdue flags, and status
+    counts (new, unanswered, faculty-response-pending, answered-by-TS). MIS has no
+    forum access under the updated procedure."""
 
-    permission_classes = [has_any_role(Role.MIS, Role.TECH_SUPPORT)]
+    permission_classes = [has_any_role(Role.TECH_SUPPORT)]
 
     def get(self, request):
         window = settings.FORUM_RESPONSE_WINDOW_HOURS
@@ -249,14 +252,14 @@ class ForumBatchesView(APIView):
 
     def get(self, request):
         user = request.user
-        if user.role in {Role.SUPER_ADMIN, Role.ADMIN, Role.MIS}:
+        if user.role == Role.TECH_SUPPORT:
             qs = Batch.objects.all()
         elif user.role == Role.FACULTY:
             qs = Batch.objects.filter(faculty=user)
         elif user.role == Role.STUDENT:
             qs = Batch.objects.filter(enrollments__student=user).distinct()
         else:
-            qs = Batch.objects.none()
+            qs = Batch.objects.none()  # MIS/Admin/SA have no forum under the procedure
         return Response([{"id": str(b.id), "code": b.code, "name": b.name} for b in qs])
 
 

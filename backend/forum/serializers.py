@@ -34,6 +34,8 @@ class ThreadSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
     batch_code = serializers.CharField(source="batch.code", read_only=True)
     reply_count = serializers.IntegerField(read_only=True)
+    hours_waiting = serializers.SerializerMethodField()
+    overdue = serializers.SerializerMethodField()
 
     class Meta:
         model = Thread
@@ -47,12 +49,30 @@ class ThreadSerializer(serializers.ModelSerializer):
             "status",
             "author_name",
             "reply_count",
+            "hours_waiting",
+            "overdue",
             "created_at",
         ]
         read_only_fields = fields
 
     def get_author_name(self, obj) -> str:
         return obj.author.full_name or obj.author.username
+
+    def get_hours_waiting(self, obj) -> int:
+        """Whole hours an *open* doubt has been waiting for its first response."""
+        from django.utils import timezone
+
+        if obj.status != "open":
+            return 0
+        return int((timezone.now() - obj.created_at).total_seconds() // 3600)
+
+    def get_overdue(self, obj) -> bool:
+        """True when an open doubt has outlived the response window (default 3h) —
+        the same SLA for Faculty and Tech Support, visible to both."""
+        from django.conf import settings
+
+        window = int(getattr(settings, "FORUM_RESPONSE_WINDOW_HOURS", 3))
+        return self.get_hours_waiting(obj) >= window
 
 
 class ThreadDetailSerializer(ThreadSerializer):

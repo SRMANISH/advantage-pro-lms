@@ -28,6 +28,9 @@ export interface ThreadItem {
   status: ThreadStatus;
   author_name: string;
   reply_count: number;
+  /** Whole hours an open doubt has waited; the 3h SLA applies to faculty + tech support. */
+  hours_waiting: number;
+  overdue: boolean;
   created_at: string;
 }
 

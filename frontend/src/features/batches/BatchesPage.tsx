@@ -36,10 +36,6 @@ export function BatchesPage({ role }: { role: RoleDef }) {
   const faculty = useQuery({ queryKey: ["faculty"], queryFn: batchesApi.listFaculty });
 
   const refetchBatches = () => qc.invalidateQueries({ queryKey: ["batches"] });
-  const createCourse = useMutation({
-    mutationFn: batchesApi.createCourse,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["courses"] }),
-  });
   const createBatch = useMutation({ mutationFn: batchesApi.createBatch, onSuccess: refetchBatches });
   const transition = useMutation({
     mutationFn: (v: { id: string; to: BatchState }) => batchesApi.transition(v.id, v.to),
@@ -50,8 +46,6 @@ export function BatchesPage({ role }: { role: RoleDef }) {
     onSuccess: refetchBatches,
   });
 
-  const [cCode, setCCode] = useState("");
-  const [cName, setCName] = useState("");
   const [b, setB] = useState({ code: "", name: "", course: "", start_date: "", end_date: "" });
 
   return (
@@ -66,29 +60,7 @@ export function BatchesPage({ role }: { role: RoleDef }) {
       />
 
       {canManage && (
-        <div className="mb-6 grid gap-4 md:grid-cols-2">
-          <Card>
-            <h2 className="mb-3 text-base font-medium text-ink">New course</h2>
-            <form
-              className="flex flex-col gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                createCourse.mutate(
-                  { code: cCode, name: cName },
-                  { onSuccess: () => (setCCode(""), setCName("")) },
-                );
-              }}
-            >
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Input placeholder="Code (e.g. FS)" value={cCode} onChange={(e) => setCCode(e.target.value)} />
-                <Input placeholder="Name" value={cName} onChange={(e) => setCName(e.target.value)} />
-              </div>
-              <Button type="submit" variant="soft" disabled={!cCode || !cName || createCourse.isPending}>
-                Add course
-              </Button>
-            </form>
-          </Card>
-
+        <div className="mb-6 grid gap-4">
           <Card>
             <h2 className="mb-3 text-base font-medium text-ink">New batch</h2>
             <form

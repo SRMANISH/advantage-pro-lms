@@ -5,6 +5,8 @@ export interface Course {
   code: string;
   name: string;
   description?: string;
+  duration?: string;
+  fees?: string | null;
 }
 
 export interface FacultyBrief {
@@ -41,7 +43,13 @@ export const batchesApi = {
   async listCourses(): Promise<Course[]> {
     return (await api.get<Course[]>("/courses/")).data;
   },
-  async createCourse(payload: { code: string; name: string }): Promise<Course> {
+  async createCourse(payload: {
+    code: string;
+    name: string;
+    description?: string;
+    duration?: string;
+    fees?: string;
+  }): Promise<Course> {
     return (await api.post<Course>("/courses/", payload)).data;
   },
   async listBatches(): Promise<Batch[]> {

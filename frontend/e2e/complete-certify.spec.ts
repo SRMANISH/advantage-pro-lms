@@ -16,19 +16,23 @@ test("completing a batch lets its student certify", async ({ page, context }) =>
   const password = "Adv123*Certify";
   const certificateId = `CERT-${stamp}`;
 
+  // Courses are Super Admin-only under the updated procedure.
+  await loginViaUi(page, "superadmin1", "Demo!passLMS1", "super-admin");
+  await page.goto("/super-admin/courses");
+  await page.getByPlaceholder("Code (e.g. FS)").fill(courseCode);
+  await page.getByPlaceholder("Name").fill("E2E Certify Course");
+  await page.getByRole("button", { name: /create course/i }).click();
+  await expect(page.getByText(courseCode)).toBeVisible();
+  await page.request.post("http://localhost:8000/api/v1/auth/logout/");
+
+  // Admin builds the batch from that course.
   await loginViaUi(page, "admin1", "Demo!passLMS1", "admin");
   await page.goto("/admin/batches");
-  await page.getByPlaceholder("Code (e.g. FS)").fill(courseCode);
-  await page.getByPlaceholder("Name").first().fill("E2E Certify Course");
-  await page.getByRole("button", { name: /add course/i }).click();
-  await expect(page.locator("option", { hasText: courseCode })).toBeAttached();
-
   const today = new Date().toISOString().slice(0, 10);
   await page.getByPlaceholder("Batch ID (e.g. FS-2026A)").fill(batchCode);
-  await page.getByPlaceholder("Name").nth(1).fill("E2E Certify Batch");
+  await page.getByPlaceholder("Name").fill("E2E Certify Batch");
   const courseValue = await page
-    .locator("select", { hasText: courseCode })
-    .locator("option", { hasText: courseCode })
+    .locator("select option", { hasText: courseCode })
     .getAttribute("value");
   await page.locator("form select").selectOption(courseValue!);
   const dateInputs = page.locator('input[type="date"]');

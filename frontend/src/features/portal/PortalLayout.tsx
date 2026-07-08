@@ -3,6 +3,7 @@ import {
   Activity,
   Award,
   BarChart3,
+  BookOpen,
   CalendarCheck,
   ChevronDown,
   ClipboardList,
@@ -48,9 +49,9 @@ const TESTS = role("mis", "faculty", "student");
 const TASKS = role("mis", "faculty", "student");
 const LIVE = role("admin", "mis", "faculty", "student");
 const ATTEND = role("super_admin", "admin", "mis", "faculty", "student", "counselor");
-const FORUM = role("mis", "tech_support", "faculty", "student");
-const MONITOR = role("mis", "tech_support");
-const DEVICES = role("mis", "faculty");
+const FORUM = role("tech_support", "faculty", "student");
+const MONITOR = role("tech_support");
+const DEVICES = role("mis", "tech_support", "faculty");
 const ACTIVITY = role("mis", "faculty");
 const ESCALATIONS = role("super_admin", "admin", "mis");
 const REPORTS = role("super_admin", "admin", "mis", "counselor", "faculty");
@@ -66,8 +67,9 @@ interface NavEntry {
 const NAV: NavEntry[] = [
   { to: "", label: "Dashboard", Icon: LayoutDashboard, roles: ALL, group: "Overview" },
   { to: "batches", label: "Batches", Icon: Users, roles: BATCHES, group: "People & batches" },
+  { to: "courses", label: "Courses", Icon: BookOpen, roles: role("super_admin"), group: "People & batches" },
   { to: "enrolment", label: "Enrolment", Icon: UserPlus, roles: ADMIN_MIS, group: "People & batches" },
-  { to: "staff", label: "Staff", Icon: UserCog, roles: role("super_admin", "admin"), group: "People & batches" },
+  { to: "staff", label: "Staff", Icon: UserCog, roles: role("super_admin"), group: "People & batches" },
   { to: "content", label: "Content", Icon: Video, roles: CONTENT, group: "Learning" },
   { to: "videos", label: "Videos", Icon: PlayCircle, roles: role("student"), group: "Learning" },
   { to: "tests", label: "Tests", Icon: ClipboardList, roles: TESTS, group: "Learning" },

@@ -46,6 +46,9 @@ const ChannelsPage = lazy(() => import("./features/channels/ChannelsPage").then(
 const SecurityPage = lazy(() =>
   import("./features/auth/SecurityPage").then((m) => ({ default: m.SecurityPage })),
 );
+const CoursesPage = lazy(() =>
+  import("./features/batches/CoursesPage").then((m) => ({ default: m.CoursesPage })),
+);
 const PermissionsPage = lazy(() =>
   import("./features/permissions/PermissionsPage").then((m) => ({ default: m.PermissionsPage })),
 );
@@ -70,19 +73,19 @@ const UtilityLinksBoardPage = lazy(() =>
 // the backend enforces the matrix on every endpoint.
 const BATCH_ROLES = new Set(["admin", "mis", "faculty"]);
 const ENROL_ROLES = new Set(["admin", "mis"]);
-const STAFF_ROLES = new Set(["super_admin", "admin"]);
+const STAFF_ROLES = new Set(["super_admin"]);
 const CONTENT_ROLES = new Set(["mis", "faculty"]);
 const TEST_ROLES = new Set(["mis", "faculty", "student"]);
 const TASK_ROLES = new Set(["mis", "faculty", "student"]);
 const ATTEND_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student", "counselor"]);
 const PERF_ROLES = new Set(["super_admin", "admin", "mis", "faculty", "student", "counselor"]);
-const DEVICE_ROLES = new Set(["mis", "faculty"]);
+const DEVICE_ROLES = new Set(["mis", "tech_support", "faculty"]);
 const ACTIVITY_ROLES = new Set(["mis", "faculty"]);
 const CERT_FOLLOWUP_ROLES = new Set(["admin", "mis"]);
 const ENGAGEMENT_ROLES = new Set(["admin", "mis"]);
 const ESCALATION_ROLES = new Set(["super_admin", "admin", "mis"]);
-const FORUM_ROLES = new Set(["mis", "tech_support", "faculty", "student"]);
-const MONITOR_ROLES = new Set(["mis", "tech_support"]);
+const FORUM_ROLES = new Set(["tech_support", "faculty", "student"]);
+const MONITOR_ROLES = new Set(["tech_support"]);
 const LIVE_ROLES = new Set(["admin", "mis", "faculty", "student"]);
 const SETTINGS_ROLES = new Set(["super_admin"]);
 const REPORT_ROLES = new Set(["super_admin", "admin", "mis", "counselor", "faculty"]);
@@ -153,6 +156,17 @@ export default function App() {
             element={
               <ProtectedRoute role={role}>
                 <BatchesPage role={role} />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        {ROLES.filter((role) => role.value === "super_admin").map((role) => (
+          <Route
+            key={`courses-${role.slug}`}
+            path={`/${role.slug}/courses`}
+            element={
+              <ProtectedRoute role={role}>
+                <CoursesPage role={role} />
               </ProtectedRoute>
             }
           />

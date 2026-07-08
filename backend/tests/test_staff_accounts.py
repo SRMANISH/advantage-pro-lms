@@ -37,14 +37,12 @@ def test_super_admin_creates_any_staff_and_triggers_setup(db):
 
 
 @pytest.mark.django_db
-def test_admin_creates_counsellor_but_not_faculty(db):
+def test_admin_cannot_create_staff_at_all(db):
+    # Updated procedure: staff creation is removed from the Admin page — SA only.
     admin = user("ad", Role.ADMIN)
-    ok = client_for(admin).post(URL, payload("co9", Role.COUNSELOR), format="json")
-    assert ok.status_code == 201
-    blocked = client_for(admin).post(
-        URL, payload("fac8", Role.FACULTY, email="f8@example.com"), format="json"
-    )
+    blocked = client_for(admin).post(URL, payload("co9", Role.COUNSELOR), format="json")
     assert blocked.status_code == 403
+    assert client_for(admin).get(URL).status_code == 403
 
 
 @pytest.mark.django_db

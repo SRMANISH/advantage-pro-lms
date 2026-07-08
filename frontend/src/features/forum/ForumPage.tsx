@@ -16,7 +16,8 @@ import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { forumApi, type Attachment, type ThreadStatus } from "./api";
 
-const RESPONDERS = new Set(["faculty", "tech_support", "mis"]);
+// Only Faculty and Tech Support may respond to doubts (students ask; MIS has no forum).
+const RESPONDERS = new Set(["faculty", "tech_support"]);
 
 function StatusBadge({ status }: { status: ThreadStatus }) {
   return <Badge>{status}</Badge>;
@@ -142,9 +143,13 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
                   <div className="text-sm font-medium text-ink">{t.title}</div>
                   <div className="text-xs text-muted">
                     {t.batch_code} · {t.author_name} · {t.reply_count} repl{t.reply_count === 1 ? "y" : "ies"}
+                    {t.status === "open" && t.hours_waiting > 0 && ` · waiting ${t.hours_waiting}h`}
                   </div>
                 </div>
-                <StatusBadge status={t.status} />
+                <span className="flex items-center gap-1.5">
+                  {t.overdue && <Badge tone="danger">overdue</Badge>}
+                  <StatusBadge status={t.status} />
+                </span>
               </button>
             ))}
           </div>
@@ -219,26 +224,32 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
         ))}
       </div>
 
-      <div className="mt-3 flex flex-col gap-2">
-        <textarea
-          className="min-h-16 rounded-lg border border-brdr bg-surface p-2 text-sm"
-          placeholder="Write a reply…"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
-        <label className="text-xs text-muted">
-          Attach a file (optional)
-          <input
-            type="file"
-            accept=".png,.jpg,.jpeg,.gif,.pdf,.txt,.zip,.docx,.xlsx"
-            className="mt-1 block w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-sky file:px-3 file:py-1.5 file:text-brand-strong"
-            onChange={(e) => setReplyFile(e.target.files?.[0] ?? null)}
+      {RESPONDERS.has(user?.role ?? "") ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <textarea
+            className="min-h-16 rounded-lg border border-brdr bg-surface p-2 text-sm"
+            placeholder="Write a reply…"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
           />
-        </label>
-        <Button className="w-fit" onClick={() => reply.mutate()} disabled={!body || reply.isPending}>
-          {reply.isPending ? "Replying…" : "Reply"}
-        </Button>
-      </div>
+          <label className="text-xs text-muted">
+            Attach a file (optional)
+            <input
+              type="file"
+              accept=".png,.jpg,.jpeg,.gif,.pdf,.txt,.zip,.docx,.xlsx"
+              className="mt-1 block w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-sky file:px-3 file:py-1.5 file:text-brand-strong"
+              onChange={(e) => setReplyFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          <Button className="w-fit" onClick={() => reply.mutate()} disabled={!body || reply.isPending}>
+            {reply.isPending ? "Replying…" : "Reply"}
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-3 rounded-lg bg-sky/50 px-3 py-2 text-xs text-navy">
+          Your faculty or tech support will reply here — replies arrive as notifications.
+        </p>
+      )}
     </Card>
   );
 }

@@ -55,11 +55,18 @@ def make_batch(course, code="B1", **extra):
 
 
 @pytest.mark.django_db
-def test_admin_creates_course_but_faculty_and_student_cannot(users, course):
-    payload = {"code": "DS", "name": "Data Science"}
-    assert client_for(users["admin"]).post(COURSES_URL, payload).status_code == 201
+def test_only_super_admin_creates_courses(users, course):
+    # Updated procedure: courses (incl. duration/fees) are defined by Super Admin alone.
+    payload = {"code": "DS", "name": "Data Science", "duration": "3 months", "fees": "45000.00"}
+    created = client_for(users["super"]).post(COURSES_URL, payload)
+    assert created.status_code == 201
+    body = created.json()
+    assert body["duration"] == "3 months" and body["fees"] == "45000.00"
     assert (
-        client_for(users["faculty"]).post(COURSES_URL, {"code": "X", "name": "X"}).status_code
+        client_for(users["admin"]).post(COURSES_URL, {"code": "X", "name": "X"}).status_code == 403
+    )
+    assert (
+        client_for(users["faculty"]).post(COURSES_URL, {"code": "Y", "name": "Y"}).status_code
         == 403
     )
     # Student is not even allowed onto the courses endpoint.
@@ -122,11 +129,14 @@ def test_mis_cannot_create_batch(users, course):
 
 
 @pytest.mark.django_db
-def test_only_admin_can_delete_batch(users, course):
-    batch = make_batch(course)
-    # Super Admin is out of batch operations; Admin owns delete.
-    assert client_for(users["super"]).delete(f"{BATCHES_URL}{batch.id}/").status_code == 403
-    assert client_for(users["admin"]).delete(f"{BATCHES_URL}{batch.id}/").status_code == 204
+def test_draft_batch_deletable_by_admin_started_batch_only_by_super_admin(users, course):
+    draft = make_batch(course)
+    assert client_for(users["admin"]).delete(f"{BATCHES_URL}{draft.id}/").status_code == 204
+
+    started = make_batch(course, code="STARTED", state=BatchState.ACTIVE)
+    # Admin may not delete a batch that has started; Super Admin may.
+    assert client_for(users["admin"]).delete(f"{BATCHES_URL}{started.id}/").status_code == 403
+    assert client_for(users["super"]).delete(f"{BATCHES_URL}{started.id}/").status_code == 204
 
 
 @pytest.mark.django_db
@@ -140,7 +150,9 @@ def test_cannot_delete_batch_with_certificates(users, course):
     )
     Certificate.objects.create(enrollment=enr, certificate_id="CERT-1")
 
-    resp = client_for(users["admin"]).delete(f"{BATCHES_URL}{batch.id}/")
+    # Even Super Admin (the only role able to delete a started batch) is blocked by the
+    # legal-records guard.
+    resp = client_for(users["super"]).delete(f"{BATCHES_URL}{batch.id}/")
     assert resp.status_code == 409
     assert Batch.objects.filter(id=batch.id).exists()
 

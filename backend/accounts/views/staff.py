@@ -17,12 +17,21 @@ from ..models import User, UserStatus
 from ..serializers import StaffCreateSerializer, UserSerializer
 
 
-class StaffAccountsView(APIView):
-    """Create and list staff accounts.
+def _active_batches_of(faculty) -> list[str]:
+    """Codes of non-completed batches this faculty is assigned to (soft or primary)."""
+    from batches.models import Batch, BatchState
 
-    Super Admin may create any staff role; Admin may create Counsellor accounts only
-    (Admin never creates Faculty/Admin). New accounts go through the same two-step setup
-    (email link -> email OTP -> phone OTP -> password) as students.
+    return list(
+        Batch.objects.filter(faculty=faculty)
+        .exclude(state=BatchState.COMPLETED)
+        .values_list("code", flat=True)
+    )
+
+
+class StaffAccountsView(APIView):
+    """Create and list staff accounts — Super Admin only (updated procedure removed the
+    Admin path entirely). New accounts go through the same two-step setup (email link ->
+    email OTP -> phone OTP -> password) as students.
     """
 
     permission_classes = [MatrixPermission]
@@ -36,11 +45,6 @@ class StaffAccountsView(APIView):
         serializer = StaffCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         role = serializer.validated_data["role"]
-        if request.user.role == Role.ADMIN and role != Role.COUNSELOR:
-            return Response(
-                {"detail": "Admin can create Counsellor accounts only."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
         user = User.objects.create(
             username=serializer.validated_data["username"],
             full_name=serializer.validated_data["full_name"],
@@ -95,6 +99,17 @@ class UserStatusView(APIView):
                 {"detail": "This account hasn't completed setup yet."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # A faculty on an ongoing batch cannot be removed — delete/complete the batch first.
+        if suspend and target.role == Role.FACULTY:
+            batches = _active_batches_of(target)
+            if batches:
+                return Response(
+                    {
+                        "detail": "This faculty is assigned to ongoing batch(es): "
+                        f"{', '.join(batches)}. Delete or complete those batches first."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         target.status = UserStatus.SUSPENDED if suspend else UserStatus.ACTIVE
         target.save(update_fields=["status"])
         record_action(
@@ -134,6 +149,18 @@ class UserRoleView(APIView):
                 {"detail": "Choose a valid staff role (students are managed via enrolment)."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # Moving a faculty off the faculty role removes them from their batches — blocked
+        # while they have ongoing batches (delete/complete those first).
+        if target.role == Role.FACULTY and new_role != Role.FACULTY:
+            batches = _active_batches_of(target)
+            if batches:
+                return Response(
+                    {
+                        "detail": "This faculty is assigned to ongoing batch(es): "
+                        f"{', '.join(batches)}. Delete or complete those batches first."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         old_role = target.role
         target.role = new_role
         target.save(update_fields=["role"])

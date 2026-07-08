@@ -52,10 +52,10 @@ class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [StaffOrFaculty, MatrixPermission]
 
     _ACTIONS = {
-        "create": Action.CREATE_EDIT_BATCH,
-        "update": Action.CREATE_EDIT_BATCH,
-        "partial_update": Action.CREATE_EDIT_BATCH,
-        "destroy": Action.CREATE_EDIT_BATCH,
+        "create": Action.MANAGE_COURSES,
+        "update": Action.MANAGE_COURSES,
+        "partial_update": Action.MANAGE_COURSES,
+        "destroy": Action.MANAGE_COURSES,
     }
 
     def get_required_action(self):
@@ -106,8 +106,13 @@ class BatchViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
+        from rest_framework.exceptions import PermissionDenied
+
         from certification.models import Certificate
 
+        # Once a batch has started (active/completed), only Super Admin may delete it.
+        if instance.state != BatchState.DRAFT and self.request.user.role != Role.SUPER_ADMIN:
+            raise PermissionDenied("Only Super Admin can delete a batch that has started.")
         if Certificate.objects.filter(enrollment__batch=instance).exists():
             raise CertificatesExistError()
         record_action(

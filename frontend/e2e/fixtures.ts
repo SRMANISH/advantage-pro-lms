@@ -103,8 +103,11 @@ export async function createActiveStudent(
   }
 
   // Find the batch id, then the new enrolment row, to resend (== "Setup link") its token.
-  const batches = await context.request.get(`${API}/forum/batches/`);
-  const targetBatch = (await batches.json()).find((b: { code: string }) => b.code === batchCode);
+  // (/batches/ — the admin endpoint; the forum batch picker is no longer admin-visible.)
+  const batches = await context.request.get(`${API}/batches/`);
+  const batchData = await batches.json();
+  const batchList = Array.isArray(batchData) ? batchData : batchData.results;
+  const targetBatch = batchList.find((b: { code: string }) => b.code === batchCode);
   const roster = await context.request.get(
     `${API}/enrollments/?batch=${targetBatch.id}&page_size=200`,
   );

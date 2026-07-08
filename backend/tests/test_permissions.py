@@ -24,9 +24,11 @@ ALL_ROLES = [SA, AD, MIS, CO, TS, FAC, STU]
 # The authoritative expected matrix per the updated operating procedure.
 EXPECTED: dict[str, set[str]] = {
     Action.CREATE_EDIT_BATCH: {AD},
-    Action.DELETE_BATCH: {AD},
+    # Draft delete = Admin too; started-batch delete = SA only (state check in the view).
+    Action.DELETE_BATCH: {SA, AD},
+    Action.MANAGE_COURSES: {SA},
     Action.IMPORT_STUDENTS: {AD, MIS},
-    Action.MANAGE_STAFF_ACCOUNTS: {SA, AD},
+    Action.MANAGE_STAFF_ACCOUNTS: {SA},
     Action.CHANGE_USER_ROLE: {SA},
     Action.ASSIGN_FACULTY: {AD},
     Action.UPLOAD_VIDEOS: {FAC},
@@ -38,11 +40,11 @@ EXPECTED: dict[str, set[str]] = {
     Action.MANAGE_ATTENDANCE: {SA, AD, MIS, CO, FAC, STU},
     Action.EXPORT_REPORTS: {SA, AD, MIS, CO, FAC},
     Action.ACCESS_AUDIT: {MIS, FAC},
-    Action.MANAGE_FORUM: {MIS, TS, FAC, STU},
+    Action.MANAGE_FORUM: {TS, FAC, STU},
     Action.SCHEDULE_LIVE_CLASSES: {FAC},
     Action.REVOKE_VIDEO_INDIVIDUAL: {MIS},
     Action.CLOSE_COURSE_VIDEO_ACCESS: {AD, MIS},
-    Action.APPROVE_DEVICE_CHANGE: {FAC, MIS},
+    Action.APPROVE_DEVICE_CHANGE: {FAC, TS, MIS},
     Action.SEND_NOTIFICATIONS: {SA, AD, MIS, CO, TS, FAC},
     Action.SUSPEND_STUDENT: {SA, AD, MIS},
     Action.SUSPEND_FACULTY: {SA, AD},
