@@ -35,9 +35,12 @@ test("completing a batch lets its student certify", async ({ page, context }) =>
     .locator("select option", { hasText: courseCode })
     .getAttribute("value");
   await page.locator("form select").selectOption(courseValue!);
-  const dateInputs = page.locator('input[type="date"]');
-  await dateInputs.nth(0).fill(today);
-  await dateInputs.nth(1).fill(today);
+  await page.locator("#batch-start").fill(today);
+  await page.locator("#batch-end").fill(today);
+  // Class schedule is now mandatory (req 14).
+  await page.getByRole("button", { name: "Mon" }).click();
+  await page.locator("#class-from").fill("18:00");
+  await page.locator("#class-to").fill("20:00");
   await page.getByRole("button", { name: /create batch/i }).click();
   const row = page.locator("div.flex.flex-wrap.items-center.gap-3.py-3", { hasText: batchCode });
   await expect(row).toBeVisible();

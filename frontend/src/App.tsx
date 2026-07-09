@@ -49,6 +49,9 @@ const SecurityPage = lazy(() =>
 const CoursesPage = lazy(() =>
   import("./features/batches/CoursesPage").then((m) => ({ default: m.CoursesPage })),
 );
+const FacultyProfilePage = lazy(() =>
+  import("./features/faculty/FacultyProfilePage").then((m) => ({ default: m.FacultyProfilePage })),
+);
 const PermissionsPage = lazy(() =>
   import("./features/permissions/PermissionsPage").then((m) => ({ default: m.PermissionsPage })),
 );
@@ -168,6 +171,17 @@ export default function App() {
             element={
               <ProtectedRoute role={role}>
                 <CoursesPage role={role} />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        {ROLES.filter((role) => role.value === "faculty").map((role) => (
+          <Route
+            key={`profile-${role.slug}`}
+            path={`/${role.slug}/profile`}
+            element={
+              <ProtectedRoute role={role}>
+                <FacultyProfilePage role={role} />
               </ProtectedRoute>
             }
           />

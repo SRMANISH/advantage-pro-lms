@@ -41,8 +41,10 @@ class FacultyListView(ListAPIView):
 
     serializer_class = FacultyBriefSerializer
     permission_classes = [StaffOrFaculty]
-    queryset = User.objects.filter(role=Role.FACULTY, status=UserStatus.ACTIVE).order_by(
-        "full_name"
+    queryset = (
+        User.objects.filter(role=Role.FACULTY, status=UserStatus.ACTIVE)
+        .select_related("faculty_profile")
+        .order_by("full_name")
     )
 
 
@@ -126,16 +128,48 @@ class BatchViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="assign-faculty")
     def assign_faculty(self, request, pk=None):
         # get_object() is queryset-scoped: faculty can only assign within their own batches.
+        from .scheduling import faculty_schedule_conflicts
+
         batch = self.get_object()
         serializer = FacultyAssignSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        faculty = serializer.validated_data["faculty_ids"]
-        batch.faculty.add(*faculty)
+        primary = serializer.validated_data.get("primary_faculty")
+        soft = serializer.validated_data.get("faculty_ids", [])
+        # Everyone assigned (primary + soft), de-duplicated, primary first.
+        assigned = list(dict.fromkeys([f for f in [primary, *soft] if f is not None]))
+
+        # "Faculty already occupied": reject anyone whose weekly slot clashes with another
+        # non-completed batch they teach (req 13).
+        for fac in assigned:
+            clashes = faculty_schedule_conflicts(
+                fac,
+                batch.class_days,
+                batch.class_start_time,
+                batch.class_end_time,
+                exclude_batch=batch,
+            )
+            if clashes:
+                return Response(
+                    {
+                        "detail": f"{fac.full_name or fac.username} is already occupied at this "
+                        f"time by batch(es): {', '.join(clashes)}."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if primary is not None:
+            batch.primary_faculty = primary
+            batch.save(update_fields=["primary_faculty", "updated_at"])
+        if assigned:
+            batch.faculty.add(*assigned)
         record_action(
             actor=request.user,
             action="batch_faculty_assigned",
             target=batch,
-            metadata={"faculty_ids": [str(f.id) for f in faculty]},
+            metadata={
+                "primary": str(primary.id) if primary else None,
+                "faculty_ids": [str(f.id) for f in assigned],
+            },
             ip_address=get_client_ip(request),
         )
         return Response(self.get_serializer(batch).data)

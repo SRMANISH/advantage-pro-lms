@@ -68,6 +68,7 @@ const NAV: NavEntry[] = [
   { to: "", label: "Dashboard", Icon: LayoutDashboard, roles: ALL, group: "Overview" },
   { to: "batches", label: "Batches", Icon: Users, roles: BATCHES, group: "People & batches" },
   { to: "courses", label: "Courses", Icon: BookOpen, roles: role("super_admin"), group: "People & batches" },
+  { to: "profile", label: "My skills", Icon: Sparkles, roles: role("faculty"), group: "People & batches" },
   { to: "enrolment", label: "Enrolment", Icon: UserPlus, roles: ADMIN_MIS, group: "People & batches" },
   { to: "staff", label: "Staff", Icon: UserCog, roles: role("super_admin"), group: "People & batches" },
   { to: "content", label: "Content", Icon: Video, roles: CONTENT, group: "Learning" },

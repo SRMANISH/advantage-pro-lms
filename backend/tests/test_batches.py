@@ -12,6 +12,13 @@ from core.roles import Role
 COURSES_URL = "/api/v1/courses/"
 BATCHES_URL = "/api/v1/batches/"
 
+# Class schedule is mandatory at batch creation (req 14).
+SCHEDULE = {
+    "class_days": ["mon", "wed", "fri"],
+    "class_start_time": "18:00",
+    "class_end_time": "20:00",
+}
+
 
 def make_user(username, role):
     return User.objects.create_user(
@@ -81,10 +88,25 @@ def test_admin_creates_batch(users, course):
         "course": str(course.id),
         "start_date": "2026-01-01",
         "end_date": "2026-04-01",
+        **SCHEDULE,
     }
     resp = client_for(users["admin"]).post(BATCHES_URL, payload, format="json")
     assert resp.status_code == 201
     assert resp.json()["state"] == BatchState.DRAFT
+    assert resp.json()["class_days"] == ["mon", "wed", "fri"]
+
+
+@pytest.mark.django_db
+def test_batch_creation_requires_a_schedule(users, course):
+    # No class_days/times -> rejected (req 14).
+    payload = {
+        "code": "NOSCHED",
+        "name": "No schedule",
+        "course": str(course.id),
+        "start_date": "2026-01-01",
+        "end_date": "2026-04-01",
+    }
+    assert client_for(users["admin"]).post(BATCHES_URL, payload, format="json").status_code == 400
 
 
 @pytest.mark.django_db
@@ -95,6 +117,7 @@ def test_batch_end_before_start_is_rejected(users, course):
         "course": str(course.id),
         "start_date": "2026-04-01",
         "end_date": "2026-01-01",
+        **SCHEDULE,
     }
     assert client_for(users["admin"]).post(BATCHES_URL, payload, format="json").status_code == 400
 

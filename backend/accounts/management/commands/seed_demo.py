@@ -70,13 +70,30 @@ class Command(BaseCommand):
                 "start_date": today - datetime.timedelta(days=45),
                 "end_date": today + datetime.timedelta(days=45),
                 "state": BatchState.ACTIVE,
+                "class_days": ["mon", "wed", "fri"],
+                "class_start_time": datetime.time(18, 0),
+                "class_end_time": datetime.time(20, 0),
             },
         )
         # Keep the demo batch current even on re-seed so dashboards stay populated.
         batch.start_date = today - datetime.timedelta(days=45)
         batch.end_date = today + datetime.timedelta(days=45)
         batch.state = BatchState.ACTIVE
-        batch.save(update_fields=["start_date", "end_date", "state"])
+        batch.class_days = ["mon", "wed", "fri"]
+        batch.class_start_time = datetime.time(18, 0)
+        batch.class_end_time = datetime.time(20, 0)
+        batch.primary_faculty = faculty
+        batch.save(
+            update_fields=[
+                "start_date",
+                "end_date",
+                "state",
+                "class_days",
+                "class_start_time",
+                "class_end_time",
+                "primary_faculty",
+            ]
+        )
         batch.faculty.add(faculty)
 
         students = self._seed_students(batch, users["student1"])

@@ -6,6 +6,7 @@ Everything is re-exported here so ``from .views import X`` (urls.py) and any ext
 
 from .auth import CSRFView, LoginView, LogoutView, MeView
 from .devices import DeviceRequestDecideView, DeviceRequestListView
+from .faculty import FacultyProfileView
 from .password import (
     ChangePasswordView,
     ForgotPasswordCompleteView,
@@ -45,6 +46,7 @@ __all__ = [
     "UserRoleView",
     "DeviceRequestListView",
     "DeviceRequestDecideView",
+    "FacultyProfileView",
     "TOTPStatusView",
     "TOTPEnrollView",
     "TOTPConfirmView",

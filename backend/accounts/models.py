@@ -147,3 +147,18 @@ class TOTPDevice(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"totp<{self.user_id}>"
+
+
+class FacultyProfile(TimeStampedModel):
+    """Skills and certifications a faculty maintains in their own portal.
+
+    Surfaced wherever a faculty is chosen for a batch, so the right person can be matched
+    to the right course (updated procedure).
+    """
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="faculty_profile")
+    skills = models.TextField(blank=True)  # comma/newline-separated, e.g. "React, Django"
+    certifications = models.TextField(blank=True)
+
+    def __str__(self) -> str:
+        return f"faculty-profile<{self.user_id}>"

@@ -20,7 +20,8 @@ from core.roles import Role
 
 from .models import Enrollment
 
-REQUIRED = ["registration_number", "name", "email", "phone", "batch", "course", "faculty"]
+# Faculty assignment is done in the batch UI (conflict-checked), not per-student at import.
+REQUIRED = ["registration_number", "name", "email", "phone", "batch", "course"]
 OPTIONAL = ["address", "guardian", "employment_company"]
 
 _PHONE_RE = re.compile(r"^\+?\d[\d\s-]{6,18}$")
@@ -98,7 +99,6 @@ def validate_and_build(rows: list[dict]) -> tuple[list[dict], list[dict]]:
         ).values_list("username", flat=True)
     )
     batches = {b.code: b for b in Batch.objects.select_related("course").all()}
-    faculty = {u.username: u for u in User.objects.filter(role=Role.FACULTY)}
 
     seen_regs: set[str] = set()
     prepared: list[dict] = []
@@ -114,7 +114,6 @@ def validate_and_build(rows: list[dict]) -> tuple[list[dict], list[dict]]:
         phone = row.get("phone", "").strip()
         batch_code = row.get("batch", "").strip()
         course_code = row.get("course", "").strip()
-        faculty_name = row.get("faculty", "").strip()
 
         for field in REQUIRED:
             if not row.get(field, "").strip():
@@ -141,10 +140,6 @@ def validate_and_build(rows: list[dict]) -> tuple[list[dict], list[dict]]:
             err("batch", f"Unknown batch '{batch_code}'.")
         if batch and course_code and batch.course.code != course_code:
             err("course", f"Course '{course_code}' does not match batch's course.")
-
-        fac = faculty.get(faculty_name)
-        if faculty_name and fac is None:
-            err("faculty", f"Unknown faculty '{faculty_name}'.")
 
         prepared.append(
             {

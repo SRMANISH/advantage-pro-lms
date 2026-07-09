@@ -2,7 +2,14 @@ from rest_framework import serializers
 
 from core.roles import Role
 
-from .models import User
+from .models import FacultyProfile, User
+
+
+class FacultyProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FacultyProfile
+        fields = ["skills", "certifications", "updated_at"]
+        read_only_fields = ["updated_at"]
 
 
 class LoginSerializer(serializers.Serializer):

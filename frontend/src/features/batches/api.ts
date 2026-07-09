@@ -13,9 +13,13 @@ export interface FacultyBrief {
   id: string;
   username: string;
   full_name: string;
+  skills?: string;
+  certifications?: string;
 }
 
 export type BatchState = "draft" | "active" | "completed";
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+export const WEEKDAYS: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 export interface Batch {
   id: string;
@@ -25,9 +29,14 @@ export interface Batch {
   course_detail: Course;
   start_date: string;
   end_date: string;
+  class_days: Weekday[];
+  class_start_time: string | null;
+  class_end_time: string | null;
   state: BatchState;
   faculty: string[];
   faculty_detail: FacultyBrief[];
+  primary_faculty: string | null;
+  primary_faculty_detail: FacultyBrief | null;
   created_at: string;
 }
 
@@ -37,6 +46,9 @@ export interface NewBatch {
   course: string;
   start_date: string;
   end_date: string;
+  class_days: Weekday[];
+  class_start_time: string;
+  class_end_time: string;
 }
 
 export const batchesApi = {
@@ -61,9 +73,11 @@ export const batchesApi = {
   async transition(id: string, to_state: BatchState): Promise<Batch> {
     return (await api.post<Batch>(`/batches/${id}/transition/`, { to_state })).data;
   },
-  async assignFaculty(id: string, facultyIds: string[]): Promise<Batch> {
-    return (await api.post<Batch>(`/batches/${id}/assign-faculty/`, { faculty_ids: facultyIds }))
-      .data;
+  async assignFaculty(
+    id: string,
+    payload: { primary_faculty?: string; faculty_ids?: string[] },
+  ): Promise<Batch> {
+    return (await api.post<Batch>(`/batches/${id}/assign-faculty/`, payload)).data;
   },
   async listFaculty(): Promise<FacultyBrief[]> {
     return (await api.get<FacultyBrief[]>("/faculty/")).data;

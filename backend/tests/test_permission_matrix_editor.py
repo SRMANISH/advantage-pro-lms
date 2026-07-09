@@ -46,6 +46,9 @@ def test_override_changes_enforcement_and_reset_reverts(db):
         "course": str(course.id),
         "start_date": "2026-03-01",
         "end_date": "2026-06-01",
+        "class_days": ["mon"],
+        "class_start_time": "18:00",
+        "class_end_time": "20:00",
     }
 
     # Default: MIS may not create batches.
