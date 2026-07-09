@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from content.access import can_access_batch
@@ -9,6 +10,7 @@ from .models import CheckIn, LiveClass
 class LiveClassSerializer(serializers.ModelSerializer):
     batch_code = serializers.CharField(source="batch.code", read_only=True)
     checked_in = serializers.SerializerMethodField()
+    duration_minutes = serializers.SerializerMethodField()
 
     class Meta:
         model = LiveClass
@@ -18,6 +20,7 @@ class LiveClassSerializer(serializers.ModelSerializer):
             "batch_code",
             "title",
             "scheduled_at",
+            "duration_minutes",
             "platform",
             "meeting_link",
             "status",
@@ -32,6 +35,9 @@ class LiveClassSerializer(serializers.ModelSerializer):
         if user.role != Role.STUDENT:
             return None
         return CheckIn.objects.filter(live_class=obj, student=user).exists()
+
+    def get_duration_minutes(self, obj) -> int:
+        return int(getattr(settings, "LIVE_CLASS_DURATION_MINUTES", 120))
 
 
 class LiveClassWriteSerializer(serializers.ModelSerializer):

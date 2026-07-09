@@ -52,6 +52,9 @@ const CoursesPage = lazy(() =>
 const FacultyProfilePage = lazy(() =>
   import("./features/faculty/FacultyProfilePage").then((m) => ({ default: m.FacultyProfilePage })),
 );
+const CalendarPage = lazy(() =>
+  import("./features/calendar/CalendarPage").then((m) => ({ default: m.CalendarPage })),
+);
 const PermissionsPage = lazy(() =>
   import("./features/permissions/PermissionsPage").then((m) => ({ default: m.PermissionsPage })),
 );
@@ -182,6 +185,17 @@ export default function App() {
             element={
               <ProtectedRoute role={role}>
                 <FacultyProfilePage role={role} />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        {ROLES.filter((role) => role.value === "student").map((role) => (
+          <Route
+            key={`calendar-${role.slug}`}
+            path={`/${role.slug}/calendar`}
+            element={
+              <ProtectedRoute role={role}>
+                <CalendarPage role={role} />
               </ProtectedRoute>
             }
           />

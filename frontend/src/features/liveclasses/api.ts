@@ -8,6 +8,7 @@ export interface LiveClass {
   batch_code: string;
   title: string;
   scheduled_at: string;
+  duration_minutes: number;
   platform: string;
   meeting_link: string;
   status: LiveClassStatus;

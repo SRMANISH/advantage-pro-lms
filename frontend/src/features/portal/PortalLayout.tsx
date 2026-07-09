@@ -76,6 +76,7 @@ const NAV: NavEntry[] = [
   { to: "tests", label: "Tests", Icon: ClipboardList, roles: TESTS, group: "Learning" },
   { to: "tasks", label: "Tasks", Icon: FileText, roles: TASKS, group: "Learning" },
   { to: "live", label: "Live classes", Icon: Radio, roles: LIVE, group: "Learning" },
+  { to: "calendar", label: "Calendar", Icon: CalendarCheck, roles: role("student"), group: "Learning" },
   { to: "attendance", label: "Attendance", Icon: CalendarCheck, roles: ATTEND, group: "Tracking" },
   { to: "performance", label: "Performance", Icon: BarChart3, roles: ATTEND, group: "Tracking" },
   { to: "forum", label: "Forum", Icon: MessagesSquare, roles: FORUM, group: "Tracking" },
