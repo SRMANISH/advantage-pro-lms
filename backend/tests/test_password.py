@@ -81,9 +81,12 @@ def test_forgot_password_wrong_email_code_rejected(client, student):
 
 
 @pytest.mark.django_db
-def test_forgot_password_unknown_account(client, db):
+def test_forgot_password_unknown_account_gives_no_existence_signal(client, db):
+    # No enumeration oracle: an unknown identifier returns the same 200 + token shape a
+    # real one does (the token is a decoy that fails at the OTP step).
     resp = client.post(FORGOT, {"identifier": "nobody"}, content_type="application/json")
-    assert resp.status_code == 404
+    assert resp.status_code == 200
+    assert set(resp.json()) >= {"ok", "token", "email"}
 
 
 @pytest.mark.django_db

@@ -105,7 +105,8 @@ export default function App() {
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/showcase" element={<ShowcasePage />} />
+        {/* Design-system demo page — dev builds only, never a public prod surface. */}
+        {import.meta.env.DEV && <Route path="/showcase" element={<ShowcasePage />} />}
         <Route path="/setup/:token" element={<SetupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/utility-links" element={<UtilityLinksBoardPage />} />

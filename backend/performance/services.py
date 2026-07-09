@@ -13,6 +13,25 @@ def _avg(nums: list[int]) -> int:
     return round(sum(nums) / len(nums)) if nums else 0
 
 
+def batch_performance_cached(batch) -> list[dict]:
+    """``batch_performance`` behind a short cache, keyed by batch id.
+
+    The board is read on every performance-page load *and* once per enrolment when a
+    student opens their dashboard/`/performance/me` — recomputing the whole 1,000-row
+    board each time is wasteful. A 60s TTL keeps a live-enough leaderboard while a busy
+    batch's dashboard hits collapse to one computation. Result is primitive list[dict]
+    (picklable). Callers that need strictly-fresh numbers use ``batch_performance``.
+    """
+    from django.core.cache import cache
+
+    key = f"perf-board:{batch.id}"
+    board: list[dict] | None = cache.get(key)
+    if board is None:
+        board = batch_performance(batch)
+        cache.set(key, board, 60)
+    return board
+
+
 def batch_totals(batch) -> dict:
     return {
         "videos": Video.objects.filter(batch=batch).count(),

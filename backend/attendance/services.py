@@ -40,12 +40,19 @@ def record_login_attendance(student, device_id: str = "") -> int:
     constraint where reference_id encodes the batch and date. Returns the number of new
     login-attendance rows created.
     """
+    from batches.models import BatchState
     from enrollments.models import Enrollment
 
     today = timezone.localdate()
     created = 0
+    # A finished student may still log in (to enter a Certificate ID), but that must not
+    # add attendance to a completed batch. Non-completed batches still record normally;
+    # any out-of-window rows are excluded on the read side (see login_present_days).
     batch_ids = (
-        Enrollment.objects.filter(student=student).values_list("batch_id", flat=True).distinct()
+        Enrollment.objects.filter(student=student)
+        .exclude(batch__state=BatchState.COMPLETED)
+        .values_list("batch_id", flat=True)
+        .distinct()
     )
     for batch_id in batch_ids:
         _, was_created = AttendanceEvent.objects.get_or_create(
@@ -88,8 +95,19 @@ def _weekdays_between(start, end) -> int:
 
 
 def login_present_days(student, batch) -> int:
-    """Distinct days the student logged in while in this batch."""
-    qs = AttendanceEvent.objects.filter(student=student, batch=batch, source=AttendanceSource.LOGIN)
+    """Distinct days the student logged in *within the batch's calendar window*.
+
+    Bounded to ``start_date..end_date`` so the present-day count (numerator) can never
+    exceed the expected-days window (denominator) — e.g. post-completion certificate
+    logins don't push attendance past 100%.
+    """
+    qs = AttendanceEvent.objects.filter(
+        student=student,
+        batch=batch,
+        source=AttendanceSource.LOGIN,
+        date__gte=batch.start_date,
+        date__lte=batch.end_date,
+    )
     if not _count_weekends():
         # django-stubs mistypes week_day__in as dates; ints are the documented values.
         qs = qs.filter(date__week_day__in=_WEEKDAYS)  # type: ignore[misc]
@@ -128,8 +146,14 @@ def batch_attendance_summaries(batch, students=None) -> dict:
         students = User.objects.filter(enrollments__batch=batch).distinct()
     ids = [s.id for s in students]
     total = expected_days(batch)
+    # Bound to the batch window so present-days (numerator) can't exceed expected-days
+    # (denominator) — mirrors login_present_days.
     present_qs = AttendanceEvent.objects.filter(
-        batch=batch, source=AttendanceSource.LOGIN, student_id__in=ids
+        batch=batch,
+        source=AttendanceSource.LOGIN,
+        student_id__in=ids,
+        date__gte=batch.start_date,
+        date__lte=batch.end_date,
     )
     if not _count_weekends():
         # django-stubs mistypes week_day__in as dates; ints are the documented values.

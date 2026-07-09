@@ -38,12 +38,15 @@ def client_for(u):
 @pytest.fixture
 def world(db):
     course = Course.objects.create(code="FS", name="Full Stack")
+    # Window spans "today" so a login recorded now falls inside the batch's calendar
+    # (login-attendance only counts days within start_date..end_date).
+    today = datetime.date.today()
     batch = Batch.objects.create(
         code="B1",
         name="B",
         course=course,
-        start_date=datetime.date(2026, 1, 1),
-        end_date=datetime.date(2026, 4, 1),
+        start_date=today - datetime.timedelta(days=30),
+        end_date=today + datetime.timedelta(days=30),
     )
     fac = user("fac", Role.FACULTY)
     batch.faculty.add(fac)

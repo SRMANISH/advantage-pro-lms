@@ -9,7 +9,7 @@ from core.permissions import has_any_role
 from core.roles import Role
 from enrollments.models import Enrollment
 
-from .services import batch_performance
+from .services import batch_performance_cached
 
 
 class MyPerformanceView(APIView):
@@ -19,7 +19,7 @@ class MyPerformanceView(APIView):
         rows = []
         enrollments = Enrollment.objects.filter(student=request.user).select_related("batch")
         for e in enrollments:
-            board = batch_performance(e.batch)
+            board = batch_performance_cached(e.batch)
             mine = next((r for r in board if r["student"] == str(request.user.id)), None)
             if mine:
                 rows.append(
@@ -50,4 +50,4 @@ class BatchPerformanceView(APIView):
             and not batch.faculty.filter(id=request.user.id).exists()
         ):
             return Response({"detail": "Not your batch."}, status=403)
-        return Response(batch_performance(batch))
+        return Response(batch_performance_cached(batch))

@@ -114,6 +114,13 @@ class Command(BaseCommand):
             if created:
                 user.set_password(PASSWORD)
                 user.save()
+            elif user.role != role or user.status != UserStatus.ACTIVE:
+                # Repair drift: a demo account whose role/status was changed during testing
+                # is restored to its documented values on re-seed (get_or_create alone
+                # never touches an existing row).
+                user.role = role
+                user.status = UserStatus.ACTIVE
+                user.save(update_fields=["role", "status"])
             users[username] = user
         return users
 

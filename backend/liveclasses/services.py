@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from notifications.services import batch_student_users, notify_many
 
-from .models import LiveClass, LiveReminder
+from .models import LiveClass, LiveClassStatus, LiveReminder
 
 REMINDER_OFFSETS = (60, 15)  # minutes before the class
 
@@ -21,13 +21,18 @@ def _class_duration_minutes() -> int:
 
 
 def active_live_class_for_batches(batch_ids):
-    """The live class currently in session (scheduled_at .. +duration) for any batch."""
+    """The live class currently in session (scheduled_at .. +duration) for any batch.
+
+    Cancelled classes are excluded: a cancelled class must not open the device-change
+    approval window (faculty-during-class / Tech-Support-outside routing keys off this).
+    """
     now = timezone.now()
     window_start = now - timedelta(minutes=_class_duration_minutes())
     return (
         LiveClass.objects.filter(
             batch_id__in=list(batch_ids), scheduled_at__lte=now, scheduled_at__gte=window_start
         )
+        .exclude(status=LiveClassStatus.CANCELLED)
         .select_related("batch")
         .first()
     )

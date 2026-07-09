@@ -1,5 +1,7 @@
 """Password flows: two-step forgot/reset (email OTP -> phone OTP) and change-password."""
 
+import secrets
+
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -28,7 +30,8 @@ class ForgotPasswordStartView(APIView):
 
     def post(self, request):
         ip = get_client_ip(request)
-        user = password_service.find_user(request.data.get("identifier", ""))
+        identifier = request.data.get("identifier", "")
+        user = password_service.find_user(identifier)
         record_action(
             actor=user,
             action="password_reset_requested",
@@ -36,10 +39,16 @@ class ForgotPasswordStartView(APIView):
             metadata={"found": bool(user)},
             ip_address=ip,
         )
+        # Never reveal whether an account exists: the response shape is identical either
+        # way (200 + opaque token + masked email). A miss returns a decoy token that isn't
+        # backed by any reset, so the OTP steps fail the same as an expired real token.
         if not user:
             return Response(
-                {"detail": "No active account found for that email or Registration ID."},
-                status=status.HTTP_404_NOT_FOUND,
+                {
+                    "ok": True,
+                    "token": secrets.token_urlsafe(32),
+                    "email": setup_service.mask_email(identifier),
+                }
             )
         token, code = password_service.start_reset(user)
         data = {"ok": True, "token": token.token, "email": setup_service.mask_email(user.email)}
