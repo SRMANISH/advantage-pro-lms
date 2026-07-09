@@ -20,6 +20,13 @@ class Enrollment(TimeStampedModel):
     address = models.CharField(max_length=255, blank=True)
     guardian = models.CharField(max_length=255, blank=True)
     employment_company = models.CharField(max_length=200, blank=True)
+    # Welcome flow (reqs 16/17): a post-enrolment popup asks the student two questions —
+    # is your address on file, and have you received your Advantage Pro goodies. Their
+    # answers drive the Admin address/goodies register.
+    welcome_answered = models.BooleanField(default=False)  # student responded to the popup
+    address_confirmed = models.BooleanField(default=False)  # student confirmed/provided address
+    goodies_received = models.BooleanField(default=False)  # student says they received goodies
+    goodies_sent = models.BooleanField(default=False)  # admin marks goodies dispatched
 
     class Meta:
         ordering = ["registration_number"]

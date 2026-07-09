@@ -10,6 +10,7 @@ import {
   Download,
   Eye,
   FileText,
+  Gift,
   KeyRound,
   LayoutDashboard,
   Link2,
@@ -37,6 +38,7 @@ import { Avatar, Logo, cn, pageVariants } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { EngagementPrompts } from "../engagement/EngagementPrompts";
 import { NotificationBell } from "../notifications/NotificationBell";
+import { WelcomePrompts } from "../welcome/WelcomePrompts";
 
 const role = (...values: string[]) => new Set(values);
 // Visibility sets mirror the updated permission matrix (backend is the source of truth;
@@ -70,6 +72,7 @@ const NAV: NavEntry[] = [
   { to: "courses", label: "Courses", Icon: BookOpen, roles: role("super_admin"), group: "People & batches" },
   { to: "profile", label: "My skills", Icon: Sparkles, roles: role("faculty"), group: "People & batches" },
   { to: "enrolment", label: "Enrolment", Icon: UserPlus, roles: ADMIN_MIS, group: "People & batches" },
+  { to: "goodies", label: "Addresses & goodies", Icon: Gift, roles: ADMIN_MIS, group: "People & batches" },
   { to: "staff", label: "Staff", Icon: UserCog, roles: role("super_admin"), group: "People & batches" },
   { to: "content", label: "Content", Icon: Video, roles: CONTENT, group: "Learning" },
   { to: "videos", label: "Videos", Icon: PlayCircle, roles: role("student"), group: "Learning" },
@@ -211,6 +214,7 @@ export function PortalLayout({ role: roleDef, children }: { role: RoleDef; child
       >
         Skip to content
       </a>
+      {roleDef.value === "student" && <WelcomePrompts />}
       {roleDef.value === "student" && <EngagementPrompts />}
 
       <aside className="hidden w-64 shrink-0 md:block">
