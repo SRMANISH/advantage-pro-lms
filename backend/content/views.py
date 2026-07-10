@@ -1,7 +1,5 @@
 """Video & material APIs: upload (faculty), list (role-scoped), gated streaming, progress."""
 
-from django.conf import settings
-from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -12,7 +10,6 @@ from accounts.models import User
 from attendance.services import record_attendance
 from audit.services import record_action
 from batches.models import Batch
-from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission, has_any_role
 from core.permissions_matrix import Action
 from core.roles import Role
@@ -20,6 +17,7 @@ from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify_many
 
 from .access import accessible_batch_ids, is_video_blocked
+from .delivery import deliver
 from .models import Material, Video, VideoAccessRevocation, VideoProgress
 from .serializers import (
     MaterialSerializer,
@@ -30,69 +28,6 @@ from .serializers import (
 )
 
 ContentRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.FACULTY, Role.STUDENT)
-
-CHUNK = 8192
-
-
-def _stream(fileobj, content_type: str, range_header: str | None) -> StreamingHttpResponse:
-    """Stream a seekable file, honouring a Range request so <video> can seek."""
-    fileobj.seek(0, 2)
-    size = fileobj.tell()
-    fileobj.seek(0)
-
-    start, end = 0, size - 1
-    partial = False
-    if range_header and range_header.startswith("bytes="):
-        raw = range_header.split("=", 1)[1].split("-")
-        start = int(raw[0]) if raw[0] else 0
-        end = int(raw[1]) if len(raw) > 1 and raw[1] else size - 1
-        end = min(end, size - 1)
-        partial = True
-
-    length = end - start + 1
-    fileobj.seek(start)
-
-    def chunks():
-        remaining = length
-        while remaining > 0:
-            data = fileobj.read(min(CHUNK, remaining))
-            if not data:
-                break
-            remaining -= len(data)
-            yield data
-
-    resp = StreamingHttpResponse(
-        chunks(), status=206 if partial else 200, content_type=content_type
-    )
-    resp["Accept-Ranges"] = "bytes"
-    resp["Content-Length"] = str(length)
-    resp["Content-Disposition"] = "inline"  # discourage download
-    if partial:
-        resp["Content-Range"] = f"bytes {start}-{end}/{size}"
-    return resp
-
-
-def _deliver(request, storage_key: str, content_type: str):
-    """Authorize in Django, then hand the actual byte-serving to the reverse proxy.
-
-    When ``MEDIA_XACCEL_PREFIX`` is set (production, behind nginx) we return an
-    ``X-Accel-Redirect`` so nginx streams the file from an internal location and the
-    gunicorn worker is freed immediately — the fix for workers being pinned by concurrent
-    viewers. In dev / CI (no prefix) we stream from the app, which is fine at low
-    concurrency. An object-storage adapter that returns real signed URLs can slot in here
-    the same way (redirect to the signed URL).
-    """
-    prefix = getattr(settings, "MEDIA_XACCEL_PREFIX", "")
-    if prefix:
-        resp = HttpResponse(content_type=content_type)
-        # nginx: `location <prefix> { internal; alias /path/to/media/; }`
-        resp["X-Accel-Redirect"] = f"{prefix.rstrip('/')}/{storage_key}"
-        resp["X-Accel-Buffering"] = "no"
-        resp["Content-Disposition"] = "inline"
-        resp["Accept-Ranges"] = "bytes"
-        return resp
-    fileobj = get_storage().open(storage_key)
-    return _stream(fileobj, content_type, request.headers.get("Range"))
 
 
 def _scoped(qs, user):
@@ -148,7 +83,7 @@ class VideoViewSet(viewsets.ModelViewSet):
                 {"detail": "Your video access for this course has been closed."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        return _deliver(request, video.storage_key, video.content_type)
+        return deliver(request, video.storage_key, video.content_type)
 
     @action(detail=True, methods=["post"])
     def progress(self, request, pk=None):
@@ -209,7 +144,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
                 {"detail": "Your access for this course has been closed."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        return _deliver(request, material.storage_key, material.content_type)
+        return deliver(request, material.storage_key, material.content_type)
 
 
 class RevokeVideoAccessView(APIView):

@@ -61,12 +61,12 @@ export function UtilityLinksBoardPage() {
           </p>
         </motion.div>
 
-        <div className="relative mt-8 rounded-3xl border-4 border-[#d9b98a] bg-gradient-to-br from-[#f7ead2] to-[#f0dcba] p-6 shadow-card sm:p-10">
+        <div className="relative mt-8 rounded-3xl border border-brand/20 bg-gradient-to-br from-sky/70 via-surface to-surface p-6 shadow-card sm:p-10">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-3xl opacity-[0.15]"
+            className="pointer-events-none absolute inset-0 rounded-3xl opacity-[0.12]"
             style={{
-              backgroundImage: "radial-gradient(#8a6a3b 1px, transparent 1px)",
+              backgroundImage: "radial-gradient(#00A0E0 1px, transparent 1px)",
               backgroundSize: "18px 18px",
             }}
           />
@@ -77,7 +77,7 @@ export function UtilityLinksBoardPage() {
               ))}
             </div>
           ) : items.length === 0 ? (
-            <p className="relative py-14 text-center text-sm text-[#7a5c33]">
+            <p className="relative py-14 text-center text-sm text-muted">
               The board is empty for now — check back soon.
             </p>
           ) : (
@@ -88,7 +88,8 @@ export function UtilityLinksBoardPage() {
               className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
             >
               {items.map((l, i) => {
-                const thumb = youtubeThumb(l.url);
+                const ytThumb = youtubeThumb(l.url);
+                const thumb = l.thumbnail_url ?? ytThumb;
                 return (
                   <motion.a
                     key={l.id}
@@ -120,7 +121,9 @@ export function UtilityLinksBoardPage() {
                       </div>
                     )}
                     <div className="flex items-start gap-2 px-1 pb-1 pt-3">
-                      {thumb && <Youtube size={16} className="mt-0.5 shrink-0 text-danger" />}
+                      {ytThumb && !l.thumbnail_url && (
+                        <Youtube size={16} className="mt-0.5 shrink-0 text-danger" />
+                      )}
                       <span className="text-sm font-semibold leading-snug text-ink group-hover:text-brand-strong">
                         {l.title}
                       </span>

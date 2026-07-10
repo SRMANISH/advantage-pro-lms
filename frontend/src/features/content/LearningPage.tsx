@@ -6,7 +6,8 @@ import { Badge, Button, Card, EmptyState, ListSkeleton, SectionHeading } from ".
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
 import { UpsellPrompt } from "../upsell/UpsellPrompt";
-import { contentApi, type VideoItem } from "./api";
+import { contentApi, type MaterialItem, type VideoItem } from "./api";
+import { MaterialViewer } from "./MaterialViewer";
 import { VideoPlayer } from "./VideoPlayer";
 
 export function LearningPage({ role }: { role: RoleDef }) {
@@ -14,11 +15,12 @@ export function LearningPage({ role }: { role: RoleDef }) {
   const videos = useQuery({ queryKey: ["videos"], queryFn: () => contentApi.listVideos() });
   const materials = useQuery({ queryKey: ["materials"], queryFn: () => contentApi.listMaterials() });
   const [active, setActive] = useState<VideoItem | null>(null);
+  const [activeNote, setActiveNote] = useState<MaterialItem | null>(null);
   const watermark = `${user?.full_name || user?.username} · ${user?.username}`;
 
   return (
     <PortalLayout role={role}>
-      {!active && (
+      {!active && !activeNote && (
         <SectionHeading
           title="Videos"
           subtitle="Your class recordings and notes — streamed in-app, no downloads."
@@ -36,6 +38,14 @@ export function LearningPage({ role }: { role: RoleDef }) {
             Watching ≥80% marks you present. Playback is in-app only — no downloads.
           </p>
           <UpsellPrompt />
+        </div>
+      ) : activeNote ? (
+        <div className="grid gap-3">
+          <Button variant="ghost" className="w-fit" onClick={() => setActiveNote(null)}>
+            ← Back to list
+          </Button>
+          <h2 className="text-base font-medium text-ink">{activeNote.title}</h2>
+          <MaterialViewer material={activeNote} watermark={watermark} />
         </div>
       ) : (
         <div className="grid gap-4">
@@ -65,19 +75,17 @@ export function LearningPage({ role }: { role: RoleDef }) {
           </Card>
 
           <Card>
-            <h2 className="mb-3 text-base font-medium text-ink">Notes &amp; materials</h2>
+            <h2 className="mb-1 text-base font-medium text-ink">Notes &amp; materials</h2>
+            <p className="mb-3 text-xs text-muted">Open to read in the app — view-only, no downloads.</p>
             {materials.data && materials.data.length > 0 ? (
               <div className="flex flex-col divide-y divide-brdr">
                 {materials.data.map((m) => (
-                  <a
-                    key={m.id}
-                    href={m.view_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="py-2 text-sm font-medium text-brand-strong underline"
-                  >
-                    {m.title}
-                  </a>
+                  <div key={m.id} className="flex items-center justify-between py-2">
+                    <span className="text-sm font-medium text-ink">{m.title}</span>
+                    <Button variant="ghost" onClick={() => setActiveNote(m)}>
+                      View
+                    </Button>
+                  </div>
                 ))}
               </div>
             ) : (

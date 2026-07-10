@@ -87,6 +87,10 @@ class UtilityLink(TimeStampedModel):
     title = models.CharField(max_length=200)
     url = models.URLField(max_length=500)
     pinned = models.BooleanField(default=False)
+    # Optional MIS-uploaded thumbnail (storage key). When empty the board falls back to a
+    # derived YouTube thumbnail, else a neutral placeholder.
+    thumbnail_key = models.CharField(max_length=255, blank=True, default="")
+    thumbnail_content_type = models.CharField(max_length=100, blank=True, default="")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
     )

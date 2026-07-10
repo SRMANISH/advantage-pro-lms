@@ -5,7 +5,6 @@ import uuid
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import FileResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -17,6 +16,7 @@ from rest_framework.views import APIView
 from audit.services import record_action
 from batches.models import Batch
 from content.access import can_access_batch
+from content.delivery import deliver
 from core.adapters.registry import get_storage
 from core.pagination import StandardResultsPagination
 from core.permissions import has_any_role
@@ -276,9 +276,12 @@ class AttachmentDownloadView(APIView):
         # Tech Support / MIS see every batch's forum; others need normal batch access.
         if user.role not in ALL_FORUM and not can_access_batch(user, att.thread.batch):
             return Response({"detail": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
-        fileobj = get_storage().open(att.storage_key)
-        return FileResponse(
-            fileobj,
-            content_type=att.content_type or "application/octet-stream",
+        # Images render inline (req 3a: they show inside the thread); other files download.
+        is_image = (att.content_type or "").startswith("image/")
+        return deliver(
+            request,
+            att.storage_key,
+            att.content_type or "application/octet-stream",
+            disposition="inline" if is_image else "attachment",
             filename=att.filename,
         )

@@ -53,10 +53,14 @@ DOCUMENT_TYPES = {
     "application/zip",
 }
 
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif"}
+IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif"}
+
 # kind -> (allowed extensions, allowed content types, settings attr for the MB cap, default MB)
 _KINDS = {
     "video": (VIDEO_EXTENSIONS, VIDEO_TYPES, "MAX_VIDEO_UPLOAD_MB", 512),
     "document": (DOCUMENT_EXTENSIONS, DOCUMENT_TYPES, "MAX_DOCUMENT_UPLOAD_MB", 25),
+    "image": (IMAGE_EXTENSIONS, IMAGE_TYPES, "MAX_IMAGE_UPLOAD_MB", 5),
 }
 
 # Magic-byte signatures per extension: (offset, expected bytes). We don't trust the

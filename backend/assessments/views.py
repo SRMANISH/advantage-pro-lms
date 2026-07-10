@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from attendance.services import record_attendance
 from audit.services import record_action
 from content.access import accessible_batch_ids, can_access_batch
-from content.views import _stream
+from content.delivery import deliver
 from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission, has_any_role
 from core.permissions_matrix import Action
@@ -248,9 +248,8 @@ class TaskSubmissionViewSet(viewsets.GenericViewSet):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         if not submission.file_key:
             return Response({"detail": "No file."}, status=status.HTTP_404_NOT_FOUND)
-        fileobj = get_storage().open(submission.file_key)
-        return _stream(
-            fileobj,
+        return deliver(
+            request,
+            submission.file_key,
             submission.content_type or "application/octet-stream",
-            request.headers.get("Range"),
         )

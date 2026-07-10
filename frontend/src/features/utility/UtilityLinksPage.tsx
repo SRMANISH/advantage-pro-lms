@@ -23,16 +23,18 @@ export function UtilityLinksPage({ role }: { role: RoleDef }) {
   const links = useQuery({ queryKey: ["utility-links"], queryFn: utilityApi.list });
 
   const [form, setForm] = useState({ title: "", url: "", pinned: false });
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
   const invalidate = () => qc.invalidateQueries({ queryKey: ["utility-links"] });
 
   const create = useMutation({
-    mutationFn: () => utilityApi.create(form),
+    mutationFn: () => utilityApi.create({ ...form, thumbnail }),
     onSuccess: () => {
       setForm({ title: "", url: "", pinned: false });
+      setThumbnail(null);
       invalidate();
       toast.show("Link pinned to the notice board.", "success");
     },
-    onError: () => toast.show("Could not add the link — check the URL.", "error"),
+    onError: () => toast.show("Could not add the link — check the URL and image.", "error"),
   });
   const remove = useMutation({
     mutationFn: (id: string) => utilityApi.remove(id),
@@ -70,7 +72,20 @@ export function UtilityLinksPage({ role }: { role: RoleDef }) {
             />
             Pin to the top of the board
           </label>
-          <div className="sm:text-right">
+          <div>
+            <label htmlFor="util-thumb" className="mb-1 block text-xs font-medium text-muted">
+              Thumbnail image (optional — else a YouTube preview is used)
+            </label>
+            <input
+              id="util-thumb"
+              type="file"
+              accept="image/png,image/jpeg,image/gif"
+              onChange={(e) => setThumbnail(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-sky file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-brand-strong"
+            />
+            {thumbnail && <p className="mt-1 text-xs text-muted">{thumbnail.name}</p>}
+          </div>
+          <div className="sm:col-span-2 sm:text-right">
             <Button
               onClick={() => create.mutate()}
               disabled={!form.title || !form.url || create.isPending}
@@ -87,7 +102,8 @@ export function UtilityLinksPage({ role }: { role: RoleDef }) {
       ) : links.data && links.data.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {links.data.map((l) => {
-            const thumb = youtubeThumb(l.url);
+            const ytThumb = youtubeThumb(l.url);
+            const thumb = l.thumbnail_url ?? ytThumb;
             return (
               <Card key={l.id} className="overflow-hidden p-0">
                 {thumb ? (
@@ -100,7 +116,9 @@ export function UtilityLinksPage({ role }: { role: RoleDef }) {
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      {thumb && <Youtube size={15} className="shrink-0 text-danger" />}
+                      {ytThumb && !l.thumbnail_url && (
+                        <Youtube size={15} className="shrink-0 text-danger" />
+                      )}
                       <span className="text-sm font-semibold text-ink">{l.title}</span>
                     </div>
                     {l.pinned && <Badge tone="warning">pinned</Badge>}

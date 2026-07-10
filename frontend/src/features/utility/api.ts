@@ -5,6 +5,8 @@ export interface UtilityLink {
   title: string;
   url: string;
   pinned: boolean;
+  /** MIS-uploaded thumbnail; null when none (board falls back to a YouTube/derived image). */
+  thumbnail_url: string | null;
   created_at: string;
 }
 
@@ -23,7 +25,20 @@ export const utilityApi = {
   async list(): Promise<UtilityLink[]> {
     return (await api.get<UtilityLink[]>("/utility-links/")).data;
   },
-  async create(body: { title: string; url: string; pinned?: boolean }): Promise<UtilityLink> {
+  async create(body: {
+    title: string;
+    url: string;
+    pinned?: boolean;
+    thumbnail?: File | null;
+  }): Promise<UtilityLink> {
+    if (body.thumbnail) {
+      const form = new FormData();
+      form.append("title", body.title);
+      form.append("url", body.url);
+      form.append("pinned", String(body.pinned ?? false));
+      form.append("thumbnail", body.thumbnail);
+      return (await api.post<UtilityLink>("/utility-links/", form)).data;
+    }
     return (await api.post<UtilityLink>("/utility-links/", body)).data;
   },
   async remove(id: string): Promise<void> {

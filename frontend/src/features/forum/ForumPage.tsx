@@ -25,19 +25,40 @@ function StatusBadge({ status }: { status: ThreadStatus }) {
 
 function Attachments({ items }: { items: Attachment[] }) {
   if (!items?.length) return null;
+  const images = items.filter((a) => a.content_type?.startsWith("image/"));
+  const files = items.filter((a) => !a.content_type?.startsWith("image/"));
   return (
-    <div className="mt-1.5 flex flex-wrap gap-2">
-      {items.map((a) => (
-        <a
-          key={a.id}
-          href={a.download_url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-sky px-2.5 py-1 text-xs font-medium text-brand-strong hover:underline"
-        >
-          <Paperclip size={13} /> {a.filename}
-        </a>
-      ))}
+    <div className="mt-1.5 flex flex-col gap-2">
+      {/* Image attachments render inline so a screenshot of the doubt is visible in place. */}
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {images.map((a) => (
+            <a key={a.id} href={a.download_url} target="_blank" rel="noreferrer" className="block">
+              <img
+                src={a.download_url}
+                alt={a.filename}
+                loading="lazy"
+                className="max-h-56 rounded-lg border border-brdr object-contain"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+      {files.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {files.map((a) => (
+            <a
+              key={a.id}
+              href={a.download_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-sky px-2.5 py-1 text-xs font-medium text-brand-strong hover:underline"
+            >
+              <Paperclip size={13} /> {a.filename}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

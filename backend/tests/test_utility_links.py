@@ -62,3 +62,38 @@ def test_pinned_links_come_first(db):
     UtilityLink.objects.create(title="Pinned", url="https://example.com/b", pinned=True)
     titles = [r["title"] for r in APIClient().get(URL).json()]
     assert titles[0] == "Pinned"
+
+
+@pytest.mark.django_db
+def test_mis_uploads_thumbnail_and_public_can_view_it(db):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    png = SimpleUploadedFile(
+        "thumb.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 64, content_type="image/png"
+    )
+    created = client_for(user("mis", Role.MIS)).post(
+        URL,
+        {"title": "With thumb", "url": "https://example.com/x", "thumbnail": png},
+        format="multipart",
+    )
+    assert created.status_code == 201
+    thumb_url = created.json()["thumbnail_url"]
+    assert thumb_url is not None
+
+    # Public (unauthenticated) fetches the served image bytes.
+    served = APIClient().get(thumb_url)
+    assert served.status_code == 200
+    assert served["Content-Type"].startswith("image/")
+
+
+@pytest.mark.django_db
+def test_non_image_thumbnail_is_rejected(db):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    bad = SimpleUploadedFile("notes.pdf", b"%PDF-1.4 fake", content_type="application/pdf")
+    resp = client_for(user("mis", Role.MIS)).post(
+        URL,
+        {"title": "Bad", "url": "https://example.com/y", "thumbnail": bad},
+        format="multipart",
+    )
+    assert resp.status_code == 400

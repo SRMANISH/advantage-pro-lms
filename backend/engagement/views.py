@@ -1,15 +1,21 @@
 """Engagement APIs: student status + actions, Admin/MIS reports, and utility links."""
 
+import uuid
+
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User, UserStatus
 from audit.services import record_action
+from content.delivery import deliver
+from core.adapters.registry import get_storage
 from core.permissions import has_any_role
 from core.roles import Role
+from core.uploads import validate_upload
 from notifications.services import admins_and_mis, notify_many
 
 from .models import CourseNextPlan, GoogleReview, LinkedInFollow, UtilityLink
@@ -31,12 +37,17 @@ def _link_row(link) -> dict:
         "title": link.title,
         "url": link.url,
         "pinned": link.pinned,
+        "thumbnail_url": (
+            f"/api/v1/utility-links/{link.id}/thumbnail/" if link.thumbnail_key else None
+        ),
         "created_at": link.created_at,
     }
 
 
 class UtilityLinksView(APIView):
-    """Public notice board: anyone reads; MIS posts."""
+    """Public notice board: anyone reads; MIS posts (optionally with a thumbnail image)."""
+
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_permissions(self):
         return [AllowAny()] if self.request.method == "GET" else [UtilityManageRoles()]
@@ -48,6 +59,14 @@ class UtilityLinksView(APIView):
         serializer = UtilityLinkSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         link = UtilityLink.objects.create(created_by=request.user, **serializer.validated_data)
+        thumb = request.FILES.get("thumbnail")
+        if thumb:
+            validate_upload(thumb, "image")
+            key = f"utility/{uuid.uuid4()}/{thumb.name}"
+            get_storage().save(key, thumb)
+            link.thumbnail_key = key
+            link.thumbnail_content_type = getattr(thumb, "content_type", "") or ""
+            link.save(update_fields=["thumbnail_key", "thumbnail_content_type", "updated_at"])
         record_action(actor=request.user, action="utility_link_added", target=link)
         return Response(_link_row(link), status=201)
 
@@ -62,6 +81,18 @@ class UtilityLinkDetailView(APIView):
         record_action(actor=request.user, action="utility_link_removed", target=link)
         link.delete()
         return Response(status=204)
+
+
+class UtilityLinkThumbnailView(APIView):
+    """Public: serve a utility link's MIS-uploaded thumbnail (the board is public)."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        link = UtilityLink.objects.filter(pk=pk).first()
+        if not link or not link.thumbnail_key:
+            return Response({"detail": "No thumbnail."}, status=404)
+        return deliver(request, link.thumbnail_key, link.thumbnail_content_type or "image/jpeg")
 
 
 def _completed_students():

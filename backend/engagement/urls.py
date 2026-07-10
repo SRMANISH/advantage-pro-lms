@@ -10,6 +10,7 @@ from .views import (
     NextPlanView,
     UtilityLinkDetailView,
     UtilityLinksView,
+    UtilityLinkThumbnailView,
 )
 
 urlpatterns = [
@@ -28,4 +29,9 @@ urlpatterns = [
     path("engagement/next-plans/", NextPlanListView.as_view(), name="engagement-next-plans"),
     path("utility-links/", UtilityLinksView.as_view(), name="utility-links"),
     path("utility-links/<uuid:pk>/", UtilityLinkDetailView.as_view(), name="utility-link-detail"),
+    path(
+        "utility-links/<uuid:pk>/thumbnail/",
+        UtilityLinkThumbnailView.as_view(),
+        name="utility-link-thumbnail",
+    ),
 ]
