@@ -58,6 +58,12 @@ const CalendarPage = lazy(() =>
 const GoodiesPage = lazy(() =>
   import("./features/welcome/GoodiesPage").then((m) => ({ default: m.GoodiesPage })),
 );
+const FeedbackPage = lazy(() =>
+  import("./features/feedback/FeedbackPage").then((m) => ({ default: m.FeedbackPage })),
+);
+const FeedbackInboxPage = lazy(() =>
+  import("./features/feedback/FeedbackInboxPage").then((m) => ({ default: m.FeedbackInboxPage })),
+);
 const PermissionsPage = lazy(() =>
   import("./features/permissions/PermissionsPage").then((m) => ({ default: m.PermissionsPage })),
 );
@@ -199,6 +205,28 @@ export default function App() {
             element={
               <ProtectedRoute role={role}>
                 <CalendarPage role={role} />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        {ROLES.filter((role) => role.value === "student").map((role) => (
+          <Route
+            key={`feedback-${role.slug}`}
+            path={`/${role.slug}/feedback`}
+            element={
+              <ProtectedRoute role={role}>
+                <FeedbackPage role={role} />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        {ROLES.filter((role) => role.value === "super_admin").map((role) => (
+          <Route
+            key={`feedback-inbox-${role.slug}`}
+            path={`/${role.slug}/feedback`}
+            element={
+              <ProtectedRoute role={role}>
+                <FeedbackInboxPage role={role} />
               </ProtectedRoute>
             }
           />

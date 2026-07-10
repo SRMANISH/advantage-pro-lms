@@ -94,6 +94,8 @@ const NAV: NavEntry[] = [
   { to: "reports", label: "Reports", Icon: Download, roles: REPORTS, group: "Operations" },
   { to: "channels", label: "Channels", Icon: Settings, roles: role("super_admin"), group: "Operations" },
   { to: "permissions", label: "Permissions", Icon: KeyRound, roles: role("super_admin"), group: "Operations" },
+  { to: "feedback", label: "Message management", Icon: MessagesSquare, roles: role("student"), group: "Completion" },
+  { to: "feedback", label: "Feedback inbox", Icon: MessagesSquare, roles: role("super_admin"), group: "Operations" },
 ];
 
 const GROUP_ORDER = ["Overview", "People & batches", "Learning", "Tracking", "Completion", "Operations"];

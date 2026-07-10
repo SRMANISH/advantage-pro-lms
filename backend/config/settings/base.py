@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "liveclasses",
     "certification",
     "engagement",
+    "feedback",
 ]
 
 MIDDLEWARE = [
