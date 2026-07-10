@@ -155,3 +155,91 @@ def test_closed_test_cannot_be_submitted(world):
         format="json",
     )
     assert resp.status_code == 400
+
+
+# ---------- Phase 5: file (Excel) + Colab test kinds, hand-graded ----------
+
+
+@pytest.mark.django_db
+def test_mcq_test_requires_questions(world):
+    resp = client_for(world["fac"]).post(
+        TESTS_URL,
+        {"batch": str(world["batch"].id), "title": "Empty", "kind": "mcq", "questions": []},
+        format="json",
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_file_test_upload_then_faculty_grades(world):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    created = client_for(world["fac"]).post(
+        TESTS_URL,
+        {"batch": str(world["batch"].id), "title": "Excel task", "kind": "file", "max_score": 50},
+        format="json",
+    )
+    assert created.status_code == 201
+    test = Test.objects.get(title="Excel task")
+    assert test.kind == "file"
+
+    # Student uploads an Excel workbook; attempt lands ungraded.
+    xlsx = SimpleUploadedFile(
+        "answers.xlsx",
+        b"PK\x03\x04 fake workbook",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    sub = client_for(world["student"]).post(
+        f"{TESTS_URL}{test.id}/submit/", {"file": xlsx}, format="multipart"
+    )
+    assert sub.status_code == 201
+    attempt = TestAttempt.objects.get(test=test, student=world["student"])
+    assert attempt.graded is False and attempt.file_key
+
+    # Faculty sees the attempt and grades it out of max_score.
+    rows = client_for(world["fac"]).get(f"{TESTS_URL}{test.id}/attempts/").json()
+    assert len(rows) == 1 and rows[0]["file_url"]
+    graded = client_for(world["fac"]).post(
+        f"/api/v1/test-attempts/{rows[0]['id']}/grade/",
+        {"score": 40, "feedback": "Neat work"},
+        format="json",
+    )
+    assert graded.status_code == 200
+    attempt.refresh_from_db()
+    assert attempt.graded is True and attempt.score == 40
+
+
+@pytest.mark.django_db
+def test_colab_test_requires_link(world):
+    created = client_for(world["fac"]).post(
+        TESTS_URL,
+        {"batch": str(world["batch"].id), "title": "Colab", "kind": "colab"},
+        format="json",
+    )
+    assert created.status_code == 201
+    test = Test.objects.get(title="Colab")
+
+    sc = client_for(world["student"])
+    assert sc.post(f"{TESTS_URL}{test.id}/submit/", {}, format="json").status_code == 400
+    ok = sc.post(
+        f"{TESTS_URL}{test.id}/submit/",
+        {"link": "https://colab.research.google.com/drive/abc"},
+        format="json",
+    )
+    assert ok.status_code == 201
+    attempt = TestAttempt.objects.get(test=test, student=world["student"])
+    assert attempt.link.endswith("abc") and attempt.graded is False
+
+
+@pytest.mark.django_db
+def test_grading_someone_elses_batch_is_blocked(world):
+    """A faculty from an unrelated batch cannot grade this attempt."""
+    test = Test.objects.create(batch=world["batch"], title="F", kind="colab", max_score=10)
+    attempt = TestAttempt.objects.create(
+        test=test, student=world["student"], total=10, graded=False, link="https://x/y"
+    )
+    outsider = user("fac2", Role.FACULTY)
+    resp = client_for(outsider).post(
+        f"/api/v1/test-attempts/{attempt.id}/grade/", {"score": 5}, format="json"
+    )
+    assert resp.status_code == 403

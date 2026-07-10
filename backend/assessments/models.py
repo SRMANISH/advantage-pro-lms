@@ -7,9 +7,20 @@ from batches.models import Batch
 from core.models import TimeStampedModel
 
 
+class TestKind(models.TextChoices):
+    MCQ = "mcq", "Multiple choice (auto-graded)"
+    FILE = "file", "File upload (e.g. Excel)"
+    COLAB = "colab", "Colab / notebook link"
+
+
 class Test(TimeStampedModel):
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="tests")
     title = models.CharField(max_length=200)
+    # MCQ = the classic auto-graded flow; FILE/COLAB = student submits an artefact
+    # (an Excel workbook, a Colab notebook link) that faculty grade by hand out of max_score.
+    kind = models.CharField(max_length=10, choices=TestKind.choices, default=TestKind.MCQ)
+    instructions = models.TextField(blank=True)
+    max_score = models.PositiveSmallIntegerField(default=100)
     open_at = models.DateTimeField(null=True, blank=True)
     close_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
@@ -49,6 +60,13 @@ class TestAttempt(TimeStampedModel):
     )
     score = models.PositiveIntegerField(default=0)
     total = models.PositiveIntegerField(default=0)
+    # File/Colab submissions: the uploaded artefact or link, plus manual-grading state.
+    file_key = models.CharField(max_length=255, blank=True)
+    content_type = models.CharField(max_length=100, blank=True)
+    link = models.URLField(max_length=500, blank=True)
+    feedback = models.TextField(blank=True)
+    # MCQ attempts are graded the instant they're submitted; file/colab wait for faculty.
+    graded = models.BooleanField(default=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

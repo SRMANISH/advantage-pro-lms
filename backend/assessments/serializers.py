@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from content.access import can_access_batch
 
-from .models import Choice, Question, Task, TaskSubmission, Test, TestAttempt
+from .models import Choice, Question, Task, TaskSubmission, Test, TestAttempt, TestKind
 
 
 # --- Write (faculty builds a test) ---
@@ -26,11 +26,22 @@ class QuestionWriteSerializer(serializers.Serializer):
 
 
 class TestWriteSerializer(serializers.ModelSerializer):
-    questions = QuestionWriteSerializer(many=True, write_only=True)
+    # Questions only apply to MCQ tests; file/colab tests carry none.
+    questions = QuestionWriteSerializer(many=True, write_only=True, required=False, default=list)
 
     class Meta:
         model = Test
-        fields = ["id", "batch", "title", "open_at", "close_at", "questions"]
+        fields = [
+            "id",
+            "batch",
+            "title",
+            "kind",
+            "instructions",
+            "max_score",
+            "open_at",
+            "close_at",
+            "questions",
+        ]
         read_only_fields = ["id"]
 
     def validate_batch(self, batch):
@@ -38,14 +49,18 @@ class TestWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You cannot add a test to this batch.")
         return batch
 
-    def validate_questions(self, questions):
-        if not questions:
-            raise serializers.ValidationError("Add at least one question.")
-        return questions
+    def validate(self, attrs):
+        kind = attrs.get("kind", TestKind.MCQ)
+        questions = attrs.get("questions") or []
+        if kind == TestKind.MCQ and not questions:
+            raise serializers.ValidationError({"questions": "Add at least one question."})
+        if kind != TestKind.MCQ:
+            attrs["questions"] = []  # a file/colab test is graded by hand, no MCQs
+        return attrs
 
     @transaction.atomic
     def create(self, validated):
-        questions = validated.pop("questions")
+        questions = validated.pop("questions", [])
         test = Test.objects.create(created_by=self.context["request"].user, **validated)
         for qi, q in enumerate(questions):
             question = Question.objects.create(test=test, text=q["text"], order=qi)
@@ -66,6 +81,17 @@ def _is_open(test) -> bool:
     return True
 
 
+def _attempt_row(attempt) -> dict:
+    return {
+        "score": attempt.score,
+        "total": attempt.total,
+        "graded": attempt.graded,
+        "feedback": attempt.feedback,
+        "link": attempt.link,
+        "has_file": bool(attempt.file_key),
+    }
+
+
 class TestListSerializer(serializers.ModelSerializer):
     question_count = serializers.IntegerField(read_only=True)
     attempt_count = serializers.IntegerField(read_only=True)
@@ -78,6 +104,8 @@ class TestListSerializer(serializers.ModelSerializer):
             "id",
             "batch",
             "title",
+            "kind",
+            "max_score",
             "open_at",
             "close_at",
             "question_count",
@@ -93,9 +121,7 @@ class TestListSerializer(serializers.ModelSerializer):
     def get_my_attempt(self, obj):
         user = self.context["request"].user
         attempt = TestAttempt.objects.filter(test=obj, student=user).first()
-        if not attempt:
-            return None
-        return {"score": attempt.score, "total": attempt.total}
+        return _attempt_row(attempt) if attempt else None
 
 
 class ChoiceTakeSerializer(serializers.ModelSerializer):
@@ -119,16 +145,25 @@ class TestTakeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Test
-        fields = ["id", "title", "open_at", "close_at", "is_open", "my_attempt", "questions"]
+        fields = [
+            "id",
+            "title",
+            "kind",
+            "instructions",
+            "max_score",
+            "open_at",
+            "close_at",
+            "is_open",
+            "my_attempt",
+            "questions",
+        ]
 
     def get_is_open(self, obj) -> bool:
         return _is_open(obj)
 
     def get_my_attempt(self, obj):
         attempt = TestAttempt.objects.filter(test=obj, student=self.context["request"].user).first()
-        if not attempt:
-            return None
-        return {"score": attempt.score, "total": attempt.total}
+        return _attempt_row(attempt) if attempt else None
 
 
 # --- Submit ---
@@ -139,6 +174,45 @@ class SubmitAnswerSerializer(serializers.Serializer):
 
 class SubmitSerializer(serializers.Serializer):
     answers = SubmitAnswerSerializer(many=True)
+
+
+class TestArtefactSubmitSerializer(serializers.Serializer):
+    """File/Colab test submission: an uploaded file or a notebook link."""
+
+    file = serializers.FileField(required=False)
+    link = serializers.URLField(required=False, allow_blank=True, default="")
+
+    def validate_file(self, upload):
+        from core.uploads import validate_upload
+
+        return validate_upload(upload, "document")
+
+
+class TestAttemptSerializer(serializers.ModelSerializer):
+    """Faculty view of a file/colab attempt awaiting (or holding) a manual grade."""
+
+    student_name = serializers.CharField(source="student.full_name", read_only=True)
+    registration_number = serializers.CharField(source="student.username", read_only=True)
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestAttempt
+        fields = [
+            "id",
+            "student_name",
+            "registration_number",
+            "score",
+            "total",
+            "graded",
+            "feedback",
+            "link",
+            "file_url",
+            "submitted_at",
+        ]
+        read_only_fields = fields
+
+    def get_file_url(self, obj) -> str:
+        return f"/api/v1/test-attempts/{obj.id}/file/" if obj.file_key else ""
 
 
 # --- Tasks ---
