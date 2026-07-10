@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { Button, Card, Input, Logo } from "../../design-system";
+import { Button, Card, Input, Logo, PasswordRules } from "../../design-system";
 import { passwordApi } from "./passwordApi";
 
 type Step = "identify" | "email" | "phone" | "password" | "done";
@@ -123,6 +123,7 @@ export function ForgotPasswordPage() {
         {step === "password" && (
           <div className="flex flex-col gap-2">
             <Input type="password" placeholder="New password" value={pw} onChange={(e) => setPw(e.target.value)} />
+            <PasswordRules value={pw} />
             <Input type="password" placeholder="Confirm new password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
             <Button onClick={reset} disabled={!pw || !pw2 || busy}>
               {busy ? "Saving…" : "Set new password"}

@@ -9,6 +9,7 @@ export { Input } from "./components/Input";
 export { Logo } from "./components/Logo";
 export { Modal } from "./components/Modal";
 export { PageTransition } from "./components/PageTransition";
+export { PasswordRules } from "./components/PasswordRules";
 export { Progress } from "./components/Progress";
 export { ProgressRing } from "./components/ProgressRing";
 export { SectionHeading } from "./components/SectionHeading";

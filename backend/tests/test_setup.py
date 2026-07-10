@@ -103,3 +103,24 @@ def test_weak_password_is_rejected(client, pending_student):
         COMPLETE, {"token": token_obj.token, "password": "123"}, content_type="application/json"
     )
     assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_setup_complete_audit_row_captures_ip(client, pending_student):
+    """R-02: the account_setup_completed audit row should carry the client IP like the
+    login/reset rows do."""
+    from audit.models import AuditLog
+
+    token_obj = create_setup_token(pending_student)
+    token_obj.email_verified = True
+    token_obj.phone_verified = True
+    token_obj.save()
+    resp = client.post(
+        COMPLETE,
+        {"token": token_obj.token, "password": "Str0ng!passLMS"},
+        content_type="application/json",
+        REMOTE_ADDR="203.0.113.7",
+    )
+    assert resp.status_code == 200
+    row = AuditLog.objects.filter(action="account_setup_completed").latest("created_at")
+    assert row.ip_address == "203.0.113.7"

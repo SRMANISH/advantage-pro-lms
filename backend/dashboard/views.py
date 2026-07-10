@@ -254,6 +254,7 @@ class DashboardView(APIView):
         }
 
     def _tech_support(self) -> dict:
+        from accounts.models import DeviceChangeRequest
         from forum.models import Thread, ThreadStatus
 
         window = settings.FORUM_RESPONSE_WINDOW_HOURS
@@ -275,6 +276,11 @@ class DashboardView(APIView):
         overdue = sum(
             1 for t in unanswered if (now - t.created_at).total_seconds() / 3600 >= window
         )
+        # Tech Support now owns outside-class device-change approvals, so surface the
+        # pending queue here the same way the MIS ops dashboard does.
+        device_requests = DeviceChangeRequest.objects.filter(
+            status=DeviceChangeRequest.Status.PENDING
+        ).count()
         return {
             "role": Role.TECH_SUPPORT,
             "kpis": {
@@ -283,6 +289,7 @@ class DashboardView(APIView):
                 "overdue": overdue,
                 "resolved": counts[ThreadStatus.RESOLVED],
             },
+            "attention": {"device_requests": device_requests},
             "forum_status": [
                 {"name": "Open", "value": counts[ThreadStatus.OPEN]},
                 {"name": "Answered", "value": counts[ThreadStatus.ANSWERED]},

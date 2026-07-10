@@ -69,3 +69,16 @@ def test_admin_dashboard_totals(world):
     assert totals["batches"] == 1
     assert totals["students"] == 1
     assert totals["courses"] == 1
+
+
+@pytest.mark.django_db
+def test_tech_support_dashboard_counts_pending_device_requests(world):
+    """R-05: Tech Support owns outside-class device approvals, so the queue count must
+    surface on their dashboard the way it does for MIS."""
+    from accounts.models import DeviceChangeRequest
+
+    DeviceChangeRequest.objects.create(user=world["student"], new_device_id="dev-new")
+
+    resp = client_for(user("ts", Role.TECH_SUPPORT)).get(URL)
+    assert resp.status_code == 200
+    assert resp.json()["attention"]["device_requests"] == 1

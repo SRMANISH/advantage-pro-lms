@@ -5,6 +5,12 @@ blocked and raises an approval request: during one of the student's live classes
 Faculty approve it; outside class hours, MIS does. After the student's course ends, the
 bound device still works (so they can sign in to look up their Certificate ID), but
 device *changes* are closed for good.
+
+On the identifier: a web app *cannot* read a device's hardware MAC address — browsers
+deliberately don't expose it. So a device is identified by a stable browser fingerprint
+(`device_id`, a FingerprintJS visitorId sent by the client), and the client IP is
+captured on the login/approval audit rows for network context. This is a strong
+deterrent against casual account sharing, not a hardware-level lock.
 """
 
 from __future__ import annotations

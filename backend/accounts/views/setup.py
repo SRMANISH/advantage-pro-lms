@@ -91,7 +91,11 @@ class SetupCompleteView(APIView):
                 {"detail": "Please verify your email and phone first."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        record_action(actor=token.user, action="account_setup_completed")
+        record_action(
+            actor=token.user,
+            action="account_setup_completed",
+            ip_address=get_client_ip(request),
+        )
         return Response({"ok": True})
 
 

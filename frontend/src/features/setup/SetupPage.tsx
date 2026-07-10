@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { Button, Input, Logo, Spinner, cn } from "../../design-system";
+import { Button, Input, Logo, PasswordRules, Spinner, cn } from "../../design-system";
 import { setupApi } from "./api";
 
 type Step = "loading" | "email" | "phone" | "password" | "done" | "error";
@@ -169,13 +169,14 @@ export function SetupPage() {
 
             {step === "password" && (
               <>
-                <p className="text-sm text-muted">Choose a password (at least 10 characters).</p>
+                <p className="text-sm text-muted">Choose a password you&apos;ll remember.</p>
                 <Input
                   type="password"
                   value={pw}
                   onChange={(e) => setPw(e.target.value)}
                   placeholder="New password"
                 />
+                <PasswordRules value={pw} />
                 <Input
                   type="password"
                   value={pw2}

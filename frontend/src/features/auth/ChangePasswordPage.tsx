@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, Input, SectionHeading, useToast } from "../../design-system";
+import { Button, Card, Input, PasswordRules, SectionHeading, useToast } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { passwordApi } from "./passwordApi";
 
@@ -65,6 +65,7 @@ export function ChangePasswordPage({ role }: { role: RoleDef }) {
               value={newPw}
               onChange={(e) => setNewPw(e.target.value)}
             />
+            <PasswordRules value={newPw} className="mt-2" />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted" htmlFor="confirm-pw">

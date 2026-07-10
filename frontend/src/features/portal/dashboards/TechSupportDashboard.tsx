@@ -1,4 +1,5 @@
-import { AlertTriangle, CheckCircle2, Flame, MessagesSquare } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Flame, MessagesSquare, Smartphone } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Card, SectionHeading, StatCard, LazyChart } from "../../../design-system";
 import type { DashboardData } from "../../dashboard/api";
@@ -6,6 +7,7 @@ import { BRAND, Hero, KpiGrid } from "./shared";
 
 export function TechSupportDashboard({ data, slug }: { data: DashboardData; slug: string }) {
   const k = data.kpis ?? {};
+  const deviceRequests = data.attention?.device_requests ?? 0;
 
   return (
     <div className="grid gap-6">
@@ -17,6 +19,29 @@ export function TechSupportDashboard({ data, slug }: { data: DashboardData; slug
         ctaTo={`/${slug}/monitor`}
         highlight={{ label: "Overdue", value: String(k.overdue ?? 0), icon: Flame }}
       />
+      {deviceRequests > 0 && (
+        <Link
+          to={`/${slug}/devices`}
+          className="flex items-center justify-between rounded-2xl border border-amber/40 bg-amber/10 px-5 py-4 transition hover:bg-amber/15"
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber/20 text-amber-700">
+              <Smartphone size={18} aria-hidden />
+            </span>
+            <div>
+              <div className="text-sm font-semibold text-ink">
+                {deviceRequests} device change {deviceRequests === 1 ? "request" : "requests"} waiting
+              </div>
+              <div className="text-xs text-muted">
+                Outside-class device changes are yours to approve — review the queue.
+              </div>
+            </div>
+          </div>
+          <span aria-hidden className="text-sm font-semibold text-navy">
+            Review →
+          </span>
+        </Link>
+      )}
       <KpiGrid>
         <StatCard label="Open" value={k.open ?? 0} icon={MessagesSquare} tone="azure" />
         <StatCard
