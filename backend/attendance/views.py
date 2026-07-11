@@ -17,7 +17,7 @@ from enrollments.models import Enrollment
 from notifications.services import notify
 
 from .models import FollowUpStatus
-from .services import daily_roster, set_followup, student_summary
+from .services import daily_roster, is_rest_day, set_followup, student_summary
 
 ReviewRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR, Role.FACULTY)
 # Absentee follow-up is owned by both Counselor and MIS (plus Admin).
@@ -149,7 +149,9 @@ class DailyAttendanceView(APIView):
             day = parsed
         day = day or timezone.localdate()
         rows = daily_roster(batch, day)
-        return Response({"date": day.isoformat(), "rows": rows})
+        return Response(
+            {"date": day.isoformat(), "weekend_excluded": is_rest_day(day), "rows": rows}
+        )
 
 
 class FollowUpStatusSerializer(serializers.Serializer):

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
+import { Badge, Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import {
   CERT_FOLLOW_UP_STATUSES,
@@ -12,10 +12,6 @@ import {
 export function CertFollowUpPage({ role }: { role: RoleDef }) {
   const qc = useQueryClient();
   const rows = useQuery({ queryKey: ["cert-followup"], queryFn: certificationApi.followUpList });
-  const remind = useMutation({
-    mutationFn: () => certificationApi.remind(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cert-followup"] }),
-  });
   const setStatus = useMutation({
     mutationFn: ({ enrollment, status }: { enrollment: string; status: CertFollowUpStatus }) =>
       certificationApi.setFollowUpStatus(enrollment, status),
@@ -29,12 +25,7 @@ export function CertFollowUpPage({ role }: { role: RoleDef }) {
     <PortalLayout role={role}>
       <SectionHeading
         title="Certificate follow-up"
-        subtitle={`${data.length} completed-course student(s) · ${pending} certificate pending.`}
-        action={
-          <Button variant="soft" onClick={() => remind.mutate()} disabled={remind.isPending}>
-            {remind.isPending ? "Sending…" : "Send weekly reminders"}
-          </Button>
-        }
+        subtitle={`${data.length} completed-course student(s) · ${pending} certificate pending. Weekly reminders send automatically.`}
       />
 
       <Card>

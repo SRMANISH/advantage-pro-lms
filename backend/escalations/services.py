@@ -12,14 +12,16 @@ from django.utils import timezone
 from .models import Escalation
 
 
-def _first_time(kind: str, student, ref) -> bool:
+def _first_time(kind: str, student, ref, batch=None) -> bool:
     """Atomically record the alert and report whether this call actually created it.
 
     ``get_or_create`` (not a separate exists-check + create) so two overlapping cron runs
     can't both pass the check and then have the second ``create()`` crash on the unique
     constraint — Django retries the get internally on the race instead of raising.
     """
-    _, created = Escalation.objects.get_or_create(kind=kind, student=student, reference_id=str(ref))
+    _, created = Escalation.objects.get_or_create(
+        kind=kind, student=student, reference_id=str(ref), defaults={"batch": batch}
+    )
     return created
 
 
@@ -45,7 +47,7 @@ def _escalate_incomplete_tests() -> int:
         for student in students:
             if student.id in attempted:
                 continue
-            if not _first_time("test_incomplete", student, test.id):
+            if not _first_time("test_incomplete", student, test.id, batch=test.batch):
                 continue
             notify(
                 student,
@@ -83,7 +85,7 @@ def _escalate_low_attendance() -> int:
             summary = summaries.get(student.id, {"total": 0, "percent": 0})
             if summary["total"] == 0 or summary["percent"] >= 50:
                 continue
-            if not _first_time("low_attendance", student, batch.id):
+            if not _first_time("low_attendance", student, batch.id, batch=batch):
                 continue
             notify_many(
                 faculty + counselors + mis,

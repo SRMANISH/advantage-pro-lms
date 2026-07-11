@@ -1,9 +1,10 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, SectionHeading } from "../../design-system";
+import { Badge, Button, Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
 import { api } from "../../lib/api";
-import { certificationApi } from "../certification/api";
+import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
 
 interface RunResult {
@@ -11,11 +12,35 @@ interface RunResult {
   attendance_alerts: number;
 }
 
+interface EscalationRow {
+  id: string;
+  kind: string;
+  student_name: string;
+  registration_number: string;
+  batch_code: string;
+  reference_id: string;
+  created_at: string;
+}
+
+const KIND_LABEL: Record<string, string> = {
+  test_incomplete: "Incomplete test",
+  low_attendance: "Low attendance",
+};
+
 export function EscalationsPage({ role }: { role: RoleDef }) {
+  const qc = useQueryClient();
+  const [batchId, setBatchId] = useState("");
+  const batches = useQuery({ queryKey: ["batches"], queryFn: batchesApi.listBatches });
+  const escalations = useQuery({
+    queryKey: ["escalations", batchId],
+    queryFn: async () =>
+      (await api.get<EscalationRow[]>(`/escalations/${batchId ? `?batch=${batchId}` : ""}`)).data,
+  });
+
   const run = useMutation({
     mutationFn: async (): Promise<RunResult> => (await api.post("/escalations/run/")).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["escalations"] }),
   });
-  const certRemind = useMutation({ mutationFn: () => certificationApi.remind() });
 
   return (
     <PortalLayout role={role}>
@@ -37,18 +62,72 @@ export function EscalationsPage({ role }: { role: RoleDef }) {
       </Card>
 
       <Card className="mt-4">
-        <h2 className="mb-1 text-base font-medium text-ink">Certificate reminders</h2>
-        <p className="mb-3 text-sm text-muted">
-          Remind students in completed batches who haven't entered their Certificate ID.
-        </p>
-        <Button variant="soft" onClick={() => certRemind.mutate()} disabled={certRemind.isPending}>
-          {certRemind.isPending ? "Sending…" : "Send certificate reminders"}
-        </Button>
-        {certRemind.isSuccess && (
-          <p className="mt-3 text-sm text-success">
-            ✓ Sent {certRemind.data.reminded} certificate reminder(s).
-          </p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-medium text-ink">Raised escalations</h2>
+          <select
+            aria-label="Filter escalations by batch"
+            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+            value={batchId}
+            onChange={(e) => setBatchId(e.target.value)}
+          >
+            <option value="">All batches</option>
+            {batches.data?.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.code} — {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {escalations.isLoading ? (
+          <TableSkeleton rows={4} cols={4} />
+        ) : escalations.data && escalations.data.length > 0 ? (
+          <div className="overflow-x-auto rounded-lg border border-brdr">
+            <table className="w-full text-sm">
+              <thead className="bg-sky text-navy">
+                <tr>
+                  <th className="px-3 py-2 text-left">Type</th>
+                  <th className="px-3 py-2 text-left">Student</th>
+                  <th className="px-3 py-2 text-left">Batch</th>
+                  <th className="px-3 py-2 text-left">Raised</th>
+                </tr>
+              </thead>
+              <tbody>
+                {escalations.data.map((e) => (
+                  <tr key={e.id} className="border-t border-brdr">
+                    <td className="px-3 py-2">
+                      <Badge tone={e.kind === "low_attendance" ? "warning" : "info"}>
+                        {KIND_LABEL[e.kind] ?? e.kind}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="text-ink">{e.student_name}</span>{" "}
+                      <span className="text-muted">({e.registration_number})</span>
+                    </td>
+                    <td className="px-3 py-2 text-muted">{e.batch_code || "—"}</td>
+                    <td className="px-3 py-2 text-muted">
+                      {new Date(e.created_at).toLocaleDateString([], {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState title="No escalations raised" hint="Run the checks or wait for the schedule." />
         )}
+      </Card>
+
+      <Card className="mt-4">
+        <h2 className="mb-1 text-base font-medium text-ink">Certificate reminders</h2>
+        <p className="text-sm text-muted">
+          Students in completed batches who haven&apos;t entered their Certificate ID are
+          reminded <span className="font-medium text-ink">automatically every week</span> — no
+          manual trigger needed. Track progress on the Certificate follow-up page.
+        </p>
       </Card>
     </PortalLayout>
   );

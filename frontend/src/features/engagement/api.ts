@@ -59,13 +59,16 @@ export const engagementApi = {
   async submitNextPlan(body: NextPlanInput): Promise<void> {
     await api.post("/engagement/next-plan/", body);
   },
-  async linkedinReport(): Promise<LinkedInReport> {
-    return (await api.get<LinkedInReport>("/engagement/reports/linkedin/")).data;
+  async linkedinReport(batchId?: string): Promise<LinkedInReport> {
+    const q = batchId ? `?batch=${batchId}` : "";
+    return (await api.get<LinkedInReport>(`/engagement/reports/linkedin/${q}`)).data;
   },
-  async googleReport(): Promise<GoogleReport> {
-    return (await api.get<GoogleReport>("/engagement/reports/google-review/")).data;
+  async googleReport(batchId?: string): Promise<GoogleReport> {
+    const q = batchId ? `?batch=${batchId}` : "";
+    return (await api.get<GoogleReport>(`/engagement/reports/google-review/${q}`)).data;
   },
-  async nextPlans(): Promise<NextPlanRow[]> {
-    return (await api.get<NextPlanRow[]>("/engagement/next-plans/")).data;
+  async nextPlans(batchId?: string): Promise<NextPlanRow[]> {
+    const q = batchId ? `?batch=${batchId}` : "";
+    return (await api.get<NextPlanRow[]>(`/engagement/next-plans/${q}`)).data;
   },
 };

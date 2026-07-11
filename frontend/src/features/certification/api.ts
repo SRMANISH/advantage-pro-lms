@@ -36,9 +36,6 @@ export const certificationApi = {
   async submit(enrollment: string, certificateId: string): Promise<void> {
     await api.post("/certification/submit/", { enrollment, certificate_id: certificateId });
   },
-  async remind(): Promise<{ reminded: number }> {
-    return (await api.post("/certification/remind/")).data;
-  },
   async followUpList(): Promise<CertFollowUpRow[]> {
     return (await api.get<CertFollowUpRow[]>("/certification/follow-up/")).data;
   },

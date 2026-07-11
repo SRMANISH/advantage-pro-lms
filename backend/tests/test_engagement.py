@@ -110,3 +110,23 @@ def test_reminders_run():
     assert result["google_review"] == 1
     assert result["next_plan"] == 1
     assert student.notifications.filter(kind="linkedin_follow").exists()
+
+
+@pytest.mark.django_db
+def test_linkedin_report_filters_by_batch():
+    """req 5: engagement reports can be scoped to one batch."""
+    b1 = completed_batch("BA")
+    b2 = completed_batch("BB")
+    s1 = user("s1", Role.STUDENT)
+    s2 = user("s2", Role.STUDENT)
+    Enrollment.objects.create(student=s1, batch=b1, registration_number="s1")
+    Enrollment.objects.create(student=s2, batch=b2, registration_number="s2")
+    LinkedInFollow.objects.create(student=s1)
+    LinkedInFollow.objects.create(student=s2)
+
+    mis = client_for(user("mis", Role.MIS))
+    all_rows = mis.get("/api/v1/engagement/reports/linkedin/").json()["students"]
+    assert {r["registration_number"] for r in all_rows} == {"s1", "s2"}
+
+    scoped = mis.get(f"/api/v1/engagement/reports/linkedin/?batch={b1.id}").json()["students"]
+    assert {r["registration_number"] for r in scoped} == {"s1"}

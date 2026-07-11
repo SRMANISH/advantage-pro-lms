@@ -210,6 +210,9 @@ class LinkedInReportView(APIView):
 
     def get(self, request):
         rows = LinkedInFollow.objects.select_related("student")
+        batch_id = request.query_params.get("batch")
+        if batch_id:
+            rows = rows.filter(student__enrollments__batch_id=batch_id).distinct()
         confirmed = sum(1 for r in rows if r.status == LinkedInFollow.Status.CONFIRMED)
         return Response(
             {
@@ -233,6 +236,9 @@ class GoogleReviewReportView(APIView):
 
     def get(self, request):
         rows = GoogleReview.objects.select_related("student")
+        batch_id = request.query_params.get("batch")
+        if batch_id:
+            rows = rows.filter(student__enrollments__batch_id=batch_id).distinct()
         submitted = sum(1 for r in rows if r.status == GoogleReview.Status.SUBMITTED)
         return Response(
             {
@@ -256,6 +262,9 @@ class NextPlanListView(APIView):
 
     def get(self, request):
         plans = CourseNextPlan.objects.select_related("student", "batch").order_by("-created_at")
+        batch_id = request.query_params.get("batch")
+        if batch_id:
+            plans = plans.filter(batch_id=batch_id)
         return Response(
             [
                 {

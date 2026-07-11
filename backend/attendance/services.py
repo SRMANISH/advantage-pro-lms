@@ -23,6 +23,13 @@ def _count_weekends() -> bool:
     return bool(getattr(settings, "ATTENDANCE_COUNT_WEEKENDS", True))
 
 
+def is_rest_day(day) -> bool:
+    """True when this calendar day doesn't count toward attendance (a weekend while
+    ``ATTENDANCE_COUNT_WEEKENDS`` is off). Used to suppress weekend absentee reminders
+    and to flag the daily roster."""
+    return not _count_weekends() and day.weekday() >= 5
+
+
 def record_attendance(student, batch, source: str, reference_id) -> None:
     """Record an engagement (activity) event. Idempotent per student+source+item."""
     AttendanceEvent.objects.get_or_create(
@@ -210,6 +217,10 @@ def remind_absentees(day=None) -> int:
     from notifications.services import notify
 
     day = day or timezone.localdate()
+    # With weekends excluded from attendance, a Saturday/Sunday "you didn't log in today"
+    # message would go to the whole roster — suppress it.
+    if is_rest_day(day):
+        return 0
     sent = 0
     for batch in Batch.objects.filter(state=BatchState.ACTIVE):
         if day < batch.start_date or day > batch.end_date:

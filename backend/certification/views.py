@@ -12,7 +12,6 @@ from core.roles import Role
 from enrollments.models import Enrollment
 
 from .models import CertFollowUpStatus, Certificate, CertificateFollowUp
-from .services import run_certificate_reminders
 
 CertFollowUpRoles = has_any_role(Role.ADMIN, Role.MIS)
 
@@ -67,17 +66,6 @@ class SubmitCertificateView(APIView):
         )
         record_action(actor=request.user, action="certificate_entered", target=enrollment)
         return Response({"ok": True})
-
-
-class RunCertRemindersView(APIView):
-    permission_classes = [has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS)]
-
-    def post(self, request):
-        count = run_certificate_reminders()
-        record_action(
-            actor=request.user, action="certificate_reminders_run", metadata={"count": count}
-        )
-        return Response({"reminded": count})
 
 
 class CertificateFollowUpListView(APIView):

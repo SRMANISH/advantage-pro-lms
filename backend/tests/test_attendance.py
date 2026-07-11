@@ -189,6 +189,31 @@ def test_remind_absentees_notifies_then_dedupes(db):
 
 
 @pytest.mark.django_db
+def test_weekend_absentee_reminders_respect_the_flag(db, settings):
+    """R-10: with weekends excluded, a Saturday 'you didn't log in' blast is suppressed."""
+    saturday = datetime.date(2026, 1, 3)
+    assert saturday.weekday() == 5
+    course = Course.objects.create(code="FSW", name="FSW")
+    batch = Batch.objects.create(
+        code="BW",
+        name="BW",
+        course=course,
+        start_date=datetime.date(2026, 1, 1),
+        end_date=datetime.date(2026, 12, 1),
+        state=BatchState.ACTIVE,
+    )
+    student = user("stuW", Role.STUDENT)
+    Enrollment.objects.create(student=student, batch=batch, registration_number="stuW")
+
+    settings.ATTENDANCE_COUNT_WEEKENDS = False
+    assert remind_absentees(day=saturday) == 0
+    assert not student.notifications.filter(kind="absence_reminder").exists()
+
+    settings.ATTENDANCE_COUNT_WEEKENDS = True
+    assert remind_absentees(day=saturday) == 1
+
+
+@pytest.mark.django_db
 def test_my_attendance_endpoint(world):
     resp = client_for(world["student"]).get(ME_URL)
     assert resp.status_code == 200

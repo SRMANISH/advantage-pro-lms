@@ -1,14 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
 import { Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
+import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
 import { engagementApi } from "./api";
 
 export function EngagementReportPage({ role }: { role: RoleDef }) {
-  const linkedin = useQuery({ queryKey: ["eng-linkedin"], queryFn: engagementApi.linkedinReport });
-  const google = useQuery({ queryKey: ["eng-google"], queryFn: engagementApi.googleReport });
-  const plans = useQuery({ queryKey: ["eng-plans"], queryFn: engagementApi.nextPlans });
+  const [batchId, setBatchId] = useState("");
+  const batches = useQuery({ queryKey: ["batches"], queryFn: batchesApi.listBatches });
+  const scope = batchId || undefined;
+  const linkedin = useQuery({
+    queryKey: ["eng-linkedin", batchId],
+    queryFn: () => engagementApi.linkedinReport(scope),
+  });
+  const google = useQuery({
+    queryKey: ["eng-google", batchId],
+    queryFn: () => engagementApi.googleReport(scope),
+  });
+  const plans = useQuery({
+    queryKey: ["eng-plans", batchId],
+    queryFn: () => engagementApi.nextPlans(scope),
+  });
 
   return (
     <PortalLayout role={role}>
@@ -16,6 +30,25 @@ export function EngagementReportPage({ role }: { role: RoleDef }) {
         title="Engagement"
         subtitle="LinkedIn follow, Google reviews and next-plan responses."
       />
+
+      <Card className="mb-6">
+        <label htmlFor="eng-batch" className="mb-1 block text-sm text-muted">
+          Filter by batch
+        </label>
+        <select
+          id="eng-batch"
+          className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm sm:max-w-sm"
+          value={batchId}
+          onChange={(e) => setBatchId(e.target.value)}
+        >
+          <option value="">All batches</option>
+          {batches.data?.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.code} — {b.name}
+            </option>
+          ))}
+        </select>
+      </Card>
 
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         <Card>

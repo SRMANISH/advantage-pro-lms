@@ -94,3 +94,41 @@ def test_run_endpoint_requires_staff(world):
     student_client = APIClient()
     student_client.force_authenticate(user=world["student"])
     assert student_client.post(RUN_URL).status_code == 403
+
+
+# ---------- req 23: batch-wise escalation view ----------
+
+
+@pytest.mark.django_db
+def test_escalations_are_tagged_with_their_batch(world):
+    run_escalations()
+    esc = Escalation.objects.filter(kind="low_attendance").first()
+    assert esc.batch_id == world["batch"].id
+
+
+@pytest.mark.django_db
+def test_escalation_list_filters_by_batch(world):
+    run_escalations()
+    client = APIClient()
+    client.force_authenticate(user=world["mis"])
+    assert len(client.get("/api/v1/escalations/").json()) >= 1
+
+    scoped = client.get(f"/api/v1/escalations/?batch={world['batch'].id}")
+    assert scoped.status_code == 200 and len(scoped.json()) >= 1
+
+    other = Batch.objects.create(
+        code="B2",
+        name="B2",
+        course=world["batch"].course,
+        start_date=datetime.date(2026, 1, 1),
+        end_date=datetime.date(2026, 4, 1),
+        state=BatchState.ACTIVE,
+    )
+    assert client.get(f"/api/v1/escalations/?batch={other.id}").json() == []
+
+
+@pytest.mark.django_db
+def test_escalation_list_blocks_students(world):
+    client = APIClient()
+    client.force_authenticate(user=world["student"])
+    assert client.get("/api/v1/escalations/").status_code == 403
