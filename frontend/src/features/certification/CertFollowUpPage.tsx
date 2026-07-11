@@ -32,7 +32,7 @@ export function CertFollowUpPage({ role }: { role: RoleDef }) {
         {rows.isLoading ? (
           <TableSkeleton rows={5} cols={6} />
         ) : data.length > 0 ? (
-          <div className="overflow-hidden rounded-lg border border-brdr">
+          <div className="overflow-x-auto rounded-lg border border-brdr">
             <table className="w-full text-sm">
               <thead className="bg-sky text-navy">
                 <tr>

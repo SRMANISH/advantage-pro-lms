@@ -123,7 +123,7 @@ function BatchRoster() {
         <Card>
           <h2 className="mb-3 text-base font-medium text-ink">Roster</h2>
           {roster.data && roster.data.length > 0 ? (
-            <div className="overflow-hidden rounded-lg border border-brdr">
+            <div className="overflow-x-auto rounded-lg border border-brdr">
               <table className="w-full text-sm">
                 <thead className="bg-sky text-navy">
                   <tr>
@@ -221,7 +221,7 @@ function DailyLoginPanel({ batchId, canFollowUp }: { batchId: string; canFollowU
           <p className="mb-2 text-xs text-muted">
             {rows.length - absentees} logged in · {absentees} did not log in
           </p>
-          <div className="overflow-hidden rounded-lg border border-brdr">
+          <div className="overflow-x-auto rounded-lg border border-brdr">
             <table className="w-full text-sm">
               <thead className="bg-sky text-navy">
                 <tr>

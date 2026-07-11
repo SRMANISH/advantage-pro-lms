@@ -121,7 +121,7 @@ function BatchBoard() {
                 onQuery={table.setQuery}
                 placeholder="Search by Registration ID or name…"
               />
-              <div className="overflow-hidden rounded-lg border border-brdr">
+              <div className="overflow-x-auto rounded-lg border border-brdr">
               <table className="w-full text-sm">
                 <thead className="bg-sky text-navy">
                   <tr>
