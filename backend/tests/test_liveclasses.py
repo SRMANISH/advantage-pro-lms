@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import User, UserStatus
 from attendance.models import AttendanceEvent
-from batches.models import Batch, Course
+from batches.models import Batch, BatchState, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from liveclasses.models import CheckIn, LiveClass
@@ -51,6 +51,25 @@ def world(db):
         "other_fac": other_fac,
         "student": student,
     }
+
+
+@pytest.mark.django_db
+def test_student_weekly_schedule_lists_their_batch_slots(world):
+    """req 1: the student calendar is fed by the batch's recurring weekly schedule."""
+    b = world["batch"]
+    b.state = BatchState.ACTIVE
+    b.class_days = ["mon", "wed", "fri"]
+    b.class_start_time = datetime.time(18, 0)
+    b.class_end_time = datetime.time(20, 0)
+    b.save()
+
+    resp = client_for(world["student"]).get("/api/v1/liveclasses/weekly-schedule/")
+    assert resp.status_code == 200
+    rows = resp.json()
+    assert len(rows) == 1
+    assert rows[0]["batch_code"] == "B1"
+    assert rows[0]["class_days"] == ["mon", "wed", "fri"]
+    assert rows[0]["start_time"] == "18:00" and rows[0]["end_time"] == "20:00"
 
 
 def schedule_payload(batch):

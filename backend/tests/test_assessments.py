@@ -210,6 +210,38 @@ def test_file_test_upload_then_faculty_grades(world):
 
 
 @pytest.mark.django_db
+def test_file_test_starter_sheet_is_downloadable_by_student(world):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    sheet = SimpleUploadedFile(
+        "template.xlsx",
+        b"PK\x03\x04 template",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    created = client_for(world["fac"]).post(
+        TESTS_URL,
+        {
+            "batch": str(world["batch"].id),
+            "title": "Sheet task",
+            "kind": "file",
+            "resource": sheet,
+            "resource_url": "https://ref.example/x",
+        },
+        format="multipart",
+    )
+    assert created.status_code == 201
+    test = Test.objects.get(title="Sheet task")
+    assert test.resource_key and test.resource_url == "https://ref.example/x"
+
+    # Student sees the starter-sheet download URL on the take view and can fetch the bytes.
+    take = client_for(world["student"]).get(f"{TESTS_URL}{test.id}/").json()
+    assert take["resource_download_url"].endswith(f"/tests/{test.id}/resource/")
+    assert take["resource_url"] == "https://ref.example/x"
+    dl = client_for(world["student"]).get(f"{TESTS_URL}{test.id}/resource/")
+    assert dl.status_code == 200
+
+
+@pytest.mark.django_db
 def test_colab_test_requires_link(world):
     created = client_for(world["fac"]).post(
         TESTS_URL,

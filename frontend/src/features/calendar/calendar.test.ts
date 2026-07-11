@@ -1,4 +1,11 @@
-import { dayKey, eventsByDay, googleCalendarUrl, monthGrid, type CalendarEvent } from "./calendar";
+import {
+  dayKey,
+  eventsByDay,
+  googleCalendarUrl,
+  monthGrid,
+  weeklyScheduleEvents,
+  type CalendarEvent,
+} from "./calendar";
 
 const event = (over: Partial<CalendarEvent> = {}): CalendarEvent => ({
   id: "1",
@@ -31,6 +38,53 @@ describe("monthGrid", () => {
     expect(grid[0].inMonth).toBe(false);
     const firstOfMonth = grid.find((c) => dayKey(c.date) === "2026-03-01");
     expect(firstOfMonth?.inMonth).toBe(true);
+  });
+});
+
+describe("weeklyScheduleEvents", () => {
+  it("projects a Mon/Wed/Fri batch onto every matching in-window day of the month", () => {
+    const grid = monthGrid(new Date(2026, 2, 15)); // March 2026
+    const events = weeklyScheduleEvents(
+      [
+        {
+          batch_code: "FS-1",
+          class_days: ["mon", "wed", "fri"],
+          start_time: "18:00",
+          end_time: "20:00",
+          start_date: "2026-03-01",
+          end_date: "2026-03-31",
+        },
+      ],
+      grid,
+    );
+    // March 2026 has 4 Mondays + 4 Wednesdays + 4 Fridays = well over one; each within window.
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((e) => e.title === "FS-1 class")).toBe(true);
+    // Every generated event lands on a Mon/Wed/Fri.
+    expect(events.every((e) => [1, 3, 5].includes(new Date(e.scheduled_at).getDay()))).toBe(true);
+    // 18:00–20:00 = 120 minutes.
+    expect(events[0].duration_minutes).toBe(120);
+  });
+
+  it("excludes days outside the batch's start/end window", () => {
+    const grid = monthGrid(new Date(2026, 2, 15));
+    const events = weeklyScheduleEvents(
+      [
+        {
+          batch_code: "X",
+          class_days: ["mon", "tue", "wed", "thu", "fri"],
+          start_time: "10:00",
+          end_time: "11:00",
+          start_date: "2026-03-20",
+          end_date: "2026-03-25",
+        },
+      ],
+      grid,
+    );
+    for (const e of events) {
+      const key = dayKey(new Date(e.scheduled_at));
+      expect(key >= "2026-03-20" && key <= "2026-03-25").toBe(true);
+    }
   });
 });
 

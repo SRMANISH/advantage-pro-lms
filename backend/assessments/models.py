@@ -21,6 +21,11 @@ class Test(TimeStampedModel):
     kind = models.CharField(max_length=10, choices=TestKind.choices, default=TestKind.MCQ)
     instructions = models.TextField(blank=True)
     max_score = models.PositiveSmallIntegerField(default=100)
+    # Faculty-provided starter material: the Excel sheet the student downloads and fills
+    # (file kind), or the Colab/notebook link they open (colab kind). Optional.
+    resource_key = models.CharField(max_length=255, blank=True)
+    resource_content_type = models.CharField(max_length=100, blank=True)
+    resource_url = models.URLField(max_length=500, blank=True)
     open_at = models.DateTimeField(null=True, blank=True)
     close_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(

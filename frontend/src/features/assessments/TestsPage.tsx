@@ -66,6 +66,8 @@ function ManageTests() {
   const [kind, setKind] = useState<TestKind>("mcq");
   const [instructions, setInstructions] = useState("");
   const [maxScore, setMaxScore] = useState(100);
+  const [resourceUrl, setResourceUrl] = useState("");
+  const [resourceFile, setResourceFile] = useState<File | null>(null);
   const [questions, setQuestions] = useState<NewQuestion[]>([blankQuestion()]);
   const [error, setError] = useState<string | null>(null);
   const [grading, setGrading] = useState<TestListItem | null>(null);
@@ -75,19 +77,25 @@ function ManageTests() {
     setKind("mcq");
     setInstructions("");
     setMaxScore(100);
+    setResourceUrl("");
+    setResourceFile(null);
     setQuestions([blankQuestion()]);
   };
 
   const create = useMutation({
     mutationFn: () =>
-      assessmentsApi.create({
-        batch: batchId,
-        title,
-        kind,
-        instructions,
-        max_score: maxScore,
-        questions: kind === "mcq" ? questions : [],
-      }),
+      assessmentsApi.create(
+        {
+          batch: batchId,
+          title,
+          kind,
+          instructions,
+          max_score: maxScore,
+          resource_url: resourceUrl,
+          questions: kind === "mcq" ? questions : [],
+        },
+        resourceFile,
+      ),
     onSuccess: () => {
       reset();
       setError(null);
@@ -261,6 +269,35 @@ function ManageTests() {
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
               />
+              {kind === "file" && (
+                <div className="mt-3">
+                  <label htmlFor="test-resource" className="mb-1 block text-xs font-medium text-muted">
+                    Starter sheet to hand out (optional — students download, fill, re-upload)
+                  </label>
+                  <input
+                    id="test-resource"
+                    type="file"
+                    onChange={(e) => setResourceFile(e.target.files?.[0] ?? null)}
+                    className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-sky file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-brand-strong"
+                  />
+                  {resourceFile && <p className="mt-1 text-xs text-muted">{resourceFile.name}</p>}
+                </div>
+              )}
+              <div className="mt-3">
+                <label htmlFor="test-resource-url" className="mb-1 block text-xs font-medium text-muted">
+                  {kind === "colab" ? "Starter notebook link" : "Reference link"} (optional)
+                </label>
+                <Input
+                  id="test-resource-url"
+                  placeholder={
+                    kind === "colab"
+                      ? "https://colab.research.google.com/…"
+                      : "https://…"
+                  }
+                  value={resourceUrl}
+                  onChange={(e) => setResourceUrl(e.target.value)}
+                />
+              </div>
             </div>
           )}
 
@@ -536,6 +573,28 @@ function TakeTest({ id, onDone }: { id: string; onDone: () => void }) {
             <p className="mb-3 whitespace-pre-wrap rounded-lg bg-sky/50 px-3 py-2 text-sm text-navy">
               {t.instructions}
             </p>
+          )}
+          {(t.resource_download_url || t.resource_url) && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {t.resource_download_url && (
+                <a
+                  href={t.resource_download_url}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
+                >
+                  ⬇ Download the sheet
+                </a>
+              )}
+              {t.resource_url && (
+                <a
+                  href={t.resource_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-brdr px-3 py-1.5 text-xs font-semibold text-brand-strong hover:bg-sky"
+                >
+                  {t.kind === "colab" ? "Open the notebook ↗" : "Open reference ↗"}
+                </a>
+              )}
+            </div>
           )}
           {t.kind === "file" ? (
             <div className="mb-3">

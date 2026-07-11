@@ -22,6 +22,7 @@ from content.delivery import deliver
 from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission
 from core.permissions_matrix import Action
+from core.uploads import validate_upload
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify, notify_many
 
@@ -76,6 +77,15 @@ class TestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         test = serializer.save()
+        # Optional faculty-provided starter sheet (e.g. the Excel workbook to fill in).
+        upload = self.request.FILES.get("resource")
+        if upload:
+            validate_upload(upload, "document")
+            key = f"tests/resources/{uuid.uuid4()}/{upload.name}"
+            get_storage().save(key, upload)
+            test.resource_key = key
+            test.resource_content_type = getattr(upload, "content_type", "") or ""
+            test.save(update_fields=["resource_key", "resource_content_type", "updated_at"])
         record_action(
             actor=self.request.user,
             action="test_created",
@@ -167,6 +177,20 @@ class TestViewSet(viewsets.ModelViewSet):
         record_attendance(request.user, test.batch, "test", test.id)
         record_action(actor=request.user, action="test_submitted", target=test)
         return Response({"ok": True, "graded": False}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"])
+    def resource(self, request, pk=None):
+        """Download the faculty-provided starter sheet (students fill it and re-upload)."""
+        test = self.get_object()
+        if not test.resource_key:
+            return Response({"detail": "No resource file."}, status=status.HTTP_404_NOT_FOUND)
+        return deliver(
+            request,
+            test.resource_key,
+            test.resource_content_type or "application/octet-stream",
+            disposition="attachment",
+            filename=test.resource_key.split("/")[-1] or "resource",
+        )
 
     @action(detail=True, methods=["get"])
     def attempts(self, request, pk=None):

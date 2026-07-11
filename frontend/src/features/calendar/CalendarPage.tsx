@@ -11,6 +11,7 @@ import {
   eventsByDay,
   googleCalendarUrl,
   monthGrid,
+  weeklyScheduleEvents,
   type CalendarEvent,
 } from "./calendar";
 
@@ -29,12 +30,21 @@ function toEvent(lc: LiveClass): CalendarEvent {
 
 export function CalendarPage({ role }: { role: RoleDef }) {
   const classes = useQuery({ queryKey: ["liveclasses"], queryFn: () => liveApi.list() });
+  const schedule = useQuery({
+    queryKey: ["weekly-schedule"],
+    queryFn: () => liveApi.weeklySchedule(),
+  });
   const [anchor, setAnchor] = useState(new Date());
 
   const active = (classes.data ?? []).filter((c) => c.status !== "cancelled");
   const events = active.map(toEvent);
-  const byDay = useMemo(() => eventsByDay(events), [events]);
   const grid = useMemo(() => monthGrid(anchor), [anchor]);
+  // Ad-hoc live classes + the batch's recurring weekly class slots for the visible month.
+  const recurring = useMemo(
+    () => weeklyScheduleEvents(schedule.data ?? [], grid),
+    [schedule.data, grid],
+  );
+  const byDay = useMemo(() => eventsByDay([...events, ...recurring]), [events, recurring]);
   const todayKey = dayKey(new Date());
 
   const upcoming = active
@@ -50,7 +60,7 @@ export function CalendarPage({ role }: { role: RoleDef }) {
     <PortalLayout role={role}>
       <SectionHeading
         title="Class calendar"
-        subtitle="Every scheduled live class, and one tap to add it to your Google Calendar."
+        subtitle="Your weekly classes and every scheduled live session — one tap to add to Google Calendar."
       />
 
       {classes.isLoading ? (

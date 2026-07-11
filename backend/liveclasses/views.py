@@ -66,6 +66,32 @@ class LiveClassViewSet(viewsets.ModelViewSet):
             channels=("in_app", "email", "sms", "whatsapp"),
         )
 
+    @action(detail=False, methods=["get"], url_path="weekly-schedule")
+    def weekly_schedule(self, request):
+        """Recurring weekly class slots (batch.class_days/times) for the caller's batches.
+        Feeds the student calendar so regular classes show, not just ad-hoc live classes."""
+        from batches.models import Batch, BatchState
+
+        ids = accessible_batch_ids(request.user)
+        qs = Batch.objects.exclude(state=BatchState.DRAFT).exclude(class_days=[])
+        if ids is not None:
+            qs = qs.filter(id__in=list(ids))
+        return Response(
+            [
+                {
+                    "batch_code": b.code,
+                    "class_days": b.class_days,
+                    "start_time": (
+                        b.class_start_time.strftime("%H:%M") if b.class_start_time else None
+                    ),
+                    "end_time": b.class_end_time.strftime("%H:%M") if b.class_end_time else None,
+                    "start_date": b.start_date,
+                    "end_date": b.end_date,
+                }
+                for b in qs
+            ]
+        )
+
     @action(detail=True, methods=["post"], url_path="check-in")
     def check_in(self, request, pk=None):
         if request.user.role != Role.STUDENT:

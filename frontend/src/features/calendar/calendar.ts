@@ -70,3 +70,65 @@ export function dayKey(d: Date): string {
     d.getDate(),
   ).padStart(2, "0")}`;
 }
+
+/** A batch's recurring weekly class slot (from batch.class_days + times). */
+export interface WeeklySchedule {
+  batch_code: string;
+  class_days: string[]; // e.g. ["mon","wed","fri"]
+  start_time: string | null; // "18:00"
+  end_time: string | null;
+  start_date: string; // "YYYY-MM-DD"
+  end_date: string;
+}
+
+// JS Date.getDay(): 0=Sun..6=Sat.
+const DAY_INDEX: Record<string, number> = {
+  sun: 0,
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+};
+
+function minutesBetween(start: string | null, end: string | null): number {
+  if (!start || !end) return 120;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const mins = eh * 60 + em - (sh * 60 + sm);
+  return mins > 0 ? mins : 120;
+}
+
+/**
+ * Project each batch's recurring weekly class onto the visible month cells: one event per
+ * matching weekday that falls inside the batch's [start_date, end_date] window. This makes
+ * a student's regular timetable appear on the calendar, not just ad-hoc live classes.
+ */
+export function weeklyScheduleEvents(
+  schedules: WeeklySchedule[],
+  cells: MonthCell[],
+): CalendarEvent[] {
+  const events: CalendarEvent[] = [];
+  for (const s of schedules) {
+    const days = new Set(s.class_days.map((d) => DAY_INDEX[d.toLowerCase()]));
+    const [hh, mm] = (s.start_time ?? "00:00").split(":").map(Number);
+    const startDay = new Date(`${s.start_date}T00:00:00`);
+    const endDay = new Date(`${s.end_date}T23:59:59`);
+    const duration = minutesBetween(s.start_time, s.end_time);
+    for (const cell of cells) {
+      const d = cell.date;
+      if (!days.has(d.getDay())) continue;
+      if (d < startDay || d > endDay) continue;
+      const scheduled = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh || 0, mm || 0);
+      events.push({
+        id: `sched-${s.batch_code}-${dayKey(d)}`,
+        title: `${s.batch_code} class`,
+        scheduled_at: scheduled.toISOString(),
+        duration_minutes: duration,
+        details: `Regular ${s.batch_code} class.`,
+      });
+    }
+  }
+  return events;
+}

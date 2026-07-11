@@ -1,4 +1,5 @@
 import { api } from "../../lib/api";
+import type { WeeklySchedule } from "../calendar/calendar";
 
 export type LiveClassStatus = "scheduled" | "cancelled" | "completed";
 
@@ -28,6 +29,9 @@ export interface NewLiveClass {
 export const liveApi = {
   async list(batchId?: string): Promise<LiveClass[]> {
     return (await api.get<LiveClass[]>(`/liveclasses/${batchId ? `?batch=${batchId}` : ""}`)).data;
+  },
+  async weeklySchedule(): Promise<WeeklySchedule[]> {
+    return (await api.get<WeeklySchedule[]>("/liveclasses/weekly-schedule/")).data;
   },
   async create(payload: NewLiveClass): Promise<LiveClass> {
     return (await api.post<LiveClass>("/liveclasses/", payload)).data;

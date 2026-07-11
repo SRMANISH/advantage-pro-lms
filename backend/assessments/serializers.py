@@ -38,6 +38,7 @@ class TestWriteSerializer(serializers.ModelSerializer):
             "kind",
             "instructions",
             "max_score",
+            "resource_url",
             "open_at",
             "close_at",
             "questions",
@@ -142,6 +143,7 @@ class TestTakeSerializer(serializers.ModelSerializer):
     questions = QuestionTakeSerializer(many=True, read_only=True)
     is_open = serializers.SerializerMethodField()
     my_attempt = serializers.SerializerMethodField()
+    resource_download_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Test
@@ -151,6 +153,8 @@ class TestTakeSerializer(serializers.ModelSerializer):
             "kind",
             "instructions",
             "max_score",
+            "resource_url",
+            "resource_download_url",
             "open_at",
             "close_at",
             "is_open",
@@ -160,6 +164,9 @@ class TestTakeSerializer(serializers.ModelSerializer):
 
     def get_is_open(self, obj) -> bool:
         return _is_open(obj)
+
+    def get_resource_download_url(self, obj) -> str:
+        return f"/api/v1/tests/{obj.id}/resource/" if obj.resource_key else ""
 
     def get_my_attempt(self, obj):
         attempt = TestAttempt.objects.filter(test=obj, student=self.context["request"].user).first()

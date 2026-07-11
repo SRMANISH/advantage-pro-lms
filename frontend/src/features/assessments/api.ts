@@ -55,6 +55,9 @@ export interface TestDetail {
   kind: TestKind;
   instructions: string;
   max_score: number;
+  /** Faculty-provided starter material: a Colab/reference link and/or a downloadable sheet. */
+  resource_url: string;
+  resource_download_url: string;
   is_open: boolean;
   my_attempt: Attempt | null;
   questions: TakeQuestion[];
@@ -76,6 +79,7 @@ export interface NewTest {
   kind: TestKind;
   instructions?: string;
   max_score?: number;
+  resource_url?: string;
   open_at?: string;
   close_at?: string;
   questions: NewQuestion[];
@@ -88,7 +92,19 @@ export const assessmentsApi = {
   async get(id: string): Promise<TestDetail> {
     return (await api.get<TestDetail>(`/tests/${id}/`)).data;
   },
-  async create(payload: NewTest): Promise<TestListItem> {
+  async create(payload: NewTest, resource?: File | null): Promise<TestListItem> {
+    if (resource) {
+      // file/colab tests carry no nested questions, so multipart is safe here.
+      const form = new FormData();
+      form.append("batch", payload.batch);
+      form.append("title", payload.title);
+      form.append("kind", payload.kind);
+      if (payload.instructions) form.append("instructions", payload.instructions);
+      if (payload.max_score != null) form.append("max_score", String(payload.max_score));
+      if (payload.resource_url) form.append("resource_url", payload.resource_url);
+      form.append("resource", resource);
+      return (await api.post<TestListItem>("/tests/", form)).data;
+    }
     return (await api.post<TestListItem>("/tests/", payload)).data;
   },
   async submit(
