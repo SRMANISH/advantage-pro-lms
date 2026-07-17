@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button, Card, Input, Select } from "../../design-system";
+import { welcomeApi } from "../welcome/api";
 import { engagementApi, type NextPlanInput } from "./api";
 
 // Institute links — override at build time via env without touching code.
@@ -26,6 +27,9 @@ function Overlay({ children }: { children: React.ReactNode }) {
 export function EngagementPrompts() {
   const qc = useQueryClient();
   const me = useQuery({ queryKey: ["engagement-me"], queryFn: engagementApi.me });
+  // The Phase-3b welcome check takes priority; don't stack this overlay on top of it.
+  // Same query key as WelcomePrompts, so react-query dedupes to one request.
+  const welcome = useQuery({ queryKey: ["welcome-me"], queryFn: welcomeApi.pending });
   // "Later" hides a prompt for this session only (no backend skip) so it returns next login.
   const [dismissed, setDismissed] = useState<Set<Prompt>>(new Set());
   const refresh = () => qc.invalidateQueries({ queryKey: ["engagement-me"] });
@@ -52,6 +56,7 @@ export function EngagementPrompts() {
   });
 
   if (!me.data) return null;
+  if (welcome.data && welcome.data.length > 0) return null; // welcome check first
   const d = me.data;
 
   let current: Prompt = null;
