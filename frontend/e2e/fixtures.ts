@@ -16,10 +16,33 @@ async function csrfToken(context: BrowserContext): Promise<string> {
  * since the popup's own status query hasn't resolved yet immediately after navigation.
  */
 export async function dismissEngagementPopup(page: Page): Promise<void> {
-  const later = page.getByRole("button", { name: "Later" });
-  await later.waitFor({ state: "visible", timeout: 2_500 }).catch(() => undefined);
-  if (await later.isVisible().catch(() => false)) {
-    await later.click();
+  // Two student popups can stack: the engagement (LinkedIn) overlay renders ABOVE the
+  // Phase-3b "Quick welcome check" and intercepts its clicks. Clear whichever is on top
+  // each round until neither remains: "Later" dismisses engagement; Yes/Yes/Submit
+  // answers the welcome check so it never returns for that student.
+  for (let round = 0; round < 4; round++) {
+    const later = page.getByRole("button", { name: "Later" });
+    const welcome = page.getByRole("heading", { name: "Quick welcome check" });
+    if (round === 0) {
+      // The popups' own status queries need a moment to resolve after navigation.
+      await Promise.race([
+        later.waitFor({ state: "visible", timeout: 2_500 }),
+        welcome.waitFor({ state: "visible", timeout: 2_500 }),
+      ]).catch(() => undefined);
+    }
+    if (await later.isVisible().catch(() => false)) {
+      await later.click();
+      continue;
+    }
+    if (await welcome.isVisible().catch(() => false)) {
+      const yes = page.getByRole("button", { name: "Yes", exact: true });
+      await yes.nth(0).click();
+      await yes.nth(1).click();
+      await page.getByRole("button", { name: "Submit", exact: true }).click();
+      await welcome.waitFor({ state: "hidden", timeout: 5_000 }).catch(() => undefined);
+      continue;
+    }
+    break;
   }
 }
 
