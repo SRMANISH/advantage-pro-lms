@@ -60,6 +60,22 @@ cd frontend && npm ci && npm run build   # outputs dist/, served by Nginx
 ```
 Serve `dist/` and reverse-proxy `/api` to gunicorn (same origin keeps cookies/CSRF simple).
 
+**Nginx security headers (set at the edge — the SPA is served by Nginx, not Django).**
+Add these to the `server {}` block so every response carries them. The CSP is tuned for
+this app: the SPA bundle is same-origin; styles need `'unsafe-inline'` (framer-motion and
+Tailwind inject inline styles); YouTube thumbnails and provider images load over https; the
+API is same-origin. Django itself also sets HSTS/nosniff/secure-cookies via `prod.py`.
+```nginx
+add_header X-Frame-Options "DENY" always;                     # no clickjacking (also frame-ancestors below)
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+add_header Content-Security-Policy "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+```
+(If you later add a strict `script-src` nonce pipeline you can drop `'unsafe-inline'` from
+`style-src` via hashed styles; not worth it for this internal tool today.)
+
 ## 5. Scheduler — cron (no Celery/Redis required)
 The time-based features are **idempotent management commands**; point cron at them:
 ```cron

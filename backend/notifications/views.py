@@ -8,6 +8,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from audit.services import record_action
 from core.adapters.registry import get_email, get_sms, get_whatsapp
+from core.crypto import encrypt_secret
 from core.pagination import StandardResultsPagination
 from core.permissions import IsSuperAdmin
 
@@ -80,8 +81,8 @@ class ChannelsView(APIView):
         setting, _ = IntegrationSetting.objects.get_or_create(channel=data["channel"])
         setting.provider = data["provider"]
         setting.config = data["config"]
-        if data["secret"]:  # only overwrite when a fresh secret is supplied
-            setting.secret = data["secret"]
+        if data["secret"]:  # only overwrite when a fresh secret is supplied — stored encrypted
+            setting.secret = encrypt_secret(data["secret"])
         setting.updated_by = request.user
         setting.save()
         record_action(

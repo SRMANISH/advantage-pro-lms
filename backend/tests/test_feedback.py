@@ -83,3 +83,13 @@ def test_staff_cannot_submit_student_feedback(world):
         "/api/v1/feedback/", {"subject": "s", "message": "m"}, format="json"
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_feedback_is_rate_limited_per_student(world):
+    """The scoped throttle (5/hour) stops a student spamming management's WhatsApp."""
+    c = client_for(world["student"])
+    body = {"subject": "s", "message": "m"}
+    for _ in range(5):
+        assert c.post("/api/v1/feedback/", body, format="json").status_code == 201
+    assert c.post("/api/v1/feedback/", body, format="json").status_code == 429

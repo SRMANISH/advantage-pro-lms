@@ -242,6 +242,36 @@ def test_file_test_starter_sheet_is_downloadable_by_student(world):
 
 
 @pytest.mark.django_db
+def test_batchmate_cannot_read_another_students_attempt_file(world):
+    """Owner + grading faculty may fetch a submission file; a batchmate may not."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    client_for(world["fac"]).post(
+        TESTS_URL,
+        {"batch": str(world["batch"].id), "title": "Sheet", "kind": "file"},
+        format="json",
+    )
+    test = Test.objects.get(title="Sheet")
+    xlsx = SimpleUploadedFile(
+        "a.xlsx",
+        b"PK\x03\x04 x",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    client_for(world["student"]).post(
+        f"{TESTS_URL}{test.id}/submit/", {"file": xlsx}, format="multipart"
+    )
+    attempt = TestAttempt.objects.get(test=test, student=world["student"])
+    file_url = f"/api/v1/test-attempts/{attempt.id}/file/"
+
+    assert client_for(world["student"]).get(file_url).status_code == 200  # owner
+    assert client_for(world["fac"]).get(file_url).status_code == 200  # grading faculty
+
+    mate = user("mate", Role.STUDENT)
+    Enrollment.objects.create(student=mate, batch=world["batch"], registration_number="mate")
+    assert client_for(mate).get(file_url).status_code == 403  # batchmate blocked
+
+
+@pytest.mark.django_db
 def test_colab_test_requires_link(world):
     created = client_for(world["fac"]).post(
         TESTS_URL,

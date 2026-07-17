@@ -38,7 +38,10 @@ def test_super_admin_saves_connection_and_secret_is_masked(db):
     assert saved.status_code == 200 and saved.json()["secret_set"] is True
 
     row = IntegrationSetting.objects.get(channel="whatsapp")
-    assert row.provider == "whatsapp_cloud" and row.secret == "super-secret-token"
+    assert row.provider == "whatsapp_cloud"
+    # Stored encrypted at rest — the column is not the plaintext, but decrypts back to it.
+    assert row.secret != "super-secret-token"
+    assert row.decrypt_secret() == "super-secret-token"
 
     # GET exposes provider/config + secret_set, but never the secret value itself.
     body = client_for(sa).get(URL).json()
@@ -59,7 +62,7 @@ def test_blank_secret_keeps_the_stored_one(db):
         URL, {"channel": "sms", "provider": "msg91", "config": {"sender": "ADVPRO"}}, format="json"
     )
     row = IntegrationSetting.objects.get(channel="sms")
-    assert row.secret == "keep-me" and row.config == {"sender": "ADVPRO"}
+    assert row.decrypt_secret() == "keep-me" and row.config == {"sender": "ADVPRO"}
 
 
 @pytest.mark.django_db

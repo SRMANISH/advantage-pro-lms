@@ -2,6 +2,7 @@
 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from audit.services import record_action
@@ -17,6 +18,10 @@ class FeedbackCreateView(APIView):
     """A student sends private feedback to management -> Super Admin WhatsApp + in-app."""
 
     permission_classes = [IsAuthenticated]
+    # Each submission fans out a WhatsApp to every Super Admin, so cap it well below the
+    # global per-user rate to prevent a student spamming management.
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "feedback"
 
     def post(self, request):
         if request.user.role != Role.STUDENT:

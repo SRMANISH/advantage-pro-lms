@@ -15,6 +15,8 @@ pyotp==2.9.0
 django-q2>=1.7,<2
 # HTTP client used by the MSG91 / WhatsApp Cloud provider adapters.
 requests>=2.31,<3
+# Fernet symmetric encryption for provider secrets stored at rest (core/crypto.py).
+cryptography>=43,<46
 
 # --- Deploy-time infrastructure (install on the server; optional in local dev) ---
 # PostgreSQL driver (set DATABASE_URL=postgres://...).

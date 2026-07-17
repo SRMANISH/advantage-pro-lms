@@ -17,6 +17,7 @@ from content.delivery import deliver
 from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission
 from core.permissions_matrix import Action
+from core.roles import Role
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify, notify_many
 
@@ -145,7 +146,12 @@ class TaskSubmissionViewSet(viewsets.GenericViewSet):
     def file(self, request, pk=None):
         submission = self.get_object()
         is_owner = submission.student_id == request.user.id
-        if not (is_owner or can_access_batch(request.user, submission.task.batch)):
+        # A student may only fetch their OWN file; staff/faculty with batch access may
+        # fetch any (to grade). Batchmates must not read each other's submissions.
+        is_reviewer = request.user.role != Role.STUDENT and can_access_batch(
+            request.user, submission.task.batch
+        )
+        if not (is_owner or is_reviewer):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         if not submission.file_key:
             return Response({"detail": "No file."}, status=status.HTTP_404_NOT_FOUND)

@@ -124,6 +124,8 @@ REST_FRAMEWORK = {
         "anon": env("THROTTLE_ANON", default="60/min"),
         "user": env("THROTTLE_USER", default="240/min"),
         "login": env("THROTTLE_LOGIN", default="10/min"),
+        # Student -> management feedback fans out a WhatsApp per Super Admin; keep it low.
+        "feedback": env("THROTTLE_FEEDBACK", default="5/hour"),
     },
     "EXCEPTION_HANDLER": "core.exceptions.exception_handler",
 }

@@ -22,6 +22,7 @@ from content.delivery import deliver
 from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission
 from core.permissions_matrix import Action
+from core.roles import Role
 from core.uploads import validate_upload
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify, notify_many
@@ -234,7 +235,11 @@ class TestAttemptViewSet(viewsets.GenericViewSet):
     def file(self, request, pk=None):
         attempt = self.get_object()
         is_owner = attempt.student_id == request.user.id
-        if not (is_owner or can_access_batch(request.user, attempt.test.batch)):
+        # Owner-only for students; staff/faculty with batch access may fetch any to grade.
+        is_reviewer = request.user.role != Role.STUDENT and can_access_batch(
+            request.user, attempt.test.batch
+        )
+        if not (is_owner or is_reviewer):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         if not attempt.file_key:
             return Response({"detail": "No file."}, status=status.HTTP_404_NOT_FOUND)
