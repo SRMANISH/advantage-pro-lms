@@ -58,11 +58,13 @@ def handle_device_login(student, device_id: str, course_ended: bool = False) -> 
     if not device_id:
         return False, "Device identifier missing — please try again."
 
-    binding = DeviceBinding.objects.filter(user=student).first()
-    if binding is None:
-        DeviceBinding.objects.create(user=student, device_id=device_id)
-        return True, ""
-    if binding.device_id == device_id:
+    # get_or_create (not filter-then-create) so two simultaneous first logins can't both
+    # pass the None check and have the second crash on the OneToOne unique constraint —
+    # surfaced by the load test. The DB decides the winner; the loser reads the bound row.
+    binding, created = DeviceBinding.objects.get_or_create(
+        user=student, defaults={"device_id": device_id}
+    )
+    if created or binding.device_id == device_id:
         return True, ""
 
     if course_ended:

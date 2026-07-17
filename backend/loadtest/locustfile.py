@@ -49,6 +49,10 @@ class _SessionUser(HttpUser):
         body = {"username": self.username, "password": self.password}
         if self.role:
             body["role"] = self.role
+        # Students are device-bound (accounts.device): the login is rejected without a
+        # device id, exactly like the SPA sends. One stable id per simulated user so the
+        # first login binds it and the rest match.
+        body["device_id"] = f"loadtest-{self.username}"
         with self.client.post(
             "/api/v1/auth/login/", json=body, name="/auth/login/", catch_response=True
         ) as resp:

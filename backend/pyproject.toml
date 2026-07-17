@@ -24,4 +24,22 @@ DJANGO_SETTINGS_MODULE = "config.settings.dev"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 # Tests are function-based; restrict class collection so Django models named Test* aren't collected.
 python_classes = ["*Tests"]
+# Coverage is opt-in (keeps the default run fast): `pytest --cov` uses the config below.
 addopts = "-q"
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "manage.py",
+    "config/*",
+    "*/apps.py",
+    "loadtest/*",
+    ".venv/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

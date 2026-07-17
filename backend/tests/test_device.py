@@ -82,6 +82,20 @@ def test_first_login_binds_device(world):
 
 
 @pytest.mark.django_db
+def test_first_bind_is_race_safe(world):
+    """The load test hit an IntegrityError when two first-logins from the same device
+    raced the OneToOne bind. get_or_create means the second resolves to the same row —
+    both succeed, exactly one binding exists (no 500)."""
+    from accounts.device import handle_device_login
+    from accounts.models import DeviceBinding
+
+    ok1, _ = handle_device_login(world["student"], "device-A")
+    ok2, _ = handle_device_login(world["student"], "device-A")
+    assert ok1 and ok2
+    assert DeviceBinding.objects.filter(user=world["student"]).count() == 1
+
+
+@pytest.mark.django_db
 def test_new_device_is_blocked_and_raises_request(world):
     assert login("stu", "device-A").status_code == 200
     resp = login("stu", "device-B")
