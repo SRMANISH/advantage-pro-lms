@@ -1,5 +1,7 @@
 import uuid
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from core.adapters.registry import get_storage
@@ -34,6 +36,7 @@ class VideoSerializer(serializers.ModelSerializer):
     def get_play_url(self, obj) -> str:
         return f"/api/v1/videos/{obj.id}/play/"
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_progress(self, obj):
         user = self.context["request"].user
         if user.role != Role.STUDENT:

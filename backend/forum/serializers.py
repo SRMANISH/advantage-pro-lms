@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from content.access import can_access_batch
@@ -82,6 +83,7 @@ class ThreadDetailSerializer(ThreadSerializer):
     class Meta(ThreadSerializer.Meta):
         fields = [*ThreadSerializer.Meta.fields, "attachments", "replies"]
 
+    @extend_schema_field(AttachmentSerializer(many=True))
     def get_attachments(self, obj):
         # Thread-level attachments only; reply attachments ride along on each reply.
         return AttachmentSerializer(obj.attachments.filter(reply__isnull=True), many=True).data

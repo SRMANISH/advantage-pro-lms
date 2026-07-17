@@ -90,6 +90,8 @@ class ThreadViewSet(viewsets.ModelViewSet):
         return ThreadSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Thread.objects.none()  # OpenAPI schema generation (no real user)
         qs = Thread.objects.select_related("batch", "author")
         if self.action == "retrieve":
             qs = qs.prefetch_related("replies__author", "replies__attachments", "attachments")

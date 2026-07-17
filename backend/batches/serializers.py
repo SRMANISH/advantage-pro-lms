@@ -11,6 +11,11 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = ["id", "code", "name", "description", "duration", "fees", "created_at"]
         read_only_fields = ["id", "created_at"]
+        # DRF serializes DecimalField as a string by default; flag it so no client does
+        # arithmetic on it without parsing first.
+        extra_kwargs = {
+            "fees": {"help_text": "Decimal amount serialized as a string; parse before arithmetic."}
+        }
 
 
 class FacultyBriefSerializer(serializers.ModelSerializer):

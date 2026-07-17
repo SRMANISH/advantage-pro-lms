@@ -21,6 +21,8 @@ class NotificationViewSet(ReadOnlyModelViewSet):
     pagination_class = StandardResultsPagination
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Notification.objects.none()  # OpenAPI schema generation (no real user)
         return Notification.objects.filter(recipient=self.request.user)
 
     @action(detail=True, methods=["post"])

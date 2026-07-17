@@ -90,6 +90,8 @@ class BatchViewSet(viewsets.ModelViewSet):
         return self._ACTIONS.get(self.action)
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Batch.objects.none()  # OpenAPI schema generation (no real user)
         user = self.request.user
         qs = Batch.objects.select_related("course").prefetch_related("faculty")
         if user.role in {Role.SUPER_ADMIN, Role.ADMIN, Role.MIS}:

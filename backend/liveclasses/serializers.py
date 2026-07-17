@@ -1,4 +1,6 @@
 from django.conf import settings
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from content.access import can_access_batch
@@ -30,6 +32,7 @@ class LiveClassSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_checked_in(self, obj):
         user = self.context["request"].user
         if user.role != Role.STUDENT:

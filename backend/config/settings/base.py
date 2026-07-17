@@ -133,6 +133,12 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Internal batch-centric LMS for Advantage Pro.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Several serializers expose a field literally named "status" backed by different
+    # choice sets; give each enum a distinct component name so the schema doesn't collide.
+    "ENUM_NAME_OVERRIDES": {
+        "LiveClassStatusEnum": "liveclasses.models.LiveClassStatus.choices",
+        "ThreadStatusEnum": "forum.models.ThreadStatus.choices",
+    },
 }
 
 # Internationalization

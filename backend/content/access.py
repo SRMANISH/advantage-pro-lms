@@ -8,22 +8,25 @@ STAFF = {Role.SUPER_ADMIN, Role.ADMIN, Role.MIS}
 
 
 def can_access_batch(user, batch: Batch) -> bool:
-    if user.role in STAFF:
+    # getattr keeps this safe for AnonymousUser (e.g. during OpenAPI schema generation).
+    role = getattr(user, "role", None)
+    if role in STAFF:
         return True
-    if user.role == Role.FACULTY:
+    if role == Role.FACULTY:
         return batch.faculty.filter(id=user.id).exists()
-    if user.role == Role.STUDENT:
+    if role == Role.STUDENT:
         return Enrollment.objects.filter(student=user, batch=batch).exists()
     return False
 
 
 def accessible_batch_ids(user):
     """Return None for 'all batches', else an iterable of allowed batch ids."""
-    if user.role in STAFF:
+    role = getattr(user, "role", None)
+    if role in STAFF:
         return None
-    if user.role == Role.FACULTY:
+    if role == Role.FACULTY:
         return Batch.objects.filter(faculty=user).values_list("id", flat=True)
-    if user.role == Role.STUDENT:
+    if role == Role.STUDENT:
         return Enrollment.objects.filter(student=user).values_list("batch_id", flat=True)
     return []
 

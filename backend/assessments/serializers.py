@@ -1,5 +1,7 @@
 from django.db import transaction
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from content.access import can_access_batch
@@ -119,6 +121,7 @@ class TestListSerializer(serializers.ModelSerializer):
     def get_is_open(self, obj) -> bool:
         return _is_open(obj)
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_my_attempt(self, obj):
         user = self.context["request"].user
         attempt = TestAttempt.objects.filter(test=obj, student=user).first()
@@ -168,6 +171,7 @@ class TestTakeSerializer(serializers.ModelSerializer):
     def get_resource_download_url(self, obj) -> str:
         return f"/api/v1/tests/{obj.id}/resource/" if obj.resource_key else ""
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_my_attempt(self, obj):
         attempt = TestAttempt.objects.filter(test=obj, student=self.context["request"].user).first()
         return _attempt_row(attempt) if attempt else None
@@ -258,6 +262,7 @@ class TaskSerializer(serializers.ModelSerializer):
     def get_is_overdue(self, obj) -> bool:
         return bool(obj.deadline and timezone.now() > obj.deadline)
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_my_submission(self, obj):
         user = self.context["request"].user
         sub = TaskSubmission.objects.filter(task=obj, student=user).first()
