@@ -127,3 +127,29 @@ def test_faculty_cannot_import(setup):
     rows = ["S300,Name,n@example.com,9876543210,FS-1,FS,prof"]
     resp = c.post(IMPORT_URL, {"file": csv_file(*rows)}, format="multipart")
     assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_roster_paginates_and_searches(setup):
+    admin_client(setup).post(
+        IMPORT_URL,
+        {
+            "file": csv_file(
+                "S001,Asha Rao,asha@example.com,9876543210,FS-1,FS,prof",
+                "S002,Ravi Kumar,ravi@example.com,9876500000,FS-1,FS,prof",
+            )
+        },
+        format="multipart",
+    )
+    c = admin_client(setup)
+    # Paginated envelope with both students.
+    full = c.get("/api/v1/enrollments/").json()
+    assert full["count"] == 2 and len(full["results"]) == 2
+
+    # Server-side search narrows to one by name.
+    hit = c.get("/api/v1/enrollments/?search=Ravi").json()
+    assert hit["count"] == 1 and hit["results"][0]["registration_number"] == "S002"
+
+    # page_size caps the page.
+    page = c.get("/api/v1/enrollments/?page_size=1").json()
+    assert page["count"] == 2 and len(page["results"]) == 1

@@ -111,10 +111,10 @@ def test_escalation_list_filters_by_batch(world):
     run_escalations()
     client = APIClient()
     client.force_authenticate(user=world["mis"])
-    assert len(client.get("/api/v1/escalations/").json()) >= 1
+    assert client.get("/api/v1/escalations/").json()["count"] >= 1
 
     scoped = client.get(f"/api/v1/escalations/?batch={world['batch'].id}")
-    assert scoped.status_code == 200 and len(scoped.json()) >= 1
+    assert scoped.status_code == 200 and scoped.json()["count"] >= 1
 
     other = Batch.objects.create(
         code="B2",
@@ -124,7 +124,7 @@ def test_escalation_list_filters_by_batch(world):
         end_date=datetime.date(2026, 4, 1),
         state=BatchState.ACTIVE,
     )
-    assert client.get(f"/api/v1/escalations/?batch={other.id}").json() == []
+    assert client.get(f"/api/v1/escalations/?batch={other.id}").json()["results"] == []
 
 
 @pytest.mark.django_db

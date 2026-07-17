@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 
 from audit.services import record_action
 from batches.models import BatchState
+from core.pagination import paginate_rows
 from core.permissions import has_any_role
 from core.roles import Role
 from core.utils import get_client_ip
@@ -120,20 +121,20 @@ class GoodiesRegisterView(APIView):
         batch_id = request.query_params.get("batch")
         if batch_id:
             rows = rows.filter(batch_id=batch_id)
-        return Response(
-            [
-                {
-                    "enrollment": str(e.id),
-                    "registration_number": e.registration_number,
-                    "student_name": e.student.full_name or e.student.username,
-                    "batch_code": e.batch.code,
-                    "address": e.address,
-                    "address_confirmed": e.address_confirmed,
-                    "goodies_received": e.goodies_received,
-                    "goodies_sent": e.goodies_sent,
-                }
-                for e in rows
-            ]
+        return paginate_rows(
+            request,
+            rows,
+            lambda e: {
+                "enrollment": str(e.id),
+                "registration_number": e.registration_number,
+                "student_name": e.student.full_name or e.student.username,
+                "batch_code": e.batch.code,
+                "address": e.address,
+                "address_confirmed": e.address_confirmed,
+                "goodies_received": e.goodies_received,
+                "goodies_sent": e.goodies_sent,
+            },
+            view=self,
         )
 
 

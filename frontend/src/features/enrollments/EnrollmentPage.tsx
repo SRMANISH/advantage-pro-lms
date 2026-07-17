@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
@@ -14,12 +14,13 @@ import {
   TableSkeleton,
   TableToolbar,
   THead,
-  useTableTools,
   useToast,
 } from "../../design-system";
+import { fetchPage } from "../../lib/api";
+import { useServerTable } from "../../lib/useServerTable";
 import { contentApi } from "../content/api";
 import { PortalLayout } from "../portal/PortalLayout";
-import { enrollmentsApi, type ImportResult } from "./api";
+import { enrollmentsApi, type EnrollmentRow, type ImportResult } from "./api";
 
 const TEMPLATE =
   "registration_number,name,email,phone,batch,course,faculty,address,guardian,employment_company\n" +
@@ -44,13 +45,12 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
     onSuccess: () => toast.show("Video access restored for this student.", "success"),
   });
 
-  const students = useQuery({ queryKey: ["enrollments"], queryFn: enrollmentsApi.list });
-  const table = useTableTools(students.data, [
-    "registration_number",
-    "student_name",
-    "batch_code",
-    "email",
-  ]);
+  // Server-side pagination + search — a batch of thousands no longer truncates at 100.
+  const table = useServerTable<EnrollmentRow>({
+    key: ["enrollments"],
+    searchable: true,
+    fetcher: (p) => fetchPage<EnrollmentRow>("/enrollments/", p),
+  });
   const [setupLinks, setSetupLinks] = useState<Record<string, string>>({});
   const resend = useMutation({
     mutationFn: (studentId: string) => enrollmentsApi.resendSetup(studentId),
@@ -171,15 +171,19 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
       </Card>
 
       <SectionHeading title="Enrolled students" />
-      {students.isLoading ? (
+      {table.isLoading ? (
         <TableSkeleton rows={6} cols={6} />
-      ) : students.data && students.data.length > 0 ? (
+      ) : table.total > 0 || table.query ? (
         <>
           <TableToolbar
             query={table.query}
             onQuery={table.setQuery}
             placeholder="Search by ID, name, batch or email…"
           />
+          {table.rows.length === 0 ? (
+            <EmptyState title="No matching students" hint="Try a different search." />
+          ) : (
+          <>
           <TableShell>
           <THead>
             <tr>
@@ -253,6 +257,8 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
             onPage={table.setPage}
             total={table.total}
           />
+          </>
+          )}
         </>
       ) : (
         <EmptyState

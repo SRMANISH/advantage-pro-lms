@@ -81,7 +81,7 @@ def test_both_no_captures_address_and_alerts_admins(world):
 @pytest.mark.django_db
 def test_admin_register_and_mark_goodies_sent(world):
     admin = client_for(world["admin"])
-    rows = admin.get("/api/v1/welcome/register/").json()
+    rows = admin.get("/api/v1/welcome/register/").json()["results"]
     row = next(r for r in rows if r["enrollment"] == str(world["enr"].id))
     assert row["goodies_sent"] is False
 

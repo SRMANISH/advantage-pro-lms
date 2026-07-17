@@ -30,9 +30,6 @@ export const welcomeApi = {
   }): Promise<void> {
     await api.post("/welcome/submit/", payload);
   },
-  async register(): Promise<GoodiesRow[]> {
-    return (await api.get<GoodiesRow[]>("/welcome/register/")).data;
-  },
   async setGoodiesSent(enrollment: string, sent: boolean): Promise<void> {
     await api.post("/welcome/goodies/", { enrollment, sent });
   },

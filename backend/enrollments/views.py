@@ -90,6 +90,8 @@ class EnrollmentListView(ListAPIView):
     pagination_class = StandardResultsPagination
 
     def get_queryset(self):
+        from django.db.models import Q
+
         user = self.request.user
         qs = Enrollment.objects.select_related("student", "batch")
         if user.role == Role.FACULTY:
@@ -97,4 +99,13 @@ class EnrollmentListView(ListAPIView):
         batch_id = self.request.query_params.get("batch")
         if batch_id:
             qs = qs.filter(batch_id=batch_id)
-        return qs
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                Q(registration_number__icontains=search)
+                | Q(student__full_name__icontains=search)
+                | Q(student__username__icontains=search)
+                | Q(batch__code__icontains=search)
+            )
+        # Deterministic ordering so page boundaries are stable across requests.
+        return qs.order_by("batch__code", "registration_number")

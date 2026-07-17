@@ -2,8 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
-import { api } from "../../lib/api";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Paginator,
+  SectionHeading,
+  TableSkeleton,
+} from "../../design-system";
+import { api, fetchPage } from "../../lib/api";
+import { useServerTable } from "../../lib/useServerTable";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
 
@@ -31,10 +40,10 @@ export function EscalationsPage({ role }: { role: RoleDef }) {
   const qc = useQueryClient();
   const [batchId, setBatchId] = useState("");
   const batches = useQuery({ queryKey: ["batches"], queryFn: batchesApi.listBatches });
-  const escalations = useQuery({
-    queryKey: ["escalations", batchId],
-    queryFn: async () =>
-      (await api.get<EscalationRow[]>(`/escalations/${batchId ? `?batch=${batchId}` : ""}`)).data,
+  const escalations = useServerTable<EscalationRow>({
+    key: ["escalations"],
+    params: { batch: batchId || undefined },
+    fetcher: (p) => fetchPage<EscalationRow>("/escalations/", p),
   });
 
   const run = useMutation({
@@ -80,42 +89,50 @@ export function EscalationsPage({ role }: { role: RoleDef }) {
         </div>
         {escalations.isLoading ? (
           <TableSkeleton rows={4} cols={4} />
-        ) : escalations.data && escalations.data.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border border-brdr">
-            <table className="w-full text-sm">
-              <thead className="bg-sky text-navy">
-                <tr>
-                  <th className="px-3 py-2 text-left">Type</th>
-                  <th className="px-3 py-2 text-left">Student</th>
-                  <th className="px-3 py-2 text-left">Batch</th>
-                  <th className="px-3 py-2 text-left">Raised</th>
-                </tr>
-              </thead>
-              <tbody>
-                {escalations.data.map((e) => (
-                  <tr key={e.id} className="border-t border-brdr">
-                    <td className="px-3 py-2">
-                      <Badge tone={e.kind === "low_attendance" ? "warning" : "info"}>
-                        {KIND_LABEL[e.kind] ?? e.kind}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="text-ink">{e.student_name}</span>{" "}
-                      <span className="text-muted">({e.registration_number})</span>
-                    </td>
-                    <td className="px-3 py-2 text-muted">{e.batch_code || "—"}</td>
-                    <td className="px-3 py-2 text-muted">
-                      {new Date(e.created_at).toLocaleDateString([], {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
+        ) : escalations.rows.length > 0 ? (
+          <>
+            <div className="overflow-x-auto rounded-lg border border-brdr">
+              <table className="w-full text-sm">
+                <thead className="bg-sky text-navy">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Type</th>
+                    <th className="px-3 py-2 text-left">Student</th>
+                    <th className="px-3 py-2 text-left">Batch</th>
+                    <th className="px-3 py-2 text-left">Raised</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {escalations.rows.map((e) => (
+                    <tr key={e.id} className="border-t border-brdr">
+                      <td className="px-3 py-2">
+                        <Badge tone={e.kind === "low_attendance" ? "warning" : "info"}>
+                          {KIND_LABEL[e.kind] ?? e.kind}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="text-ink">{e.student_name}</span>{" "}
+                        <span className="text-muted">({e.registration_number})</span>
+                      </td>
+                      <td className="px-3 py-2 text-muted">{e.batch_code || "—"}</td>
+                      <td className="px-3 py-2 text-muted">
+                        {new Date(e.created_at).toLocaleDateString([], {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Paginator
+              page={escalations.page}
+              pageCount={escalations.pageCount}
+              onPage={escalations.setPage}
+              total={escalations.total}
+            />
+          </>
         ) : (
           <EmptyState title="No escalations raised" hint="Run the checks or wait for the schedule." />
         )}

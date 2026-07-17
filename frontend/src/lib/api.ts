@@ -26,6 +26,22 @@ export function unwrap<T>(data: T[] | Paginated<T>): T[] {
   return Array.isArray(data) ? data : data.results;
 }
 
+export interface Page<T> {
+  results: T[];
+  count: number;
+}
+
+/** Fetch one server page, tolerating either an array or a DRF envelope. Used with
+ * useServerTable to drive real server-side pagination (no silent client truncation). */
+export async function fetchPage<T>(
+  url: string,
+  params: Record<string, unknown> = {},
+): Promise<Page<T>> {
+  const { data } = await api.get<Paginated<T> | T[]>(url, { params });
+  if (Array.isArray(data)) return { results: data, count: data.length };
+  return { results: data.results, count: data.count };
+}
+
 // Global mutation-error surface: any failed write pops an error toast with the server's
 // detail. GETs and the auth flows (which render errors inline) are excluded.
 const QUIET = ["/auth/login/", "/auth/password/", "/auth/setup/"];

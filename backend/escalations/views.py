@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from audit.services import record_action
+from core.pagination import paginate_rows
 from core.permissions import has_any_role
 from core.roles import Role
 from core.utils import get_client_ip
@@ -38,17 +39,17 @@ class EscalationListView(APIView):
         batch_id = request.query_params.get("batch")
         if batch_id:
             rows = rows.filter(batch_id=batch_id)
-        return Response(
-            [
-                {
-                    "id": str(e.id),
-                    "kind": e.kind,
-                    "student_name": e.student.full_name or e.student.username,
-                    "registration_number": e.student.username,
-                    "batch_code": e.batch.code if e.batch else "",
-                    "reference_id": e.reference_id,
-                    "created_at": e.created_at,
-                }
-                for e in rows[:500]
-            ]
+        return paginate_rows(
+            request,
+            rows,
+            lambda e: {
+                "id": str(e.id),
+                "kind": e.kind,
+                "student_name": e.student.full_name or e.student.username,
+                "registration_number": e.student.username,
+                "batch_code": e.batch.code if e.batch else "",
+                "reference_id": e.reference_id,
+                "created_at": e.created_at,
+            },
+            view=self,
         )

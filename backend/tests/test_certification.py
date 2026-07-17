@@ -107,7 +107,7 @@ def test_mis_certificate_follow_up_dashboard_and_status():
 
     listing = client_for(mis).get("/api/v1/certification/follow-up/")
     assert listing.status_code == 200
-    rows = listing.json()
+    rows = listing.json()["results"]
     assert any(r["registration_number"] == "REG1" and r["certified"] is False for r in rows)
 
     set_resp = client_for(mis).post(

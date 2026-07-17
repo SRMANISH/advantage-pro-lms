@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from audit.services import record_action
 from batches.models import BatchState
+from core.pagination import paginate_rows
 from core.permissions import has_any_role
 from core.roles import Role
 from enrollments.models import Enrollment
@@ -80,24 +81,26 @@ class CertificateFollowUpListView(APIView):
             .prefetch_related("certificate", "cert_followup")
             .order_by("batch__code", "registration_number")
         )
-        rows = []
-        for e in enrollments:
+        batch_id = request.query_params.get("batch")
+        if batch_id:
+            enrollments = enrollments.filter(batch_id=batch_id)
+
+        def row(e):
             cert = getattr(e, "certificate", None)
             fu = getattr(e, "cert_followup", None)
-            rows.append(
-                {
-                    "enrollment": str(e.id),
-                    "registration_number": e.registration_number,
-                    "student_name": e.student.full_name or e.student.username,
-                    "batch_code": e.batch.code,
-                    "certified": cert is not None,
-                    "certificate_id": cert.certificate_id if cert else None,
-                    "follow_up_status": fu.status if fu else CertFollowUpStatus.PENDING,
-                    "reminder_count": fu.reminder_count if fu else 0,
-                    "last_reminder_at": fu.last_reminder_at if fu else None,
-                }
-            )
-        return Response(rows)
+            return {
+                "enrollment": str(e.id),
+                "registration_number": e.registration_number,
+                "student_name": e.student.full_name or e.student.username,
+                "batch_code": e.batch.code,
+                "certified": cert is not None,
+                "certificate_id": cert.certificate_id if cert else None,
+                "follow_up_status": fu.status if fu else CertFollowUpStatus.PENDING,
+                "reminder_count": fu.reminder_count if fu else 0,
+                "last_reminder_at": fu.last_reminder_at if fu else None,
+            }
+
+        return paginate_rows(request, enrollments, row, view=self)
 
 
 class CertFollowUpStatusSerializer(serializers.Serializer):
