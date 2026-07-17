@@ -23,8 +23,13 @@ class WhatsAppCloudAdapter(WhatsAppAdapter):
     def send(self, to: str, message: str) -> None:
         if not to:
             return
-        token = getattr(settings, "WHATSAPP_ACCESS_TOKEN", "")
-        phone_id = getattr(settings, "WHATSAPP_PHONE_NUMBER_ID", "")
+        # SA-saved connection (Channels page) first, then env settings per key.
+        from core.integrations import integration_config
+
+        cfg = integration_config("whatsapp")
+        c = cfg["config"]
+        token = cfg["secret"] or getattr(settings, "WHATSAPP_ACCESS_TOKEN", "")
+        phone_id = c.get("phone_number_id") or getattr(settings, "WHATSAPP_PHONE_NUMBER_ID", "")
         if not token or not phone_id:
             logger.warning(
                 "WHATSAPP_ACCESS_TOKEN/WHATSAPP_PHONE_NUMBER_ID not configured — "
@@ -32,7 +37,7 @@ class WhatsAppCloudAdapter(WhatsAppAdapter):
                 to,
             )
             return
-        template_name = getattr(settings, "WHATSAPP_TEMPLATE_NAME", "")
+        template_name = c.get("template_name") or getattr(settings, "WHATSAPP_TEMPLATE_NAME", "")
         url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
         body: dict[str, Any]
         if template_name:
@@ -42,7 +47,10 @@ class WhatsAppCloudAdapter(WhatsAppAdapter):
                 "type": "template",
                 "template": {
                     "name": template_name,
-                    "language": {"code": getattr(settings, "WHATSAPP_TEMPLATE_LANG", "en")},
+                    "language": {
+                        "code": c.get("template_lang")
+                        or getattr(settings, "WHATSAPP_TEMPLATE_LANG", "en")
+                    },
                     "components": [
                         {"type": "body", "parameters": [{"type": "text", "text": message}]}
                     ],

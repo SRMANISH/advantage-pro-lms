@@ -85,6 +85,11 @@ class ChannelsView(APIView):
             setting.secret = encrypt_secret(data["secret"])
         setting.updated_by = request.user
         setting.save()
+        # Providers read the effective config through a short cache — drop it so the save
+        # takes effect immediately (incl. the "Send test" button below).
+        from core.integrations import invalidate_integration_config
+
+        invalidate_integration_config()
         record_action(
             actor=request.user,
             action="integration_updated",

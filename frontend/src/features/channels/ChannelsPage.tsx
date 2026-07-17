@@ -117,6 +117,14 @@ export function ChannelsPage({ role }: { role: RoleDef }) {
   );
 }
 
+// Which config keys each channel's adapter reads (the secret is separate, below).
+const CONFIG_KEYS: Record<string, string> = {
+  email: '{ "host": "smtp…", "port": 587, "username": "…", "use_tls": true, "from_email": "…" } · secret = password',
+  sms: '{ "sender_id": "ADVPRO", "route": "4", "country": "91" } · secret = MSG91 auth key',
+  whatsapp: '{ "phone_number_id": "…", "template_name": "", "template_lang": "en" } · secret = access token',
+  storage: "provider-specific",
+};
+
 function ConnectionCard({ channel, onSaved }: { channel: Channel; onSaved: () => void }) {
   const [provider, setProvider] = useState(channel.provider);
   const [configText, setConfigText] = useState(JSON.stringify(channel.config ?? {}, null, 2));
@@ -171,7 +179,7 @@ function ConnectionCard({ channel, onSaved }: { channel: Channel; onSaved: () =>
             htmlFor={`cfg-${channel.kind}`}
             className="mb-1 block text-xs font-medium text-muted"
           >
-            Config (JSON — non-secret settings like sender id, host, region)
+            Config (JSON) — keys: {CONFIG_KEYS[channel.kind] ?? "non-secret settings"}
           </label>
           <textarea
             id={`cfg-${channel.kind}`}

@@ -24,10 +24,15 @@ class Msg91SmsAdapter(SmsAdapter):
     def send(self, to: str, message: str) -> None:
         if not to:
             return
-        auth_key = getattr(settings, "MSG91_AUTH_KEY", "")
-        sender = getattr(settings, "MSG91_SENDER_ID", "")
-        route = getattr(settings, "MSG91_ROUTE", "4")
-        country = getattr(settings, "MSG91_COUNTRY", "91")
+        # SA-saved connection (Channels page) first, then env settings per key.
+        from core.integrations import integration_config
+
+        cfg = integration_config("sms")
+        c = cfg["config"]
+        auth_key = cfg["secret"] or getattr(settings, "MSG91_AUTH_KEY", "")
+        sender = c.get("sender_id") or getattr(settings, "MSG91_SENDER_ID", "")
+        route = str(c.get("route") or getattr(settings, "MSG91_ROUTE", "4"))
+        country = str(c.get("country") or getattr(settings, "MSG91_COUNTRY", "91"))
         if not auth_key or not sender:
             logger.warning("MSG91_AUTH_KEY/MSG91_SENDER_ID not configured — SMS not sent to %s", to)
             return

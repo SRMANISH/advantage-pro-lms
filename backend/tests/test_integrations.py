@@ -72,3 +72,62 @@ def test_only_super_admin_can_edit_connections(db):
             URL, {"channel": "email", "provider": "smtp"}, format="json"
         )
         assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_integration_config_is_db_first_with_env_fallback(db):
+    from core.integrations import integration_config
+
+    # No row saved -> empty (the adapter then falls back to env settings).
+    assert integration_config("whatsapp") == {"provider": "", "config": {}, "secret": ""}
+
+    client_for(user("sa", Role.SUPER_ADMIN)).put(
+        URL,
+        {
+            "channel": "whatsapp",
+            "provider": "whatsapp_cloud",
+            "config": {"phone_number_id": "123"},
+            "secret": "tok",
+        },
+        format="json",
+    )
+    # The save invalidated the cache, so the config reflects it (secret decrypted).
+    cfg = integration_config("whatsapp")
+    assert cfg["provider"] == "whatsapp_cloud"
+    assert cfg["config"] == {"phone_number_id": "123"}
+    assert cfg["secret"] == "tok"
+
+
+@pytest.mark.django_db
+def test_sms_adapter_uses_the_saved_db_connection(db, monkeypatch):
+    """req 21 wired for real: the MSG91 adapter sends with the SA-saved key/sender,
+    not just env settings."""
+    from core.adapters.msg91 import Msg91SmsAdapter
+
+    client_for(user("sa", Role.SUPER_ADMIN)).put(
+        URL,
+        {
+            "channel": "sms",
+            "provider": "msg91",
+            "config": {"sender_id": "ADVPRO", "route": "4"},
+            "secret": "live-authkey",
+        },
+        format="json",
+    )
+
+    captured = {}
+
+    class _Resp:
+        status_code = 200
+        text = ""
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        captured["headers"] = headers
+        captured["json"] = json
+        return _Resp()
+
+    monkeypatch.setattr("core.adapters.msg91.requests.post", fake_post)
+    Msg91SmsAdapter().send("9876500000", "Hello")
+
+    assert captured["headers"]["authkey"] == "live-authkey"
+    assert captured["json"]["sender"] == "ADVPRO"

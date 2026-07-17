@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
 
 from .base import EmailAdapter
 
@@ -21,11 +21,27 @@ class SmtpEmailAdapter(EmailAdapter):
     def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> None:
         if not to:
             return
+        # SA-saved SMTP connection (Channels page) first, then Django's EMAIL_* env settings.
+        from core.integrations import integration_config
+
+        cfg = integration_config("email")
+        c = cfg["config"]
+        from_email = c.get("from_email") or getattr(settings, "DEFAULT_FROM_EMAIL", None)
+        connection = None
+        if cfg["secret"] or c.get("host") or c.get("username"):
+            connection = get_connection(
+                host=c.get("host") or getattr(settings, "EMAIL_HOST", ""),
+                port=int(c.get("port") or getattr(settings, "EMAIL_PORT", 587)),
+                username=c.get("username") or getattr(settings, "EMAIL_HOST_USER", ""),
+                password=cfg["secret"] or getattr(settings, "EMAIL_HOST_PASSWORD", ""),
+                use_tls=bool(c.get("use_tls", getattr(settings, "EMAIL_USE_TLS", True))),
+            )
         message = EmailMultiAlternatives(
             subject=subject,
             body=body,
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+            from_email=from_email,
             to=[to],
+            connection=connection,
         )
         if html:
             message.attach_alternative(html, "text/html")
