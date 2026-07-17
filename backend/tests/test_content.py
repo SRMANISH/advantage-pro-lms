@@ -67,6 +67,25 @@ def mp4(name="lesson.mp4"):
 
 
 @pytest.mark.django_db
+def test_video_list_has_no_per_row_progress_query(world, django_assert_max_num_queries):
+    """N+1 guard: the student `progress` field is prefetched, so listing N videos does not
+    add N queries. 8 videos here would blow a low ceiling if it regressed to per-row."""
+    from content.models import VideoProgress
+
+    for i in range(8):
+        v = Video.objects.create(
+            batch=world["batch"], title=f"V{i}", storage_key=f"videos/{i}/x.mp4"
+        )
+        VideoProgress.objects.create(video=v, student=world["student"], percent=50)
+
+    with django_assert_max_num_queries(10):
+        resp = client_for(world["student"]).get(VIDEOS_URL)
+    assert resp.status_code == 200
+    results = resp.json()["results"] if isinstance(resp.json(), dict) else resp.json()
+    assert len(results) == 8 and all(r["progress"]["percent"] == 50 for r in results)
+
+
+@pytest.mark.django_db
 def test_faculty_uploads_video_to_own_batch(world):
     resp = client_for(world["fac"]).post(
         VIDEOS_URL,

@@ -124,7 +124,11 @@ class TestListSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_my_attempt(self, obj):
         user = self.context["request"].user
-        attempt = TestAttempt.objects.filter(test=obj, student=user).first()
+        prefetched = getattr(obj, "my_attempts", None)  # set by TestViewSet for students
+        if prefetched is not None:
+            attempt = prefetched[0] if prefetched else None
+        else:
+            attempt = TestAttempt.objects.filter(test=obj, student=user).first()
         return _attempt_row(attempt) if attempt else None
 
 
@@ -265,7 +269,11 @@ class TaskSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_my_submission(self, obj):
         user = self.context["request"].user
-        sub = TaskSubmission.objects.filter(task=obj, student=user).first()
+        prefetched = getattr(obj, "my_subs", None)  # set by TaskViewSet for students
+        if prefetched is not None:
+            sub = prefetched[0] if prefetched else None
+        else:
+            sub = TaskSubmission.objects.filter(task=obj, student=user).first()
         if not sub:
             return None
         return {

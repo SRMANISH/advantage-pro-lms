@@ -11,7 +11,7 @@ from core.cron import LockHeld, cron_lock
 from core.roles import Role
 from enrollments.models import Enrollment
 from escalations.models import Escalation
-from escalations.services import _first_time, run_escalations
+from escalations.services import run_escalations
 
 
 def user(username, role):
@@ -45,7 +45,7 @@ def test_management_command_skips_quietly_when_locked(capsys):
 
 
 @pytest.mark.django_db
-def test_escalation_first_time_is_race_safe_via_get_or_create():
+def test_escalation_ledger_bulk_create_is_race_safe():
     course = Course.objects.create(code="FS", name="Full Stack")
     batch = Batch.objects.create(
         code="FS-1",
@@ -57,10 +57,17 @@ def test_escalation_first_time_is_race_safe_via_get_or_create():
     student = user("S1", Role.STUDENT)
     Enrollment.objects.create(student=student, batch=batch, registration_number="S1")
 
-    # First call creates + reports True; a second "overlapping" call (simulating the
-    # second of two racing cron runs) must not raise IntegrityError and must report False.
-    assert _first_time("low_attendance", student, batch.id) is True
-    assert _first_time("low_attendance", student, batch.id) is False
+    # The batched ledger writes via bulk_create(ignore_conflicts=True); a second
+    # "overlapping" run inserting the same (kind, student, reference_id) must not raise
+    # IntegrityError and must not create a duplicate row.
+    rows = [
+        Escalation(kind="low_attendance", student=student, reference_id=str(batch.id), batch=batch)
+    ]
+    Escalation.objects.bulk_create(rows, ignore_conflicts=True)
+    Escalation.objects.bulk_create(
+        [Escalation(kind="low_attendance", student=student, reference_id=str(batch.id))],
+        ignore_conflicts=True,
+    )
     assert (
         Escalation.objects.filter(
             kind="low_attendance", student=student, reference_id=str(batch.id)

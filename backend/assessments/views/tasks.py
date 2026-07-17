@@ -58,7 +58,19 @@ class TaskViewSet(viewsets.ModelViewSet):
         batch = self.request.query_params.get("batch")
         if batch:
             qs = qs.filter(batch_id=batch)
-        ids = accessible_batch_ids(self.request.user)
+        user = self.request.user
+        # Prefetch the student's own submission per task (serializer my_submission) — no N+1.
+        if user.role == Role.STUDENT:
+            from django.db.models import Prefetch
+
+            qs = qs.prefetch_related(
+                Prefetch(
+                    "submissions",
+                    queryset=TaskSubmission.objects.filter(student=user),
+                    to_attr="my_subs",
+                )
+            )
+        ids = accessible_batch_ids(user)
         return qs if ids is None else qs.filter(batch_id__in=list(ids))
 
     def perform_create(self, serializer):

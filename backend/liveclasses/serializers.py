@@ -37,6 +37,9 @@ class LiveClassSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         if user.role != Role.STUDENT:
             return None
+        prefetched = getattr(obj, "my_checkins", None)  # set by LiveClassViewSet for students
+        if prefetched is not None:
+            return len(prefetched) > 0
         return CheckIn.objects.filter(live_class=obj, student=user).exists()
 
     def get_duration_minutes(self, obj) -> int:

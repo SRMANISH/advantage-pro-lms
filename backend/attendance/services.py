@@ -214,6 +214,7 @@ def remind_absentees(day=None) -> int:
     number of reminders sent. Counselor and MIS follow up off the same login data.
     """
     from batches.models import Batch, BatchState
+    from notifications.models import Notification
     from notifications.services import notify
 
     day = day or timezone.localdate()
@@ -221,12 +222,19 @@ def remind_absentees(day=None) -> int:
     # message would go to the whole roster — suppress it.
     if is_rest_day(day):
         return 0
+    # One query for everyone already reminded today (was a per-student .exists()); grown
+    # in-loop so a student absent in two batches is still reminded at most once per day.
+    reminded = set(
+        Notification.objects.filter(kind="absence_reminder", created_at__date=day).values_list(
+            "recipient_id", flat=True
+        )
+    )
     sent = 0
     for batch in Batch.objects.filter(state=BatchState.ACTIVE):
         if day < batch.start_date or day > batch.end_date:
             continue
         for student in absentee_students(batch, day):
-            if student.notifications.filter(kind="absence_reminder", created_at__date=day).exists():
+            if student.id in reminded:
                 continue
             notify(
                 student,
@@ -236,6 +244,7 @@ def remind_absentees(day=None) -> int:
                 subject="We missed you today",
                 channels=("in_app", "email", "sms"),
             )
+            reminded.add(student.id)
             sent += 1
     return sent
 

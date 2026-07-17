@@ -53,11 +53,24 @@ class VideoViewSet(viewsets.ModelViewSet):
         return VideoUploadSerializer if self.action == "create" else VideoSerializer
 
     def get_queryset(self):
+        from django.db.models import Prefetch
+
         qs = Video.objects.select_related("batch", "uploaded_by")
+        user = self.request.user
+        # Prefetch just this student's progress rows so the serializer's `progress` field
+        # is a list lookup, not one query per video (N+1).
+        if user.role == Role.STUDENT:
+            qs = qs.prefetch_related(
+                Prefetch(
+                    "progresses",
+                    queryset=VideoProgress.objects.filter(student=user),
+                    to_attr="my_progress",
+                )
+            )
         batch = self.request.query_params.get("batch")
         if batch:
             qs = qs.filter(batch_id=batch)
-        return _scoped(qs, self.request.user)
+        return _scoped(qs, user)
 
     def perform_create(self, serializer):
         video = serializer.save()

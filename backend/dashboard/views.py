@@ -8,6 +8,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db.models import Count, Q
+from django.db.models.functions import TruncWeek
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,23 +22,25 @@ from enrollments.models import Enrollment
 
 
 def _weekly_logins(student=None, batch_ids=None) -> list[dict]:
-    """Distinct login-days per week for the last 6 weeks (real attendance data)."""
+    """Distinct login-days per week for the last 6 weeks (real attendance data).
+
+    Login attendance is unique per (student, day), so a week's row count equals its
+    distinct login-days — a single grouped TruncWeek query, not six per-week counts.
+    """
     today = timezone.localdate()
-    weeks: list[dict] = []
-    for i in range(5, -1, -1):
-        monday = today - timedelta(days=today.weekday() + 7 * i)
-        sunday = monday + timedelta(days=6)
-        qs = AttendanceEvent.objects.filter(
-            source=AttendanceSource.LOGIN, date__gte=monday, date__lte=sunday
-        )
-        if student is not None:
-            value = qs.filter(student=student).values("date").distinct().count()
-        else:
-            if batch_ids is not None:
-                qs = qs.filter(batch_id__in=batch_ids)
-            value = qs.values("student", "date").distinct().count()
-        weeks.append({"label": monday.strftime("%d %b"), "value": value})
-    return weeks
+    mondays = [today - timedelta(days=today.weekday() + 7 * i) for i in range(5, -1, -1)]
+    qs = AttendanceEvent.objects.filter(
+        source=AttendanceSource.LOGIN, date__gte=mondays[0], date__lte=today
+    )
+    if student is not None:
+        qs = qs.filter(student=student)
+    elif batch_ids is not None:
+        qs = qs.filter(batch_id__in=batch_ids)
+    counts = {
+        row["week"]: row["n"]
+        for row in qs.annotate(week=TruncWeek("date")).values("week").annotate(n=Count("id"))
+    }
+    return [{"label": m.strftime("%d %b"), "value": counts.get(m, 0)} for m in mondays]
 
 
 class DashboardView(APIView):

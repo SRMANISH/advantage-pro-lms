@@ -41,7 +41,11 @@ class VideoSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         if user.role != Role.STUDENT:
             return None
-        p = obj.progresses.filter(student=user).first()
+        prefetched = getattr(obj, "my_progress", None)  # set by VideoViewSet for students
+        if prefetched is not None:
+            p = prefetched[0] if prefetched else None
+        else:
+            p = obj.progresses.filter(student=user).first()
         if not p:
             return {"percent": 0, "completed": False, "last_position": 0}
         return {"percent": p.percent, "completed": p.completed, "last_position": p.last_position}

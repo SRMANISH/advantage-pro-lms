@@ -45,7 +45,20 @@ class LiveClassViewSet(viewsets.ModelViewSet):
         batch = self.request.query_params.get("batch")
         if batch:
             qs = qs.filter(batch_id=batch)
-        ids = accessible_batch_ids(self.request.user)
+        user = self.request.user
+        # Prefetch the student's own check-ins so the serializer's checked_in flag is a
+        # list lookup, not one query per class (N+1).
+        if user.role == Role.STUDENT:
+            from django.db.models import Prefetch
+
+            qs = qs.prefetch_related(
+                Prefetch(
+                    "checkins",
+                    queryset=CheckIn.objects.filter(student=user),
+                    to_attr="my_checkins",
+                )
+            )
+        ids = accessible_batch_ids(user)
         return qs if ids is None else qs.filter(batch_id__in=list(ids))
 
     def perform_create(self, serializer):

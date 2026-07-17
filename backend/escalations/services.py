@@ -12,19 +12,6 @@ from django.utils import timezone
 from .models import Escalation
 
 
-def _first_time(kind: str, student, ref, batch=None) -> bool:
-    """Atomically record the alert and report whether this call actually created it.
-
-    ``get_or_create`` (not a separate exists-check + create) so two overlapping cron runs
-    can't both pass the check and then have the second ``create()`` crash on the unique
-    constraint — Django retries the get internally on the race instead of raising.
-    """
-    _, created = Escalation.objects.get_or_create(
-        kind=kind, student=student, reference_id=str(ref), defaults={"batch": batch}
-    )
-    return created
-
-
 def _escalate_incomplete_tests() -> int:
     from accounts.models import User
     from assessments.models import Test, TestAttempt
@@ -40,15 +27,29 @@ def _escalate_incomplete_tests() -> int:
         .select_related("batch")
     )
     count = 0
+    new_rows = []
     for test in tests:
         faculty = list(test.batch.faculty.all())
         attempted = set(TestAttempt.objects.filter(test=test).values_list("student_id", flat=True))
+        # One query for who's already been escalated for this test (was a get_or_create
+        # per student — the ledger write is now a single bulk_create below).
+        already = set(
+            Escalation.objects.filter(
+                kind="test_incomplete", reference_id=str(test.id)
+            ).values_list("student_id", flat=True)
+        )
         students = User.objects.filter(role=Role.STUDENT, enrollments__batch=test.batch).distinct()
         for student in students:
-            if student.id in attempted:
+            if student.id in attempted or student.id in already:
                 continue
-            if not _first_time("test_incomplete", student, test.id, batch=test.batch):
-                continue
+            new_rows.append(
+                Escalation(
+                    kind="test_incomplete",
+                    student=student,
+                    reference_id=str(test.id),
+                    batch=test.batch,
+                )
+            )
             notify(
                 student,
                 "test_incomplete",
@@ -64,6 +65,8 @@ def _escalate_incomplete_tests() -> int:
                 channels=("in_app",),
             )
             count += 1
+    # ignore_conflicts keeps overlapping runs from crashing on the unique constraint.
+    Escalation.objects.bulk_create(new_rows, ignore_conflicts=True)
     return count
 
 
@@ -77,16 +80,30 @@ def _escalate_low_attendance() -> int:
     mis = list(User.objects.filter(role=Role.MIS))
     counselors = list(User.objects.filter(role=Role.COUNSELOR))
     count = 0
+    new_rows = []
     for batch in Batch.objects.filter(state=BatchState.ACTIVE):
         faculty = list(batch.faculty.all())
         students = list(User.objects.filter(role=Role.STUDENT, enrollments__batch=batch).distinct())
         summaries = batch_attendance_summaries(batch, students)  # one query for the batch
+        already = set(
+            Escalation.objects.filter(
+                kind="low_attendance", reference_id=str(batch.id)
+            ).values_list("student_id", flat=True)
+        )
         for student in students:
             summary = summaries.get(student.id, {"total": 0, "percent": 0})
             if summary["total"] == 0 or summary["percent"] >= 50:
                 continue
-            if not _first_time("low_attendance", student, batch.id, batch=batch):
+            if student.id in already:
                 continue
+            new_rows.append(
+                Escalation(
+                    kind="low_attendance",
+                    student=student,
+                    reference_id=str(batch.id),
+                    batch=batch,
+                )
+            )
             notify_many(
                 faculty + counselors + mis,
                 "low_attendance",
@@ -96,6 +113,7 @@ def _escalate_low_attendance() -> int:
                 channels=("in_app", "email"),
             )
             count += 1
+    Escalation.objects.bulk_create(new_rows, ignore_conflicts=True)
     return count
 
 
