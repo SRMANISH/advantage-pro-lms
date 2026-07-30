@@ -60,6 +60,10 @@ class SetupToken(TimeStampedModel):
     used = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
+    # How many email OTPs this link has sent. Opening the setup page sends one, and each
+    # retry sends another, so this is a total-sends cap (not a resend cap like the reset
+    # flow's ``resend_count``, where the first send happens outside the counter).
+    send_count = models.PositiveSmallIntegerField(default=0)
 
     def __str__(self) -> str:
         return f"setup<{self.user_id}>"

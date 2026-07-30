@@ -12,6 +12,7 @@ import secrets
 from datetime import timedelta
 
 from django.conf import settings
+from django.db.models import F
 from django.utils import timezone
 
 from core.adapters.registry import get_email, get_sms
@@ -21,6 +22,10 @@ from .models import OTPCode, SetupToken, User, UserStatus
 OTP_TTL = timedelta(minutes=10)
 SETUP_TTL = timedelta(hours=48)
 MAX_ATTEMPTS = 5
+# Total email OTPs one setup link may send (the initial open counts as the first). Without
+# this, anyone holding a valid link could re-trigger sends indefinitely — both a mail-cost
+# problem and a way to keep invalidating a legitimate user's in-flight code.
+MAX_SETUP_SENDS = 5
 
 
 def _hash_code(user_id, purpose: str, code: str) -> str:
@@ -88,22 +93,38 @@ def _verify(user: User, purpose: str, code: str) -> tuple[bool, str]:
     )
     if otp is None or otp.expires_at < timezone.now():
         return False, "Code expired — request a new one."
-    if otp.attempts >= MAX_ATTEMPTS:
+    # Claim an attempt atomically. A read-modify-write here would let concurrent guesses
+    # each observe the same count and collectively exceed MAX_ATTEMPTS; the conditional
+    # UPDATE makes the database the arbiter, so the cap holds under parallel requests.
+    claimed = OTPCode.objects.filter(pk=otp.pk, attempts__lt=MAX_ATTEMPTS).update(
+        attempts=F("attempts") + 1
+    )
+    if not claimed:
         return False, "Too many attempts — request a new code."
-    otp.attempts += 1
     if hmac.compare_digest(otp.code_hash, _hash_code(user.id, purpose, code)):
         otp.consumed = True
-        otp.save(update_fields=["consumed", "attempts", "updated_at"])
+        otp.save(update_fields=["consumed", "updated_at"])
         return True, ""
-    otp.save(update_fields=["attempts", "updated_at"])
     return False, "Incorrect code."
 
 
-def start_setup(token: SetupToken) -> str:
-    """Send the email OTP. Returns the code (used only to surface in DEBUG)."""
+def start_setup(token: SetupToken) -> tuple[str | None, str]:
+    """Send the email OTP, respecting the per-link send cap.
+
+    Returns ``(code, "")`` on success — the code is only ever surfaced in DEBUG — or
+    ``(None, reason)`` once the link has sent MAX_SETUP_SENDS codes.
+    """
+    # Conditional UPDATE, so racing requests can't both slip past the cap.
+    claimed = SetupToken.objects.filter(pk=token.pk, send_count__lt=MAX_SETUP_SENDS).update(
+        send_count=F("send_count") + 1
+    )
+    if not claimed:
+        return None, (
+            "Too many codes requested for this link — ask your administrator to resend it."
+        )
     code = _issue_otp(token.user, OTPCode.Purpose.EMAIL)
     get_email().send(token.user.email or "(none)", "Your verification code", f"Email code: {code}")
-    return code
+    return code, ""
 
 
 def verify_email(token: SetupToken, code: str) -> tuple[bool, str, str | None]:

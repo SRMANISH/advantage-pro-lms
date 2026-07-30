@@ -106,6 +106,47 @@ def test_weak_password_is_rejected(client, pending_student):
 
 
 @pytest.mark.django_db
+def test_setup_link_caps_how_many_codes_it_will_send(client, pending_student):
+    """A valid link must not be an unlimited mail trigger: MAX_SETUP_SENDS codes, then 429."""
+    from accounts.setup import MAX_SETUP_SENDS
+
+    token = create_setup_token(pending_student).token
+    for _ in range(MAX_SETUP_SENDS):
+        assert (
+            client.post(START, {"token": token}, content_type="application/json").status_code == 200
+        )
+
+    capped = client.post(START, {"token": token}, content_type="application/json")
+    assert capped.status_code == 429
+    assert "administrator" in capped.json()["detail"]
+
+
+@pytest.mark.django_db
+def test_otp_attempt_cap_holds_when_attempts_race(client, pending_student, settings):
+    """The attempt counter is claimed with a conditional UPDATE, so concurrent guesses
+    can't collectively exceed MAX_ATTEMPTS (a read-modify-write would let them)."""
+    from accounts.models import OTPCode
+    from accounts.setup import MAX_ATTEMPTS, _verify
+
+    settings.DEBUG = True
+    token = create_setup_token(pending_student).token
+    client.post(START, {"token": token}, content_type="application/json")
+
+    for _ in range(MAX_ATTEMPTS):
+        ok, _reason = _verify(pending_student, OTPCode.Purpose.EMAIL, "000000")
+        assert ok is False
+
+    otp = OTPCode.objects.get(user=pending_student, purpose=OTPCode.Purpose.EMAIL, consumed=False)
+    assert otp.attempts == MAX_ATTEMPTS
+
+    # Cap reached: further guesses are refused outright, and never increment past the cap.
+    ok, reason = _verify(pending_student, OTPCode.Purpose.EMAIL, "000000")
+    assert ok is False and "Too many attempts" in reason
+    otp.refresh_from_db()
+    assert otp.attempts == MAX_ATTEMPTS
+
+
+@pytest.mark.django_db
 def test_setup_complete_audit_row_captures_ip(client, pending_student):
     """R-02: the account_setup_completed audit row should carry the client IP like the
     login/reset rows do."""

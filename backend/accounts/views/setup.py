@@ -32,7 +32,9 @@ class SetupStartView(APIView):
             return Response(
                 {"detail": "Invalid or expired setup link."}, status=status.HTTP_400_BAD_REQUEST
             )
-        code = setup_service.start_setup(token)
+        code, reason = setup_service.start_setup(token)
+        if code is None:
+            return Response({"detail": reason}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         data = {"ok": True, "email": setup_service.mask_email(token.user.email)}
         if settings.DEBUG:
             data["dev_code"] = code
