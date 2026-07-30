@@ -10,6 +10,7 @@ from batches.models import Batch, BatchState, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from liveclasses.models import CheckIn, LiveClass
+
 from .helpers import client_for, user
 
 URL = "/api/v1/liveclasses/"

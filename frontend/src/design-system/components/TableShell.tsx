@@ -5,7 +5,12 @@ import { cn } from "../utils/cn";
 /** Consistent rounded, bordered, horizontally-scrollable table container. */
 export function TableShell({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-x-auto rounded-2xl border border-brdr bg-surface shadow-card", className)}>
+    <div
+      className={cn(
+        "overflow-x-auto rounded-2xl border border-brdr bg-surface shadow-card",
+        className,
+      )}
+    >
       <table className="w-full text-sm">{children}</table>
     </div>
   );

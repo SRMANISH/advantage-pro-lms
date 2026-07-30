@@ -25,11 +25,5 @@ export { TableShell, THead } from "./components/TableShell";
 export { Tabs } from "./components/Tabs";
 export { toast, ToastProvider, useToast } from "./components/Toast";
 export { LazyChart } from "./charts/LazyChart";
-export {
-  fade,
-  fadeUp,
-  pageVariants,
-  staggerContainer,
-  staggerItem,
-} from "./motion";
+export { fade, fadeUp, pageVariants, staggerContainer, staggerItem } from "./motion";
 export { cn } from "./utils/cn";

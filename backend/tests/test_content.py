@@ -11,6 +11,7 @@ from batches.models import Batch, Course
 from content.models import Video, VideoProgress
 from core.roles import Role
 from enrollments.models import Enrollment
+
 from .helpers import client_for, user
 
 VIDEOS_URL = "/api/v1/videos/"

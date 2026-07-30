@@ -13,7 +13,10 @@ import { VideoPlayer } from "./VideoPlayer";
 export function LearningPage({ role }: { role: RoleDef }) {
   const { user } = useAuth();
   const videos = useQuery({ queryKey: ["videos"], queryFn: () => contentApi.listVideos() });
-  const materials = useQuery({ queryKey: ["materials"], queryFn: () => contentApi.listMaterials() });
+  const materials = useQuery({
+    queryKey: ["materials"],
+    queryFn: () => contentApi.listMaterials(),
+  });
   const [active, setActive] = useState<VideoItem | null>(null);
   const [activeNote, setActiveNote] = useState<MaterialItem | null>(null);
   const watermark = `${user?.full_name || user?.username} · ${user?.username}`;
@@ -76,7 +79,9 @@ export function LearningPage({ role }: { role: RoleDef }) {
 
           <Card>
             <h2 className="mb-1 text-base font-medium text-ink">Notes &amp; materials</h2>
-            <p className="mb-3 text-xs text-muted">Open to read in the app — view-only, no downloads.</p>
+            <p className="mb-3 text-xs text-muted">
+              Open to read in the app — view-only, no downloads.
+            </p>
             {materials.data && materials.data.length > 0 ? (
               <div className="flex flex-col divide-y divide-brdr">
                 {materials.data.map((m) => (

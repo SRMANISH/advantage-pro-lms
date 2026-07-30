@@ -11,7 +11,10 @@ export interface CalendarEvent {
 
 /** Format a Date as the UTC basic form Google Calendar expects: YYYYMMDDTHHMMSSZ. */
 function toGCalUTC(d: Date): string {
-  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return d
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
 }
 
 /**

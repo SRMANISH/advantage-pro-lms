@@ -10,10 +10,7 @@ export const facultyApi = {
   async getProfile(): Promise<FacultyProfile> {
     return (await api.get<FacultyProfile>("/auth/faculty/profile/")).data;
   },
-  async saveProfile(payload: {
-    skills: string;
-    certifications: string;
-  }): Promise<FacultyProfile> {
+  async saveProfile(payload: { skills: string; certifications: string }): Promise<FacultyProfile> {
     return (await api.put<FacultyProfile>("/auth/faculty/profile/", payload)).data;
   },
 };

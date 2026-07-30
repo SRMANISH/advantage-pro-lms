@@ -6,6 +6,7 @@ from batches.models import Course
 from core.models import PermissionOverride
 from core.permissions_matrix import Action, can
 from core.roles import Role
+
 from .helpers import client_for, user
 
 MATRIX_URL = "/api/v1/permissions/matrix/"

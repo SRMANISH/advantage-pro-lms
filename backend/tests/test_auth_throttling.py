@@ -100,8 +100,9 @@ def test_setup_complete_is_rate_limited(client, pending):
 @pytest.mark.django_db
 def test_setup_resend_is_rate_limited(db):
     """Staff-triggered resend still sends mail, so it needs a per-IP ceiling of its own."""
-    from accounts.models import UserStatus as US
     from django.contrib.auth import get_user_model
+
+    from accounts.models import UserStatus as US
 
     staff = get_user_model().objects.create_user(
         username="mis_rs", password="x", role=Role.MIS, status=US.ACTIVE

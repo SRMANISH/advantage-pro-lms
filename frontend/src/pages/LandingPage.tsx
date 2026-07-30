@@ -8,7 +8,10 @@ import { useAuth } from "../features/auth/auth";
 
 const FEATURES = [
   { title: "Learn your way", body: "Live classes and recorded lessons you can revisit anytime." },
-  { title: "Practice with purpose", body: "Tests, tasks and faculty feedback that help you improve." },
+  {
+    title: "Practice with purpose",
+    body: "Tests, tasks and faculty feedback that help you improve.",
+  },
   { title: "See your progress", body: "Attendance, scores, streaks and rank in one clear view." },
 ];
 
@@ -49,13 +52,20 @@ export function LandingPage() {
             </span>
           </motion.h1>
           <motion.p variants={staggerItem} className="mt-5 max-w-md text-base text-muted">
-            Watch classes, practise with tests and tasks, track your attendance and scores, and
-            stay connected with your batch — your whole learning journey in one place.
+            Watch classes, practise with tests and tasks, track your attendance and scores, and stay
+            connected with your batch — your whole learning journey in one place.
           </motion.p>
 
-          <motion.div id="features" variants={staggerItem} className="mt-8 grid gap-3 sm:grid-cols-3">
+          <motion.div
+            id="features"
+            variants={staggerItem}
+            className="mt-8 grid gap-3 sm:grid-cols-3"
+          >
             {FEATURES.map((f) => (
-              <div key={f.title} className="rounded-2xl border border-brdr bg-surface/70 p-4 shadow-card">
+              <div
+                key={f.title}
+                className="rounded-2xl border border-brdr bg-surface/70 p-4 shadow-card"
+              >
                 <div className="text-sm font-semibold text-ink">{f.title}</div>
                 <div className="mt-1 text-xs leading-relaxed text-muted">{f.body}</div>
               </div>
@@ -226,4 +236,3 @@ function SignInCard() {
     </div>
   );
 }
-

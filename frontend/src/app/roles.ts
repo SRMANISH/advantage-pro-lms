@@ -17,8 +17,18 @@ export const ROLES: RoleDef[] = [
     tagline: "Teach, grade, and guide your batches.",
   },
   { slug: "admin", value: "admin", label: "Admin", tagline: "Run day-to-day operations." },
-  { slug: "mis", value: "mis", label: "MIS Executive", tagline: "Monitor sessions and escalations." },
-  { slug: "counselor", value: "counselor", label: "Counselor", tagline: "Attendance and follow-up." },
+  {
+    slug: "mis",
+    value: "mis",
+    label: "MIS Executive",
+    tagline: "Monitor sessions and escalations.",
+  },
+  {
+    slug: "counselor",
+    value: "counselor",
+    label: "Counselor",
+    tagline: "Attendance and follow-up.",
+  },
   {
     slug: "tech-support",
     value: "tech_support",

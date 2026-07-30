@@ -29,8 +29,15 @@ test("admin imports a student, they complete setup, then sign in", async ({ page
   await expect(page.getByText(/imported 1 student/i)).toBeVisible();
 
   // Find the new pending row and pull its setup link.
+  //
+  // Search for it rather than scanning the current page. The list is server-paginated at 25
+  // and ordered by (batch__code, registration_number) ascending, so a freshly imported
+  // student is *not* on page 1 once the batch has more than a page of enrolments — and since
+  // this spec adds one every run against a shared dev database, it eventually stops finding
+  // its own row. It was passing on the accident of a small dataset.
+  await page.getByPlaceholder(/search/i).fill(regNumber);
   const row = page.locator("tr", { hasText: regNumber });
-  await expect(row).toBeVisible();
+  await expect(row).toBeVisible({ timeout: 10_000 }); // allow for the 300ms search debounce
   await row.getByRole("button", { name: /setup link/i }).click();
   const setupLink = row.getByRole("link", { name: /open link/i });
   await expect(setupLink).toBeVisible();

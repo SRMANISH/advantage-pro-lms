@@ -22,8 +22,18 @@ export function CounselorDashboard({ data, slug }: { data: DashboardData; slug: 
         }}
       />
       <KpiGrid>
-        <StatCard label="Active students" value={k.active_students ?? 0} icon={GraduationCap} tone="azure" />
-        <StatCard label="Logged in today" value={k.logged_in_today ?? 0} icon={CheckCircle2} tone="green" />
+        <StatCard
+          label="Active students"
+          value={k.active_students ?? 0}
+          icon={GraduationCap}
+          tone="azure"
+        />
+        <StatCard
+          label="Logged in today"
+          value={k.logged_in_today ?? 0}
+          icon={CheckCircle2}
+          tone="green"
+        />
         <StatCard
           label="Absentees today"
           value={k.absentees_today ?? 0}

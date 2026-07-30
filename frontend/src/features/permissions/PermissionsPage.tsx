@@ -1,14 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import {
-  Badge,
-  Button,
-  Card,
-  SectionHeading,
-  TableSkeleton,
-  useToast,
-} from "../../design-system";
+import { Badge, Button, Card, SectionHeading, TableSkeleton, useToast } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { permissionsApi, type MatrixRow } from "./api";
 

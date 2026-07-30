@@ -103,7 +103,11 @@ export function ForgotPasswordPage() {
         {step === "email" && (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted">We sent a code to {mask}.</p>
-            <Input placeholder="6-digit email code" value={code} onChange={(e) => setCode(e.target.value)} />
+            <Input
+              placeholder="6-digit email code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
             <Button onClick={verifyEmail} disabled={!code || busy}>
               {busy ? "Verifying…" : "Verify email"}
             </Button>
@@ -113,7 +117,11 @@ export function ForgotPasswordPage() {
         {step === "phone" && (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted">Enter the code sent to {mask}.</p>
-            <Input placeholder="6-digit phone code" value={code} onChange={(e) => setCode(e.target.value)} />
+            <Input
+              placeholder="6-digit phone code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
             <Button onClick={verifyPhone} disabled={!code || busy}>
               {busy ? "Verifying…" : "Verify phone"}
             </Button>
@@ -122,9 +130,19 @@ export function ForgotPasswordPage() {
 
         {step === "password" && (
           <div className="flex flex-col gap-2">
-            <Input type="password" placeholder="New password" value={pw} onChange={(e) => setPw(e.target.value)} />
+            <Input
+              type="password"
+              placeholder="New password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+            />
             <PasswordRules value={pw} />
-            <Input type="password" placeholder="Confirm new password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
+            <Input
+              type="password"
+              placeholder="Confirm new password"
+              value={pw2}
+              onChange={(e) => setPw2(e.target.value)}
+            />
             <Button onClick={reset} disabled={!pw || !pw2 || busy}>
               {busy ? "Saving…" : "Set new password"}
             </Button>

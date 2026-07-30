@@ -43,9 +43,7 @@ describe("useTableTools", () => {
 
 describe("Paginator", () => {
   it("renders nothing for a single page", () => {
-    const { container } = render(
-      <Paginator page={1} pageCount={1} onPage={() => undefined} />,
-    );
+    const { container } = render(<Paginator page={1} pageCount={1} onPage={() => undefined} />);
     expect(container).toBeEmptyDOMElement();
   });
 

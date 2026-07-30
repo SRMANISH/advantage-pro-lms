@@ -9,6 +9,7 @@ from accounts.models import FacultyProfile
 from batches.models import Batch, BatchState, Course
 from batches.scheduling import faculty_schedule_conflicts
 from core.roles import Role
+
 from .helpers import client_for, user
 
 

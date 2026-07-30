@@ -136,7 +136,9 @@ export async function createActiveStudent(
   );
   const rows = await roster.json();
   const list = Array.isArray(rows) ? rows : rows.results;
-  const row = list.find((r: { registration_number: string }) => r.registration_number === registrationNumber);
+  const row = list.find(
+    (r: { registration_number: string }) => r.registration_number === registrationNumber,
+  );
   if (!row) throw new Error(`imported student ${registrationNumber} not found in roster`);
 
   const resend = await post(context, "/auth/setup/resend/", { student_id: row.student });

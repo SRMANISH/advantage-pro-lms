@@ -103,7 +103,11 @@ export function ChannelsPage({ role }: { role: RoleDef }) {
             value={form.message}
             onChange={(e) => setForm({ ...form, message: e.target.value })}
           />
-          <Button className="w-fit" onClick={() => test.mutate()} disabled={!form.to || test.isPending}>
+          <Button
+            className="w-fit"
+            onClick={() => test.mutate()}
+            disabled={!form.to || test.isPending}
+          >
             {test.isPending ? "Sending…" : "Send test"}
           </Button>
           {test.isSuccess && (
@@ -119,9 +123,11 @@ export function ChannelsPage({ role }: { role: RoleDef }) {
 
 // Which config keys each channel's adapter reads (the secret is separate, below).
 const CONFIG_KEYS: Record<string, string> = {
-  email: '{ "host": "smtp…", "port": 587, "username": "…", "use_tls": true, "from_email": "…" } · secret = password',
+  email:
+    '{ "host": "smtp…", "port": 587, "username": "…", "use_tls": true, "from_email": "…" } · secret = password',
   sms: '{ "sender_id": "ADVPRO", "route": "4", "country": "91" } · secret = MSG91 auth key',
-  whatsapp: '{ "phone_number_id": "…", "template_name": "", "template_lang": "en" } · secret = access token',
+  whatsapp:
+    '{ "phone_number_id": "…", "template_name": "", "template_lang": "en" } · secret = access token',
   storage: "provider-specific",
 };
 

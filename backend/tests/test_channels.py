@@ -3,6 +3,7 @@
 import pytest
 
 from core.roles import Role
+
 from .helpers import client_for, user
 
 CHANNELS = "/api/v1/settings/channels/"

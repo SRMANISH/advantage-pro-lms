@@ -38,7 +38,13 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
         scheduled_at: new Date(form.scheduled_at).toISOString(),
       }),
     onSuccess: () => {
-      setForm({ batch: "", title: "", scheduled_at: "", platform: "Google Meet", meeting_link: "" });
+      setForm({
+        batch: "",
+        title: "",
+        scheduled_at: "",
+        platform: "Google Meet",
+        meeting_link: "",
+      });
       qc.invalidateQueries({ queryKey: ["liveclasses"] });
     },
   });
@@ -66,7 +72,10 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
 
   return (
     <PortalLayout role={role}>
-      <SectionHeading title="Live classes" subtitle="Scheduled sessions with reminders and check-in." />
+      <SectionHeading
+        title="Live classes"
+        subtitle="Scheduled sessions with reminders and check-in."
+      />
 
       {canSchedule && (
         <Card className="mb-6">
@@ -84,7 +93,11 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
                 </option>
               ))}
             </select>
-            <Input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <Input
+              placeholder="Title"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
             <Input
               type="datetime-local"
               value={form.scheduled_at}
@@ -105,7 +118,11 @@ export function LiveClassesPage({ role }: { role: RoleDef }) {
               className="w-fit sm:col-span-2"
               onClick={() => create.mutate()}
               disabled={
-                !form.batch || !form.title || !form.scheduled_at || !form.meeting_link || create.isPending
+                !form.batch ||
+                !form.title ||
+                !form.scheduled_at ||
+                !form.meeting_link ||
+                create.isPending
               }
             >
               {create.isPending ? "Scheduling…" : "Schedule + notify"}
@@ -159,7 +176,11 @@ function Row({
       <div className="flex min-w-0 items-center gap-4">
         <div
           className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl ${
-            cancelled ? "bg-appbg text-muted" : past ? "bg-sky text-navy" : "bg-brand/10 text-brand-strong"
+            cancelled
+              ? "bg-appbg text-muted"
+              : past
+                ? "bg-sky text-navy"
+                : "bg-brand/10 text-brand-strong"
           }`}
         >
           <span className="text-lg font-bold leading-none">{dt.getDate()}</span>
@@ -169,7 +190,9 @@ function Row({
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`text-sm font-semibold ${cancelled ? "text-muted line-through" : "text-ink"}`}>
+            <span
+              className={`text-sm font-semibold ${cancelled ? "text-muted line-through" : "text-ink"}`}
+            >
               {live.title}
             </span>
             {cancelled ? (
@@ -190,7 +213,12 @@ function Row({
         live.checked_in ? (
           <div className="flex items-center gap-2">
             <Badge>Checked in</Badge>
-            <a href={live.meeting_link} target="_blank" rel="noreferrer" className="text-sm text-brand-strong underline">
+            <a
+              href={live.meeting_link}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-brand-strong underline"
+            >
               Join
             </a>
           </div>
@@ -199,7 +227,12 @@ function Row({
         )
       ) : (
         <div className="flex items-center gap-2">
-          <a href={live.meeting_link} target="_blank" rel="noreferrer" className="text-sm text-brand-strong underline">
+          <a
+            href={live.meeting_link}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-brand-strong underline"
+          >
             Open link
           </a>
           {canSchedule && (

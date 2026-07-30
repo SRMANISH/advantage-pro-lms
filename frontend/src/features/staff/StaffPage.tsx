@@ -70,7 +70,10 @@ export function StaffPage({ role }: { role: RoleDef }) {
       staffApi.setStatus(vars.id, vars.suspend),
     onSuccess: (u) => {
       qc.invalidateQueries({ queryKey: ["staff"] });
-      toast.show(u.status === "suspended" ? "Account suspended." : "Account reactivated.", "success");
+      toast.show(
+        u.status === "suspended" ? "Account suspended." : "Account reactivated.",
+        "success",
+      );
     },
   });
 
@@ -152,46 +155,48 @@ export function StaffPage({ role }: { role: RoleDef }) {
             />
             <div className="flex flex-col divide-y divide-brdr">
               {table.rows.map((s) => (
-              <div key={s.id} className="flex items-center justify-between py-2 text-sm">
-                <div>
-                  <span className="font-medium text-ink">{s.full_name || s.username}</span>
-                  <span className="text-muted"> · {s.username}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isSuperAdmin && ROLE_LABEL[s.role] ? (
-                    <Select
-                      aria-label={`Role for ${s.username}`}
-                      className="h-8 py-1 text-xs"
-                      value={s.role}
-                      onChange={(e) => setRole.mutate({ id: s.id, role: e.target.value })}
-                    >
-                      {ALL_STAFF_ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </Select>
-                  ) : (
-                    <Badge>{ROLE_LABEL[s.role] ?? s.role}</Badge>
-                  )}
-                  <span
-                    className={s.status === "active" ? "text-xs text-muted" : "text-xs text-amber-600"}
-                  >
-                    {s.status}
-                  </span>
-                  {canSuspendFaculty && s.role === "faculty" && s.status !== "pending" && (
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        setStatus.mutate({ id: s.id, suspend: s.status !== "suspended" })
+                <div key={s.id} className="flex items-center justify-between py-2 text-sm">
+                  <div>
+                    <span className="font-medium text-ink">{s.full_name || s.username}</span>
+                    <span className="text-muted"> · {s.username}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isSuperAdmin && ROLE_LABEL[s.role] ? (
+                      <Select
+                        aria-label={`Role for ${s.username}`}
+                        className="h-8 py-1 text-xs"
+                        value={s.role}
+                        onChange={(e) => setRole.mutate({ id: s.id, role: e.target.value })}
+                      >
+                        {ALL_STAFF_ROLES.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Badge>{ROLE_LABEL[s.role] ?? s.role}</Badge>
+                    )}
+                    <span
+                      className={
+                        s.status === "active" ? "text-xs text-muted" : "text-xs text-amber-600"
                       }
                     >
-                      {s.status === "suspended" ? "Reactivate" : "Suspend"}
-                    </Button>
-                  )}
+                      {s.status}
+                    </span>
+                    {canSuspendFaculty && s.role === "faculty" && s.status !== "pending" && (
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          setStatus.mutate({ id: s.id, suspend: s.status !== "suspended" })
+                        }
+                      >
+                        {s.status === "suspended" ? "Reactivate" : "Suspend"}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
             </div>
             <Paginator
               page={table.page}

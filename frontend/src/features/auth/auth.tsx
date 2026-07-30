@@ -6,7 +6,12 @@ import { authApi, type AuthUser } from "./api";
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (username: string, password: string, role?: string, totpCode?: string) => Promise<AuthUser>;
+  login: (
+    username: string,
+    password: string,
+    role?: string,
+    totpCode?: string,
+  ) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
 

@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import TOTPDevice
 from core.roles import Role
+
 from .helpers import client_for, user
 
 ENROLL = "/api/v1/auth/totp/enroll/"

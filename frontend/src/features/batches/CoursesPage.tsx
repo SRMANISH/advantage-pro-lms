@@ -93,7 +93,10 @@ export function CoursesPage({ role }: { role: RoleDef }) {
         ) : courses.data && courses.data.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {courses.data.map((c) => (
-              <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <div
+                key={c.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+              >
                 <div>
                   <span className="font-medium text-ink">{c.code}</span>
                   <span className="text-muted"> · {c.name}</span>

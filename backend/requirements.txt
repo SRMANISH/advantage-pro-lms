@@ -1,7 +1,7 @@
 # Runtime dependencies (production). Dev/test/lint tools are in requirements-dev.txt.
 # Pin exact versions for reproducible deploys.
 
-Django==5.2.15
+Django==5.2.16
 djangorestframework==3.17.1
 django-cors-headers==4.9.0
 django-environ==0.14.0
@@ -16,7 +16,9 @@ django-q2>=1.7,<2
 # HTTP client used by the MSG91 / WhatsApp Cloud provider adapters.
 requests>=2.31,<3
 # Fernet symmetric encryption for provider secrets stored at rest (core/crypto.py).
-cryptography>=43,<46
+# Floor is a security floor, not a preference: <46 locked us out of the fixes for
+# PYSEC-2026-35/36/2141 and GHSA-537c-gmf6-5ccf (last of which lands in 48.0.1).
+cryptography>=48.0.1,<50
 
 # --- Deploy-time infrastructure (install on the server; optional in local dev) ---
 # PostgreSQL driver (set DATABASE_URL=postgres://...).

@@ -9,6 +9,7 @@ from batches.models import Batch, Course
 from core.roles import Role
 from notifications.models import Notification
 from notifications.services import notify
+
 from .helpers import client_for, user
 
 LIST_URL = "/api/v1/notifications/"

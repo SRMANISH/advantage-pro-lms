@@ -7,6 +7,7 @@ import pytest
 from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
+
 from .helpers import client_for, user
 
 STUDENTS = "/api/v1/reports/students/"

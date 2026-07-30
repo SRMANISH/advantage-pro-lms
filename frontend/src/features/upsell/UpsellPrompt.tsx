@@ -17,10 +17,7 @@ export function UpsellPrompt() {
 
   return (
     <div className="rounded-2xl border border-brdr bg-surface p-4">
-      <span
-        className="text-xs font-medium"
-        style={{ color: "rgb(var(--color-violet))" }}
-      >
+      <span className="text-xs font-medium" style={{ color: "rgb(var(--color-violet))" }}>
         Recommended next step
       </span>
       <p className="mt-1 text-sm text-ink">{q.data.message}</p>

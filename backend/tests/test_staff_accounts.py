@@ -4,6 +4,7 @@ import pytest
 
 from accounts.models import SetupToken, User, UserStatus
 from core.roles import Role
+
 from .helpers import client_for, user
 
 URL = "/api/v1/auth/staff/"

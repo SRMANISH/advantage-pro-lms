@@ -30,7 +30,8 @@ export function TechSupportDashboard({ data, slug }: { data: DashboardData; slug
             </span>
             <div>
               <div className="text-sm font-semibold text-ink">
-                {deviceRequests} device change {deviceRequests === 1 ? "request" : "requests"} waiting
+                {deviceRequests} device change {deviceRequests === 1 ? "request" : "requests"}{" "}
+                waiting
               </div>
               <div className="text-xs text-muted">
                 Outside-class device changes are yours to approve — review the queue.
@@ -58,7 +59,13 @@ export function TechSupportDashboard({ data, slug }: { data: DashboardData; slug
           tone="rose"
           deltaTone={k.overdue ? "down" : "up"}
         />
-        <StatCard label="Resolved" value={k.resolved ?? 0} icon={CheckCircle2} tone="green" deltaTone="up" />
+        <StatCard
+          label="Resolved"
+          value={k.resolved ?? 0}
+          icon={CheckCircle2}
+          tone="green"
+          deltaTone="up"
+        />
       </KpiGrid>
       <Card>
         <SectionHeading title="Forum status" subtitle="Every doubt, by its current stage" />
@@ -72,9 +79,9 @@ export function TechSupportDashboard({ data, slug }: { data: DashboardData; slug
               height={220}
             />
             <p className="mt-2 rounded-lg bg-sky/50 px-3 py-2 text-xs leading-relaxed text-navy">
-              Open = waiting for a first reply · Answered = replied, not yet closed ·
-              Escalated = pushed to faculty · Resolved = done. Your goal: keep Open near zero
-              within the response window.
+              Open = waiting for a first reply · Answered = replied, not yet closed · Escalated =
+              pushed to faculty · Resolved = done. Your goal: keep Open near zero within the
+              response window.
             </p>
           </>
         ) : (

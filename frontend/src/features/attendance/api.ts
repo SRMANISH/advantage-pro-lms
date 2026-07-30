@@ -23,12 +23,7 @@ export interface BatchChoice {
   name: string;
 }
 
-export type FollowUpStatus =
-  | "pending"
-  | "contacted"
-  | "not_reachable"
-  | "resolved"
-  | "escalated";
+export type FollowUpStatus = "pending" | "contacted" | "not_reachable" | "resolved" | "escalated";
 
 export const FOLLOW_UP_STATUSES: { value: FollowUpStatus; label: string }[] = [
   { value: "pending", label: "Pending" },

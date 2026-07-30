@@ -243,7 +243,10 @@ export function ManageTests() {
               />
               {kind === "file" && (
                 <div className="mt-3">
-                  <label htmlFor="test-resource" className="mb-1 block text-xs font-medium text-muted">
+                  <label
+                    htmlFor="test-resource"
+                    className="mb-1 block text-xs font-medium text-muted"
+                  >
                     Starter sheet to hand out (optional — students download, fill, re-upload)
                   </label>
                   <input
@@ -256,15 +259,16 @@ export function ManageTests() {
                 </div>
               )}
               <div className="mt-3">
-                <label htmlFor="test-resource-url" className="mb-1 block text-xs font-medium text-muted">
+                <label
+                  htmlFor="test-resource-url"
+                  className="mb-1 block text-xs font-medium text-muted"
+                >
                   {kind === "colab" ? "Starter notebook link" : "Reference link"} (optional)
                 </label>
                 <Input
                   id="test-resource-url"
                   placeholder={
-                    kind === "colab"
-                      ? "https://colab.research.google.com/…"
-                      : "https://…"
+                    kind === "colab" ? "https://colab.research.google.com/…" : "https://…"
                   }
                   value={resourceUrl}
                   onChange={(e) => setResourceUrl(e.target.value)}
@@ -367,26 +371,40 @@ function GradeRow({ attempt, onGraded }: { attempt: TestAttemptRow; onGraded: ()
           <span className="text-muted">({attempt.registration_number})</span>
         </div>
         {attempt.graded ? (
-          <Badge tone="success">Graded {attempt.score}/{attempt.total}</Badge>
+          <Badge tone="success">
+            Graded {attempt.score}/{attempt.total}
+          </Badge>
         ) : (
           <Badge tone="warning">Awaiting grade</Badge>
         )}
       </div>
       <div className="mb-3 flex flex-wrap gap-3 text-sm">
         {attempt.file_url && (
-          <a href={attempt.file_url} target="_blank" rel="noreferrer" className="text-brand-strong underline">
+          <a
+            href={attempt.file_url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-brand-strong underline"
+          >
             Open submitted file ↗
           </a>
         )}
         {attempt.link && (
-          <a href={attempt.link} target="_blank" rel="noreferrer" className="text-brand-strong underline">
+          <a
+            href={attempt.link}
+            target="_blank"
+            rel="noreferrer"
+            className="text-brand-strong underline"
+          >
             Open Colab link ↗
           </a>
         )}
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted">Score (max {attempt.total})</label>
+          <label className="mb-1 block text-xs font-medium text-muted">
+            Score (max {attempt.total})
+          </label>
           <Input
             type="number"
             min={0}
@@ -409,4 +427,3 @@ function GradeRow({ attempt, onGraded }: { attempt: TestAttemptRow; onGraded: ()
     </Card>
   );
 }
-

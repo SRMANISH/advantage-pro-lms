@@ -20,6 +20,7 @@ from enrollments.models import Enrollment
 from liveclasses.models import LiveClass, LiveClassStatus
 from liveclasses.services import active_live_class_for_student
 from performance.services import batch_performance_cached
+
 from .helpers import user
 
 # ---------- R-04: cancelled class must not open the device-approval window ----------

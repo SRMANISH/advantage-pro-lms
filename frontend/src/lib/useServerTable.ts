@@ -37,9 +37,7 @@ export function useServerTable<T, P extends Page<T> = Page<T>>(opts: {
   // Reset to page 1 whenever a filter param changes.
   useEffect(() => setPage(1), [paramsKey]);
 
-  const extra = Object.fromEntries(
-    Object.entries(opts.params ?? {}).filter(([, v]) => v),
-  );
+  const extra = Object.fromEntries(Object.entries(opts.params ?? {}).filter(([, v]) => v));
 
   const result = useQuery({
     queryKey: [...opts.key, page, pageSize, search, paramsKey],

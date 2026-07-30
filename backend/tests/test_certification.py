@@ -9,6 +9,7 @@ from certification.models import Certificate
 from certification.services import run_certificate_reminders
 from core.roles import Role
 from enrollments.models import Enrollment
+
 from .helpers import client_for, user
 
 ME = "/api/v1/certification/me/"

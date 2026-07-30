@@ -60,10 +60,9 @@ test("completing a batch lets its student certify", async ({ page, context }) =>
   await loginViaUi(page, regNumber, password, "student");
   await page.goto("/student/certificate");
   await dismissEngagementPopup(page);
-  const certCard = page.locator(
-    "div.rounded-2xl.border.border-brdr.bg-surface.p-5.shadow-card",
-    { hasText: "E2E Certify Batch" },
-  );
+  const certCard = page.locator("div.rounded-2xl.border.border-brdr.bg-surface.p-5.shadow-card", {
+    hasText: "E2E Certify Batch",
+  });
   await expect(certCard.getByText(/pending/i)).toBeVisible();
   await certCard.getByPlaceholder(/enter your certificate id/i).fill(certificateId);
   await certCard.getByRole("button", { name: /^submit$/i }).click();

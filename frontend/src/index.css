@@ -28,7 +28,14 @@
   body {
     @apply bg-appbg text-ink antialiased;
     font-family:
-      ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
   }
 }
 
@@ -44,7 +51,8 @@
 /* Page background — soft blue wash, not flat white. */
 .ap-appbg {
   background-color: #f4fafe;
-  background-image: radial-gradient(1200px 500px at 100% -5%, #e6f4fe 0%, transparent 55%),
+  background-image:
+    radial-gradient(1200px 500px at 100% -5%, #e6f4fe 0%, transparent 55%),
     radial-gradient(900px 500px at -10% 110%, #eaf6ff 0%, transparent 55%), #f5fbff;
 }
 
@@ -55,7 +63,11 @@
   background-image:
     radial-gradient(115% 140% at 100% 0%, rgba(6, 166, 230, 0.55) 0%, rgba(6, 166, 230, 0) 55%),
     radial-gradient(90% 120% at 0% 100%, rgba(110, 46, 160, 0.32) 0%, rgba(110, 46, 160, 0) 60%),
-    radial-gradient(140% 160% at 15% -10%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 45%),
+    radial-gradient(
+      140% 160% at 15% -10%,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(255, 255, 255, 0) 45%
+    ),
     linear-gradient(135deg, #0c8fd4 0%, #1c5fc0 45%, #102f70 100%);
   color: #fff;
 }

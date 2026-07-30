@@ -44,8 +44,8 @@ function WelcomeCard({ prompt }: { prompt: WelcomePrompt }) {
       <Card className="w-full max-w-md">
         <h2 className="mb-1 text-base font-medium text-ink">Quick welcome check</h2>
         <p className="mb-4 text-sm text-muted">
-          For your <span className="font-medium text-ink">{prompt.batch_code}</span> batch —
-          two quick questions.
+          For your <span className="font-medium text-ink">{prompt.batch_code}</span> batch — two
+          quick questions.
         </p>
 
         <YesNo

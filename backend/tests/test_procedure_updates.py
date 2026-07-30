@@ -11,6 +11,7 @@ from batches.models import Batch, BatchState, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from forum.models import Thread
+
 from .helpers import client_for, user
 
 

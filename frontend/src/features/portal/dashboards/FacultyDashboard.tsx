@@ -37,7 +37,12 @@ export function FacultyDashboard({
           tone="amber"
           deltaTone={a.unanswered_doubts ? "down" : "up"}
         />
-        <StatCard label="To grade" value={a.submissions_to_grade ?? 0} icon={ClipboardCheck} tone="violet" />
+        <StatCard
+          label="To grade"
+          value={a.submissions_to_grade ?? 0}
+          icon={ClipboardCheck}
+          tone="violet"
+        />
       </KpiGrid>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -61,7 +66,10 @@ function FacultyBatches({ data, slug }: { data: DashboardData; slug: string }) {
       <SectionHeading
         title="Your batches"
         action={
-          <Link to={`/${slug}/batches`} className="text-sm font-medium text-brand-strong hover:underline">
+          <Link
+            to={`/${slug}/batches`}
+            className="text-sm font-medium text-brand-strong hover:underline"
+          >
             Open batches
           </Link>
         }

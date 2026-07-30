@@ -6,43 +6,77 @@ import { ROLES } from "./app/roles";
 import { Spinner } from "./design-system";
 
 // Route-level code-splitting: each page is its own chunk, loaded on demand.
-const LandingPage = lazy(() => import("./pages/LandingPage").then((m) => ({ default: m.LandingPage })));
-const ShowcasePage = lazy(() => import("./pages/ShowcasePage").then((m) => ({ default: m.ShowcasePage })));
-const SetupPage = lazy(() => import("./features/setup/SetupPage").then((m) => ({ default: m.SetupPage })));
+const LandingPage = lazy(() =>
+  import("./pages/LandingPage").then((m) => ({ default: m.LandingPage })),
+);
+const ShowcasePage = lazy(() =>
+  import("./pages/ShowcasePage").then((m) => ({ default: m.ShowcasePage })),
+);
+const SetupPage = lazy(() =>
+  import("./features/setup/SetupPage").then((m) => ({ default: m.SetupPage })),
+);
 const ForgotPasswordPage = lazy(() =>
   import("./features/auth/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })),
 );
-const LoginPage = lazy(() => import("./features/auth/LoginPage").then((m) => ({ default: m.LoginPage })));
-const PortalPage = lazy(() => import("./features/portal/PortalPage").then((m) => ({ default: m.PortalPage })));
-const BatchesPage = lazy(() => import("./features/batches/BatchesPage").then((m) => ({ default: m.BatchesPage })));
-const StaffPage = lazy(() => import("./features/staff/StaffPage").then((m) => ({ default: m.StaffPage })));
+const LoginPage = lazy(() =>
+  import("./features/auth/LoginPage").then((m) => ({ default: m.LoginPage })),
+);
+const PortalPage = lazy(() =>
+  import("./features/portal/PortalPage").then((m) => ({ default: m.PortalPage })),
+);
+const BatchesPage = lazy(() =>
+  import("./features/batches/BatchesPage").then((m) => ({ default: m.BatchesPage })),
+);
+const StaffPage = lazy(() =>
+  import("./features/staff/StaffPage").then((m) => ({ default: m.StaffPage })),
+);
 const EnrollmentPage = lazy(() =>
   import("./features/enrollments/EnrollmentPage").then((m) => ({ default: m.EnrollmentPage })),
 );
-const ContentPage = lazy(() => import("./features/content/ContentPage").then((m) => ({ default: m.ContentPage })));
-const LearningPage = lazy(() => import("./features/content/LearningPage").then((m) => ({ default: m.LearningPage })));
-const TestsPage = lazy(() => import("./features/assessments/TestsPage").then((m) => ({ default: m.TestsPage })));
-const TasksPage = lazy(() => import("./features/assessments/TasksPage").then((m) => ({ default: m.TasksPage })));
+const ContentPage = lazy(() =>
+  import("./features/content/ContentPage").then((m) => ({ default: m.ContentPage })),
+);
+const LearningPage = lazy(() =>
+  import("./features/content/LearningPage").then((m) => ({ default: m.LearningPage })),
+);
+const TestsPage = lazy(() =>
+  import("./features/assessments/TestsPage").then((m) => ({ default: m.TestsPage })),
+);
+const TasksPage = lazy(() =>
+  import("./features/assessments/TasksPage").then((m) => ({ default: m.TasksPage })),
+);
 const AttendancePage = lazy(() =>
   import("./features/attendance/AttendancePage").then((m) => ({ default: m.AttendancePage })),
 );
 const PerformancePage = lazy(() =>
   import("./features/performance/PerformancePage").then((m) => ({ default: m.PerformancePage })),
 );
-const DevicesPage = lazy(() => import("./features/devices/DevicesPage").then((m) => ({ default: m.DevicesPage })));
-const ActivityPage = lazy(() => import("./features/activity/ActivityPage").then((m) => ({ default: m.ActivityPage })));
+const DevicesPage = lazy(() =>
+  import("./features/devices/DevicesPage").then((m) => ({ default: m.DevicesPage })),
+);
+const ActivityPage = lazy(() =>
+  import("./features/activity/ActivityPage").then((m) => ({ default: m.ActivityPage })),
+);
 const EngagementReportPage = lazy(() =>
-  import("./features/engagement/EngagementReportPage").then((m) => ({ default: m.EngagementReportPage })),
+  import("./features/engagement/EngagementReportPage").then((m) => ({
+    default: m.EngagementReportPage,
+  })),
 );
 const EscalationsPage = lazy(() =>
   import("./features/escalations/EscalationsPage").then((m) => ({ default: m.EscalationsPage })),
 );
-const ForumPage = lazy(() => import("./features/forum/ForumPage").then((m) => ({ default: m.ForumPage })));
-const MonitorPage = lazy(() => import("./features/forum/MonitorPage").then((m) => ({ default: m.MonitorPage })));
+const ForumPage = lazy(() =>
+  import("./features/forum/ForumPage").then((m) => ({ default: m.ForumPage })),
+);
+const MonitorPage = lazy(() =>
+  import("./features/forum/MonitorPage").then((m) => ({ default: m.MonitorPage })),
+);
 const LiveClassesPage = lazy(() =>
   import("./features/liveclasses/LiveClassesPage").then((m) => ({ default: m.LiveClassesPage })),
 );
-const ChannelsPage = lazy(() => import("./features/channels/ChannelsPage").then((m) => ({ default: m.ChannelsPage })));
+const ChannelsPage = lazy(() =>
+  import("./features/channels/ChannelsPage").then((m) => ({ default: m.ChannelsPage })),
+);
 const SecurityPage = lazy(() =>
   import("./features/auth/SecurityPage").then((m) => ({ default: m.SecurityPage })),
 );
@@ -71,9 +105,13 @@ const CertificatePage = lazy(() =>
   import("./features/certification/CertificatePage").then((m) => ({ default: m.CertificatePage })),
 );
 const CertFollowUpPage = lazy(() =>
-  import("./features/certification/CertFollowUpPage").then((m) => ({ default: m.CertFollowUpPage })),
+  import("./features/certification/CertFollowUpPage").then((m) => ({
+    default: m.CertFollowUpPage,
+  })),
 );
-const ReportsPage = lazy(() => import("./features/reports/ReportsPage").then((m) => ({ default: m.ReportsPage })));
+const ReportsPage = lazy(() =>
+  import("./features/reports/ReportsPage").then((m) => ({ default: m.ReportsPage })),
+);
 const ChangePasswordPage = lazy(() =>
   import("./features/auth/ChangePasswordPage").then((m) => ({ default: m.ChangePasswordPage })),
 );
@@ -105,7 +143,14 @@ const LIVE_ROLES = new Set(["admin", "mis", "faculty", "student"]);
 const SETTINGS_ROLES = new Set(["super_admin"]);
 const REPORT_ROLES = new Set(["super_admin", "admin", "mis", "counselor", "faculty"]);
 // TOTP 2FA is a staff feature — every role except student.
-const STAFF_ROLES_ALL = new Set(["super_admin", "admin", "mis", "counselor", "tech_support", "faculty"]);
+const STAFF_ROLES_ALL = new Set([
+  "super_admin",
+  "admin",
+  "mis",
+  "counselor",
+  "tech_support",
+  "faculty",
+]);
 
 function RouteFallback() {
   return (

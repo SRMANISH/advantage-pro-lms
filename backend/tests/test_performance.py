@@ -9,6 +9,7 @@ from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from performance.services import batch_performance, student_metrics
+
 from .helpers import client_for, user
 
 ME_URL = "/api/v1/performance/me/"

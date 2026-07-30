@@ -21,6 +21,10 @@ x-django: &django
   environment:
     # Pinned here so no service can accidentally boot with dev settings.
     DJANGO_SETTINGS_MODULE: config.settings.prod
+    # nginx sits in front in this topology, so exactly one hop of X-Forwarded-For is ours.
+    # Without this, DRF's per-IP throttles key on the whole client-supplied header and a
+    # caller rotating it gets a fresh bucket every request.
+    TRUSTED_PROXY_COUNT: "1"
   depends_on:
     db: { condition: service_healthy }
     redis: { condition: service_healthy }

@@ -128,8 +128,16 @@ export function BatchesPage({ role }: { role: RoleDef }) {
               }}
             >
               <div className="grid gap-2 sm:grid-cols-2">
-                <Input placeholder="Batch ID (e.g. FS-2026A)" value={b.code} onChange={(e) => setB({ ...b, code: e.target.value })} />
-                <Input placeholder="Name" value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} />
+                <Input
+                  placeholder="Batch ID (e.g. FS-2026A)"
+                  value={b.code}
+                  onChange={(e) => setB({ ...b, code: e.target.value })}
+                />
+                <Input
+                  placeholder="Name"
+                  value={b.name}
+                  onChange={(e) => setB({ ...b, name: e.target.value })}
+                />
               </div>
               <Select value={b.course} onChange={(e) => setB({ ...b, course: e.target.value })}>
                 <option value="">Select course…</option>
@@ -142,11 +150,21 @@ export function BatchesPage({ role }: { role: RoleDef }) {
               <div className="flex flex-wrap gap-2">
                 <label htmlFor="batch-start" className="flex-1 text-xs text-muted">
                   Start date
-                  <Input id="batch-start" type="date" value={b.start_date} onChange={(e) => setB({ ...b, start_date: e.target.value })} />
+                  <Input
+                    id="batch-start"
+                    type="date"
+                    value={b.start_date}
+                    onChange={(e) => setB({ ...b, start_date: e.target.value })}
+                  />
                 </label>
                 <label htmlFor="batch-end" className="flex-1 text-xs text-muted">
                   End date
-                  <Input id="batch-end" type="date" value={b.end_date} onChange={(e) => setB({ ...b, end_date: e.target.value })} />
+                  <Input
+                    id="batch-end"
+                    type="date"
+                    value={b.end_date}
+                    onChange={(e) => setB({ ...b, end_date: e.target.value })}
+                  />
                 </label>
               </div>
 
@@ -172,11 +190,21 @@ export function BatchesPage({ role }: { role: RoleDef }) {
                 <div className="flex gap-2">
                   <label htmlFor="class-from" className="flex-1 text-xs text-muted">
                     From
-                    <Input id="class-from" type="time" value={b.class_start_time} onChange={(e) => setB({ ...b, class_start_time: e.target.value })} />
+                    <Input
+                      id="class-from"
+                      type="time"
+                      value={b.class_start_time}
+                      onChange={(e) => setB({ ...b, class_start_time: e.target.value })}
+                    />
                   </label>
                   <label htmlFor="class-to" className="flex-1 text-xs text-muted">
                     To
-                    <Input id="class-to" type="time" value={b.class_end_time} onChange={(e) => setB({ ...b, class_end_time: e.target.value })} />
+                    <Input
+                      id="class-to"
+                      type="time"
+                      value={b.class_end_time}
+                      onChange={(e) => setB({ ...b, class_end_time: e.target.value })}
+                    />
                   </label>
                 </div>
               </div>

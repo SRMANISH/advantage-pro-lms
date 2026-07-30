@@ -56,8 +56,8 @@ export function UtilityLinksBoardPage() {
             Utility links
           </h1>
           <p className="mt-2 max-w-xl text-sm text-muted">
-            Hand-picked sessions, playlists and resources — pinned fresh by the MIS desk.
-            Tap any note to open it.
+            Hand-picked sessions, playlists and resources — pinned fresh by the MIS desk. Tap any
+            note to open it.
           </p>
         </motion.div>
 

@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, EmptyState, ListSkeleton, SectionHeading, useToast } from "../../design-system";
+import {
+  Button,
+  Card,
+  EmptyState,
+  ListSkeleton,
+  SectionHeading,
+  useToast,
+} from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { devicesApi } from "./api";
 
@@ -41,11 +48,14 @@ export function DevicesPage({ role }: { role: RoleDef }) {
                         r.during_class ? "bg-sky text-navy" : "bg-appbg text-muted"
                       }`}
                     >
-                      {r.during_class ? `During class${r.class_context ? `: ${r.class_context}` : ""}` : "Outside class"}
+                      {r.during_class
+                        ? `During class${r.class_context ? `: ${r.class_context}` : ""}`
+                        : "Outside class"}
                     </span>
                   </div>
                   <div className="text-xs text-muted">
-                    {r.registration_number} · requested {r.created_at.slice(0, 16).replace("T", " ")}
+                    {r.registration_number} · requested{" "}
+                    {r.created_at.slice(0, 16).replace("T", " ")}
                   </div>
                 </div>
                 <div className="flex gap-2">

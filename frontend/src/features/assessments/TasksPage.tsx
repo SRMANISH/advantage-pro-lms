@@ -24,7 +24,10 @@ export function TasksPage({ role }: { role: RoleDef }) {
   const { user } = useAuth();
   return (
     <PortalLayout role={role}>
-      <SectionHeading title="Tasks" subtitle="Assignments with deadlines, submissions and grading." />
+      <SectionHeading
+        title="Tasks"
+        subtitle="Assignments with deadlines, submissions and grading."
+      />
       {user?.role === "student" ? <StudentTasks /> : <ManageTasks />}
     </PortalLayout>
   );
@@ -156,7 +159,10 @@ function TaskGrading({ task }: { task: TaskItem }) {
 
   return (
     <div className="rounded-lg border border-brdr p-3">
-      <button className="flex w-full items-center justify-between" onClick={() => setOpen((o) => !o)}>
+      <button
+        className="flex w-full items-center justify-between"
+        onClick={() => setOpen((o) => !o)}
+      >
         <span className="text-sm font-medium text-ink">{task.title}</span>
         <span className="text-xs text-muted">{task.submission_count} submission(s)</span>
       </button>
@@ -174,7 +180,11 @@ function TaskGrading({ task }: { task: TaskItem }) {
           )}
           {visible.length > 0 ? (
             visible.map((s) => (
-              <GradeRow key={s.id} submission={s} onGraded={() => qc.invalidateQueries({ queryKey: ["submissions", task.id] })} />
+              <GradeRow
+                key={s.id}
+                submission={s}
+                onGraded={() => qc.invalidateQueries({ queryKey: ["submissions", task.id] })}
+              />
             ))
           ) : (
             <EmptyState title={toGradeOnly ? "Everything is graded 🎉" : "No submissions yet"} />
@@ -205,7 +215,12 @@ function GradeRow({ submission, onGraded }: { submission: Submission; onGraded: 
       </div>
       {submission.text && <p className="mb-1 text-sm text-ink">{submission.text}</p>}
       {submission.file_url && (
-        <a href={submission.file_url} target="_blank" rel="noreferrer" className="text-sm text-brand-strong underline">
+        <a
+          href={submission.file_url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-brand-strong underline"
+        >
           View file
         </a>
       )}
@@ -216,7 +231,11 @@ function GradeRow({ submission, onGraded }: { submission: Submission; onGraded: 
           value={score}
           onChange={(e) => setScore(e.target.value)}
         />
-        <Input placeholder="Feedback" value={feedback} onChange={(e) => setFeedback(e.target.value)} />
+        <Input
+          placeholder="Feedback"
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+        />
         <Button onClick={() => grade.mutate()} disabled={!score || grade.isPending}>
           Grade
         </Button>

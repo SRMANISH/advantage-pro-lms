@@ -107,10 +107,7 @@ export const assessmentsApi = {
     }
     return (await api.post<TestListItem>("/tests/", payload)).data;
   },
-  async submit(
-    id: string,
-    answers: { question: string; choice: string }[],
-  ): Promise<Attempt> {
+  async submit(id: string, answers: { question: string; choice: string }[]): Promise<Attempt> {
     return (await api.post<Attempt>(`/tests/${id}/submit/`, { answers })).data;
   },
   /** File/Colab submission: an uploaded file or a notebook link. */
@@ -127,10 +124,7 @@ export const assessmentsApi = {
   async attempts(id: string): Promise<TestAttemptRow[]> {
     return (await api.get<TestAttemptRow[]>(`/tests/${id}/attempts/`)).data;
   },
-  async gradeAttempt(
-    attemptId: string,
-    body: { score: number; feedback?: string },
-  ): Promise<void> {
+  async gradeAttempt(attemptId: string, body: { score: number; feedback?: string }): Promise<void> {
     await api.post(`/test-attempts/${attemptId}/grade/`, body);
   },
 };

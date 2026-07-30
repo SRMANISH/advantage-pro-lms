@@ -11,7 +11,13 @@ interface ProgressRingProps {
 }
 
 /** Animated SVG progress ring — sweeps from 0 to `value` on mount (CSS transition). */
-export function ProgressRing({ value, size = 112, stroke = 10, label, className }: ProgressRingProps) {
+export function ProgressRing({
+  value,
+  size = 112,
+  stroke = 10,
+  label,
+  className,
+}: ProgressRingProps) {
   const pct = Math.max(0, Math.min(100, value));
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
@@ -23,14 +29,27 @@ export function ProgressRing({ value, size = 112, stroke = 10, label, className 
   }, [pct]);
 
   const tone =
-    pct >= 75 ? "rgb(var(--color-success))" : pct >= 50 ? "rgb(var(--color-brand))" : "rgb(var(--color-danger))";
+    pct >= 75
+      ? "rgb(var(--color-success))"
+      : pct >= 50
+        ? "rgb(var(--color-brand))"
+        : "rgb(var(--color-danger))";
 
   return (
-    <div className={cn("relative inline-flex items-center justify-center", className)} role="img"
-      aria-label={`${label ?? "Progress"}: ${pct}%`}>
+    <div
+      className={cn("relative inline-flex items-center justify-center", className)}
+      role="img"
+      aria-label={`${label ?? "Progress"}: ${pct}%`}
+    >
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke}
-          stroke="rgb(var(--color-sky))" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          strokeWidth={stroke}
+          stroke="rgb(var(--color-sky))"
+        />
         <circle
           cx={size / 2}
           cy={size / 2}

@@ -80,7 +80,10 @@ export function ForumPage({ role }: { role: RoleDef }) {
 function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const threads = useQuery({ queryKey: ["threads", q], queryFn: () => forumApi.list(q || undefined) });
+  const threads = useQuery({
+    queryKey: ["threads", q],
+    queryFn: () => forumApi.list(q || undefined),
+  });
   const batches = useQuery({ queryKey: ["forum-batches"], queryFn: forumApi.batches });
 
   const [form, setForm] = useState({ batch: "", title: "", body: "" });
@@ -163,7 +166,8 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
                 <div>
                   <div className="text-sm font-medium text-ink">{t.title}</div>
                   <div className="text-xs text-muted">
-                    {t.batch_code} · {t.author_name} · {t.reply_count} repl{t.reply_count === 1 ? "y" : "ies"}
+                    {t.batch_code} · {t.author_name} · {t.reply_count} repl
+                    {t.reply_count === 1 ? "y" : "ies"}
                     {t.status === "open" && t.hours_waiting > 0 && ` · waiting ${t.hours_waiting}h`}
                   </div>
                 </div>
@@ -206,7 +210,8 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
 
   if (thread.isLoading || !thread.data) return <ListSkeleton items={2} />;
   const t = thread.data;
-  const canEscalate = RESPONDERS.has(user?.role ?? "") && t.status !== "resolved" && t.status !== "escalated";
+  const canEscalate =
+    RESPONDERS.has(user?.role ?? "") && t.status !== "resolved" && t.status !== "escalated";
 
   return (
     <Card>
@@ -262,7 +267,11 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
               onChange={(e) => setReplyFile(e.target.files?.[0] ?? null)}
             />
           </label>
-          <Button className="w-fit" onClick={() => reply.mutate()} disabled={!body || reply.isPending}>
+          <Button
+            className="w-fit"
+            onClick={() => reply.mutate()}
+            disabled={!body || reply.isPending}
+          >
             {reply.isPending ? "Replying…" : "Reply"}
           </Button>
         </div>

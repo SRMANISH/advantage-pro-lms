@@ -27,6 +27,19 @@ export default defineConfig({
       url: "http://localhost:8000/api/v1/health/",
       reuseExistingServer: true,
       timeout: 60_000,
+      // The auth throttles are per-IP and the whole suite runs from one IP against one shared
+      // server, so specs can exhaust each other's buckets — login is 10/min and three specs
+      // sign in, several as multiple roles. Raised here rather than in the defaults: 10/min is
+      // correct against credential spraying, and a dozen browser specs from localhost is not
+      // that threat model. Anything asserting throttle behaviour belongs in
+      // tests/test_auth_throttling.py, where the cache is cleared per test and real limits apply.
+      env: {
+        THROTTLE_LOGIN: "1000/min",
+        THROTTLE_VERIFICATION: "1000/min",
+        THROTTLE_OTP: "1000/min",
+        THROTTLE_ANON: "5000/min",
+        THROTTLE_USER: "5000/min",
+      },
     },
     {
       command: "npm run dev",

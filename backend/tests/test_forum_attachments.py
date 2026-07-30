@@ -9,6 +9,7 @@ from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from forum.models import Thread, ThreadAttachment
+
 from .helpers import client_for, user
 
 THREADS = "/api/v1/threads/"

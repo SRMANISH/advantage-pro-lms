@@ -20,6 +20,27 @@ export function nextPollInterval(quietStreak: number): number {
   return Math.min(BASE_POLL_MS * 2 ** quietStreak, MAX_POLL_MS);
 }
 
+/**
+ * True only for an in-app path we are willing to navigate to.
+ *
+ * `Notification.link` is the one server-supplied value that reaches `navigate()`. Today every
+ * writer passes a hardcoded literal ("/student/tests"), so there is nothing to exploit — but
+ * that is an incidental property of the current call sites, not something the type system or
+ * the schema enforces. One future `link=f"/x/{user_input}"` would turn this into an open
+ * redirect, and react-router 6.30.4 carries an advisory (GHSA-wrjc-x8rr-h8h6) for exactly that
+ * shape: a backslash slipping past a naive leading-slash check.
+ *
+ * So: require a single leading forward slash, and reject anything that could re-anchor to
+ * another origin — "//evil.com" (protocol-relative), "/\evil.com" and "\\evil.com"
+ * (backslash variants browsers normalise to "//"), and any "scheme:" prefix.
+ */
+export function isSafeInAppLink(link: string): boolean {
+  if (!link || !link.startsWith("/")) return false;
+  if (link.startsWith("//") || link.startsWith("/\\")) return false;
+  if (link.includes("\\")) return false;
+  return true;
+}
+
 export function NotificationBell() {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -70,7 +91,7 @@ export function NotificationBell() {
   const onItem = (id: string, link: string) => {
     markRead.mutate(id);
     setOpen(false);
-    if (link) navigate(link);
+    if (isSafeInAppLink(link)) navigate(link);
   };
 
   return (
@@ -101,7 +122,8 @@ export function NotificationBell() {
             >
               <div className="flex items-center justify-between border-b border-brdr bg-sky/40 px-4 py-3">
                 <span className="text-sm font-semibold text-ink">
-                  Notifications{unread > 0 && <span className="ml-1 text-muted">· {unread} new</span>}
+                  Notifications
+                  {unread > 0 && <span className="ml-1 text-muted">· {unread} new</span>}
                 </span>
                 {unread > 0 && (
                   <button

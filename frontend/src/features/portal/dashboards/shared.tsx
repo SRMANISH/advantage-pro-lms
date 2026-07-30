@@ -30,7 +30,14 @@ export function HeroRing({ percent }: { percent: number }) {
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} stroke="rgba(255,255,255,0.22)" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          strokeWidth={stroke}
+          stroke="rgba(255,255,255,0.22)"
+        />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -130,7 +137,9 @@ export function Hero({
                     highlight.value
                   )}
                 </div>
-                {highlight.sub && <div className="mt-1.5 text-xs text-white/60">{highlight.sub}</div>}
+                {highlight.sub && (
+                  <div className="mt-1.5 text-xs text-white/60">{highlight.sub}</div>
+                )}
               </div>
             )}
           </div>

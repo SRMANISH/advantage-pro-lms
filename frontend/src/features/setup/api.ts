@@ -26,6 +26,5 @@ export const setupApi = {
   start: (token: string) => call("/auth/setup/start/", { token }),
   verifyEmail: (token: string, code: string) => call("/auth/setup/verify-email/", { token, code }),
   verifyPhone: (token: string, code: string) => call("/auth/setup/verify-phone/", { token, code }),
-  complete: (token: string, password: string) =>
-    call("/auth/setup/complete/", { token, password }),
+  complete: (token: string, password: string) => call("/auth/setup/complete/", { token, password }),
 };

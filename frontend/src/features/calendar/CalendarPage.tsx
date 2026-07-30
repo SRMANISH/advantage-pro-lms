@@ -101,11 +101,18 @@ export function CalendarPage({ role }: { role: RoleDef }) {
                     key={key}
                     className={cn(
                       "min-h-14 rounded-lg border p-1 text-left text-xs",
-                      cell.inMonth ? "border-brdr bg-surface" : "border-transparent bg-appbg/40 text-muted",
+                      cell.inMonth
+                        ? "border-brdr bg-surface"
+                        : "border-transparent bg-appbg/40 text-muted",
                       key === todayKey && "ring-1 ring-brand",
                     )}
                   >
-                    <div className={cn("mb-0.5", key === todayKey && "font-semibold text-brand-strong")}>
+                    <div
+                      className={cn(
+                        "mb-0.5",
+                        key === todayKey && "font-semibold text-brand-strong",
+                      )}
+                    >
                       {cell.date.getDate()}
                     </div>
                     {dayEvents.slice(0, 2).map((e) => (

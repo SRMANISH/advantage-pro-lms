@@ -108,9 +108,19 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# Number of reverse proxies between the client and Django. Governs how far
+# ``X-Forwarded-For`` may be trusted — see core/utils.py::get_client_ip and NUM_PROXIES
+# below. Default 0 (no proxy, header ignored): guessing high is the unsafe direction,
+# because it starts trusting header entries the client wrote. Set to 1 for the documented
+# nginx topology (deploy/nginx.conf), 2 if a CDN sits in front of that.
+TRUSTED_PROXY_COUNT = env.int("TRUSTED_PROXY_COUNT", default=0)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        # Re-checks UserStatus on every request. Plain SessionAuthentication would let a
+        # suspended account keep working until its cookie expired, because login is the only
+        # place status was ever checked. See core/authentication.py.
+        "core.authentication.ActiveSessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -133,6 +143,13 @@ REST_FRAMEWORK = {
         "feedback": env("THROTTLE_FEEDBACK", default="5/hour"),
     },
     "EXCEPTION_HANDLER": "core.exceptions.exception_handler",
+    # How many proxies sit in front of Django. This is a security control, not a tuning knob:
+    # DRF keys its IP throttles on get_ident(), and with NUM_PROXIES unset that returns the
+    # *entire* X-Forwarded-For header. A client sending a different X-Forwarded-For on every
+    # request would land in a different throttle bucket each time, which silently defeats the
+    # login brute-force guard and every verification throttle. Pinning it to the real proxy
+    # depth makes DRF read the entry our own nginx appended, which a client cannot control.
+    "NUM_PROXIES": TRUSTED_PROXY_COUNT,
 }
 
 # `manage.py check --deploy` runs in CI at --fail-level WARNING so a security.W* regression

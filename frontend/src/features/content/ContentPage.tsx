@@ -93,7 +93,11 @@ export function ContentPage({ role }: { role: RoleDef }) {
             <Card>
               <h2 className="mb-3 text-base font-medium text-ink">Upload class video</h2>
               <div className="flex flex-col gap-2">
-                <Input placeholder="Title" value={vTitle} onChange={(e) => setVTitle(e.target.value)} />
+                <Input
+                  placeholder="Title"
+                  value={vTitle}
+                  onChange={(e) => setVTitle(e.target.value)}
+                />
                 <FileUpload
                   accept="video/*"
                   file={vFile}
@@ -113,7 +117,11 @@ export function ContentPage({ role }: { role: RoleDef }) {
           <Card>
             <h2 className="mb-3 text-base font-medium text-ink">Upload note / material</h2>
             <div className="flex flex-col gap-2">
-              <Input placeholder="Title" value={mTitle} onChange={(e) => setMTitle(e.target.value)} />
+              <Input
+                placeholder="Title"
+                value={mTitle}
+                onChange={(e) => setMTitle(e.target.value)}
+              />
               <FileUpload
                 accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg,.zip"
                 file={mFile}
@@ -144,7 +152,11 @@ export function ContentPage({ role }: { role: RoleDef }) {
               ✓ Course video access closed.
             </span>
           ) : (
-            <Button variant="ghost" onClick={() => closeCourse.mutate()} disabled={closeCourse.isPending}>
+            <Button
+              variant="ghost"
+              onClick={() => closeCourse.mutate()}
+              disabled={closeCourse.isPending}
+            >
               Close course video access
             </Button>
           )}
@@ -158,9 +170,7 @@ export function ContentPage({ role }: { role: RoleDef }) {
             {videos.data.map((v) => (
               <div key={v.id} className="py-2 text-sm">
                 <span className="font-medium text-ink">{v.title}</span>
-                {v.uploaded_by_name && (
-                  <span className="text-muted"> · {v.uploaded_by_name}</span>
-                )}
+                {v.uploaded_by_name && <span className="text-muted"> · {v.uploaded_by_name}</span>}
               </div>
             ))}
           </div>

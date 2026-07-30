@@ -57,7 +57,9 @@ export function StatCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           {Icon && (
-            <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", TONES[tone])}>
+            <span
+              className={cn("flex h-9 w-9 items-center justify-center rounded-xl", TONES[tone])}
+            >
               <Icon size={17} aria-hidden />
             </span>
           )}

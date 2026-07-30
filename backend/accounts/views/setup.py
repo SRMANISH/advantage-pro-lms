@@ -14,8 +14,8 @@ from core.roles import Role
 from core.utils import get_client_ip
 
 from .. import setup as setup_service
-from ..throttling import OTPRateThrottle, VerificationRateThrottle
 from ..models import User
+from ..throttling import OTPRateThrottle, VerificationRateThrottle
 
 
 def _resolve_token(request):

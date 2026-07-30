@@ -1,6 +1,13 @@
 import { CalendarCheck, ClipboardList, FileText, Flame } from "lucide-react";
 
-import { Badge, Card, EmptyState, SectionHeading, Sparkline, StatCard } from "../../../design-system";
+import {
+  Badge,
+  Card,
+  EmptyState,
+  SectionHeading,
+  Sparkline,
+  StatCard,
+} from "../../../design-system";
 import type { DashboardData } from "../../dashboard/api";
 import { Field, Hero, KpiGrid, TrendCard, UpNext } from "./shared";
 
@@ -43,7 +50,12 @@ export function StudentDashboard({
           footer={<Sparkline data={trendValues} />}
         />
         <StatCard label="Pending tasks" value={k.pending_tasks ?? 0} icon={FileText} tone="amber" />
-        <StatCard label="Upcoming tests" value={k.upcoming_tests ?? 0} icon={ClipboardList} tone="violet" />
+        <StatCard
+          label="Upcoming tests"
+          value={k.upcoming_tests ?? 0}
+          icon={ClipboardList}
+          tone="violet"
+        />
         <StatCard
           label="Login streak"
           value={k.streak_days ?? 0}
@@ -80,7 +92,9 @@ function StudentBatches({ data }: { data: DashboardData }) {
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-base font-medium text-ink">{b.name}</h3>
                 <Badge
-                  tone={b.state === "active" ? "success" : b.state === "completed" ? "info" : "neutral"}
+                  tone={
+                    b.state === "active" ? "success" : b.state === "completed" ? "info" : "neutral"
+                  }
                 >
                   {b.state}
                 </Badge>

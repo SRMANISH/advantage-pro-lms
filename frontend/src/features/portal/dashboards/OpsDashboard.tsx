@@ -26,7 +26,12 @@ export function OpsDashboard({ data, slug }: { data: DashboardData; slug: string
         highlight={{ label: "Active batches", value: String(t.active_batches ?? 0), icon: Users }}
       />
       <KpiGrid>
-        <StatCard label="Total students" value={t.students ?? 0} icon={GraduationCap} tone="azure" />
+        <StatCard
+          label="Total students"
+          value={t.students ?? 0}
+          icon={GraduationCap}
+          tone="azure"
+        />
         <StatCard label="Active batches" value={t.active_batches ?? 0} icon={Users} tone="green" />
         <StatCard label="Courses" value={t.courses ?? 0} icon={BookOpen} tone="violet" />
         <StatCard
@@ -52,8 +57,8 @@ export function OpsDashboard({ data, slug }: { data: DashboardData; slug: string
             <>
               <LazyChart kind="donut" data={data.batch_states} height={220} />
               <p className="mt-2 rounded-lg bg-sky/50 px-3 py-2 text-xs leading-relaxed text-navy">
-                Draft = being set up · Active = running now · Completed = finished (video
-                access closed, certificates in follow-up).
+                Draft = being set up · Active = running now · Completed = finished (video access
+                closed, certificates in follow-up).
               </p>
             </>
           ) : (

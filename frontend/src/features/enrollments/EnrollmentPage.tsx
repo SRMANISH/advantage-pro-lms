@@ -101,8 +101,8 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
         <h2 className="mb-1 text-base font-medium text-ink">Import student list</h2>
         <p className="mb-3 text-sm text-muted">
           Upload a .csv or .xlsx. The first column is each student&apos;s{" "}
-          <span className="font-medium text-ink">Registration ID</span> (their login and
-          recognition ID). If any row is invalid the whole upload is rejected and nothing is saved.
+          <span className="font-medium text-ink">Registration ID</span> (their login and recognition
+          ID). If any row is invalid the whole upload is rejected and nothing is saved.
         </p>
 
         <FileUpload
@@ -183,88 +183,85 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
           {table.rows.length === 0 ? (
             <EmptyState title="No matching students" hint="Try a different search." />
           ) : (
-          <>
-          <TableShell>
-          <THead>
-            <tr>
-              <th className="px-3 py-2">Registration ID</th>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Batch</th>
-              <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Setup</th>
-              {isMis && <th className="px-3 py-2">Videos</th>}
-            </tr>
-          </THead>
-          <tbody>
-            {table.rows.map((s) => (
-              <tr key={s.id} className="border-t border-brdr">
-                <td className="px-3 py-2 font-medium text-ink">{s.registration_number}</td>
-                <td className="px-3 py-2">{s.student_name}</td>
-                <td className="px-3 py-2">{s.batch_code}</td>
-                <td className="px-3 py-2 text-muted">{s.email}</td>
-                <td className="px-3 py-2">
-                  <Badge tone={s.student_status === "active" ? "success" : "warning"}>
-                    {s.student_status}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2">
-                  {s.student_status === "pending" &&
-                    (setupLinks[s.student] ? (
-                      <a
-                        href={setupLinks[s.student]}
-                        className="text-brand-strong underline"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open link
-                      </a>
-                    ) : (
-                      <Button variant="ghost" onClick={() => resend.mutate(s.student)}>
-                        Setup link
-                      </Button>
-                    ))}
-                </td>
-                {isMis && (
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          revokeVideos.mutate({ studentId: s.student, batchId: s.batch })
-                        }
-                      >
-                        Revoke
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          restoreVideos.mutate({ studentId: s.student, batchId: s.batch })
-                        }
-                      >
-                        Restore
-                      </Button>
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
-            </tbody>
-          </TableShell>
-          <Paginator
-            page={table.page}
-            pageCount={table.pageCount}
-            onPage={table.setPage}
-            total={table.total}
-          />
-          </>
+            <>
+              <TableShell>
+                <THead>
+                  <tr>
+                    <th className="px-3 py-2">Registration ID</th>
+                    <th className="px-3 py-2">Name</th>
+                    <th className="px-3 py-2">Batch</th>
+                    <th className="px-3 py-2">Email</th>
+                    <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2">Setup</th>
+                    {isMis && <th className="px-3 py-2">Videos</th>}
+                  </tr>
+                </THead>
+                <tbody>
+                  {table.rows.map((s) => (
+                    <tr key={s.id} className="border-t border-brdr">
+                      <td className="px-3 py-2 font-medium text-ink">{s.registration_number}</td>
+                      <td className="px-3 py-2">{s.student_name}</td>
+                      <td className="px-3 py-2">{s.batch_code}</td>
+                      <td className="px-3 py-2 text-muted">{s.email}</td>
+                      <td className="px-3 py-2">
+                        <Badge tone={s.student_status === "active" ? "success" : "warning"}>
+                          {s.student_status}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        {s.student_status === "pending" &&
+                          (setupLinks[s.student] ? (
+                            <a
+                              href={setupLinks[s.student]}
+                              className="text-brand-strong underline"
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open link
+                            </a>
+                          ) : (
+                            <Button variant="ghost" onClick={() => resend.mutate(s.student)}>
+                              Setup link
+                            </Button>
+                          ))}
+                      </td>
+                      {isMis && (
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              onClick={() =>
+                                revokeVideos.mutate({ studentId: s.student, batchId: s.batch })
+                              }
+                            >
+                              Revoke
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() =>
+                                restoreVideos.mutate({ studentId: s.student, batchId: s.batch })
+                              }
+                            >
+                              Restore
+                            </Button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </TableShell>
+              <Paginator
+                page={table.page}
+                pageCount={table.pageCount}
+                onPage={table.setPage}
+                total={table.total}
+              />
+            </>
           )}
         </>
       ) : (
-        <EmptyState
-          title="No students enrolled yet"
-          hint="Import a list above to get started."
-        />
+        <EmptyState title="No students enrolled yet" hint="Import a list above to get started." />
       )}
     </PortalLayout>
   );

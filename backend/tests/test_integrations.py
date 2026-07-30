@@ -4,6 +4,7 @@ import pytest
 
 from core.roles import Role
 from notifications.models import IntegrationSetting
+
 from .helpers import client_for, user
 
 URL = "/api/v1/settings/channels/"

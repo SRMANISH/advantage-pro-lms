@@ -8,6 +8,7 @@ from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from notifications.models import Notification
+
 from .helpers import client_for, user
 
 BATCHES_URL = "/api/v1/attendance/batches/"

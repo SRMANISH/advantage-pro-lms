@@ -17,6 +17,7 @@ from batches.models import Batch, BatchState, Course
 from content.models import Video
 from core.roles import Role
 from enrollments.models import Enrollment
+
 from .helpers import client_for, user
 
 ME_URL = "/api/v1/attendance/me/"

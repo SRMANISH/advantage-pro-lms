@@ -7,6 +7,7 @@ import pytest
 from accounts.models import User, UserStatus
 from batches.models import Batch, BatchState, Course
 from core.roles import Role
+
 from .helpers import client_for
 
 COURSES_URL = "/api/v1/courses/"

@@ -10,7 +10,9 @@ import { dismissEngagementPopup, loginViaUi } from "./fixtures";
 
 async function selectFsDemo(page: import("@playwright/test").Page, selectId: string) {
   const select = page.locator(`#${selectId}`);
-  const value = await page.locator(`#${selectId} option`, { hasText: "FS-DEMO" }).getAttribute("value");
+  const value = await page
+    .locator(`#${selectId} option`, { hasText: "FS-DEMO" })
+    .getAttribute("value");
   await select.selectOption(value!);
 }
 
@@ -61,10 +63,9 @@ test("faculty creates a task, student submits, faculty grades, student sees the 
   await dismissEngagementPopup(page);
   // Every <Card> renders this exact base class list — one Card per task, so scoping to
   // it (not a bare "div") avoids matching every ancestor that contains the title text.
-  const card = page.locator(
-    "div.rounded-2xl.border.border-brdr.bg-surface.p-5.shadow-card",
-    { hasText: title },
-  );
+  const card = page.locator("div.rounded-2xl.border.border-brdr.bg-surface.p-5.shadow-card", {
+    hasText: title,
+  });
   await card.getByPlaceholder(/type your answer/i).fill("Here is my submission.");
   await card.getByRole("button", { name: /^submit$/i }).click();
   await expect(card.getByText(/^submitted$/i).first()).toBeVisible();
@@ -84,9 +85,8 @@ test("faculty creates a task, student submits, faculty grades, student sees the 
   await loginViaUi(page, "S106", "Demo!passLMS1", "student");
   await page.goto("/student/tasks");
   await dismissEngagementPopup(page);
-  const graded = page.locator(
-    "div.rounded-2xl.border.border-brdr.bg-surface.p-5.shadow-card",
-    { hasText: title },
-  );
+  const graded = page.locator("div.rounded-2xl.border.border-brdr.bg-surface.p-5.shadow-card", {
+    hasText: title,
+  });
   await expect(graded.getByText(/score: 9/i)).toBeVisible();
 });

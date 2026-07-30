@@ -20,7 +20,11 @@ export function useTableTools<T extends object>(
     const q = query.trim().toLowerCase();
     if (!q) return all;
     return all.filter((r) =>
-      searchKeys.some((k) => String(r[k] ?? "").toLowerCase().includes(q)),
+      searchKeys.some((k) =>
+        String(r[k] ?? "")
+          .toLowerCase()
+          .includes(q),
+      ),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, query]);
@@ -57,7 +61,10 @@ export function TableToolbar({
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
       <label className="relative block w-full max-w-xs">
-        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+        <Search
+          size={15}
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+        />
         <input
           value={query}
           onChange={(e) => onQuery(e.target.value)}

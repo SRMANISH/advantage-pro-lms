@@ -110,8 +110,16 @@ export default function Chart({
         <defs>
           {series.map((s, i) => (
             <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={s.color ?? colors[i % colors.length]} stopOpacity={0.28} />
-              <stop offset="100%" stopColor={s.color ?? colors[i % colors.length]} stopOpacity={0} />
+              <stop
+                offset="0%"
+                stopColor={s.color ?? colors[i % colors.length]}
+                stopOpacity={0.28}
+              />
+              <stop
+                offset="100%"
+                stopColor={s.color ?? colors[i % colors.length]}
+                stopOpacity={0}
+              />
             </linearGradient>
           ))}
         </defs>

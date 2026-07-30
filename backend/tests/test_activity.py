@@ -4,6 +4,7 @@ import pytest
 
 from audit.models import AuditLog
 from core.roles import Role
+
 from .helpers import client_for, user
 
 URL = "/api/v1/activity/"

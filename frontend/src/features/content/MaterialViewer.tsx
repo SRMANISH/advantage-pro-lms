@@ -9,7 +9,13 @@ import type { MaterialItem } from "./api";
  * strong deterrent against casual redistribution — the same honest framing as the video
  * watermark, not a cryptographic guarantee (a determined user can still screenshot).
  */
-export function MaterialViewer({ material, watermark }: { material: MaterialItem; watermark: string }) {
+export function MaterialViewer({
+  material,
+  watermark,
+}: {
+  material: MaterialItem;
+  watermark: string;
+}) {
   const type = material.content_type || "";
   const isImage = type.startsWith("image/");
   const isPdf = type === "application/pdf";

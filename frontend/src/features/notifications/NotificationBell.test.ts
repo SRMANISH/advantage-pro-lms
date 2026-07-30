@@ -1,4 +1,4 @@
-import { nextPollInterval, signatureOf } from "./NotificationBell";
+import { isSafeInAppLink, nextPollInterval, signatureOf } from "./NotificationBell";
 
 describe("signatureOf", () => {
   it("differs when an item's read state changes", () => {
@@ -31,5 +31,29 @@ describe("nextPollInterval", () => {
   it("caps at 5 minutes however long the quiet streak", () => {
     expect(nextPollInterval(10)).toBe(300_000);
     expect(nextPollInterval(50)).toBe(300_000);
+  });
+});
+
+describe("isSafeInAppLink", () => {
+  it("accepts the in-app paths the backend actually emits", () => {
+    for (const ok of ["/student/tests", "/faculty/forum", "/admin/goodies", "/student"]) {
+      expect(isSafeInAppLink(ok)).toBe(true);
+    }
+  });
+
+  it("rejects anything that could leave the origin", () => {
+    const hostile = [
+      "//evil.com", // protocol-relative
+      // String.raw so the backslashes are unambiguous — written as ordinary quoted strings,
+      // "/\evil.com" silently parses to "/evil.com" (an escape TS does not recognise), which
+      // is a legitimately safe path, and the case tests nothing.
+      String.raw`/\evil.com`, // slash-backslash; browsers normalise this to //
+      String.raw`\\evil.com`, // double backslash
+      "https://evil.com", // absolute
+      "javascript:alert(1)", // scheme
+      "evil.com", // no leading slash
+      "", // empty
+    ];
+    for (const bad of hostile) expect(isSafeInAppLink(bad)).toBe(false);
   });
 });

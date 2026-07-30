@@ -13,6 +13,20 @@ from core.roles import Role
 from enrollments.models import Enrollment
 from performance.services import batch_performance
 
+# Excel, LibreOffice and Google Sheets treat a leading =, +, - or @ as the start of a
+# formula, and a leading tab/CR can smuggle one past a naive check. Every export below
+# carries user-supplied text (student names, follow-up notes) and is opened by staff in a
+# spreadsheet, so an unescaped cell is remote code execution on the reader's machine, not a
+# cosmetic issue. Prefixing with a single quote makes the cell literal text.
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _sanitize_cell(value):
+    """Neutralise spreadsheet formula injection in one cell, leaving the value readable."""
+    if not isinstance(value, str):
+        return value
+    return f"'{value}" if value.startswith(_FORMULA_PREFIXES) else value
+
 
 def _csv(filename: str, header: list[str], rows) -> HttpResponse:
     response = HttpResponse(content_type="text/csv")
@@ -20,7 +34,7 @@ def _csv(filename: str, header: list[str], rows) -> HttpResponse:
     writer = csv.writer(response)
     writer.writerow(header)
     for row in rows:
-        writer.writerow(row)
+        writer.writerow([_sanitize_cell(cell) for cell in row])
     return response
 
 

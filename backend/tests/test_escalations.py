@@ -12,6 +12,7 @@ from enrollments.models import Enrollment
 from escalations.models import Escalation
 from escalations.services import run_escalations
 from notifications.models import Notification
+
 from .helpers import user
 
 RUN_URL = "/api/v1/escalations/run/"

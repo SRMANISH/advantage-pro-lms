@@ -133,16 +133,19 @@ export function EscalationsPage({ role }: { role: RoleDef }) {
             />
           </>
         ) : (
-          <EmptyState title="No escalations raised" hint="Run the checks or wait for the schedule." />
+          <EmptyState
+            title="No escalations raised"
+            hint="Run the checks or wait for the schedule."
+          />
         )}
       </Card>
 
       <Card className="mt-4">
         <h2 className="mb-1 text-base font-medium text-ink">Certificate reminders</h2>
         <p className="text-sm text-muted">
-          Students in completed batches who haven&apos;t entered their Certificate ID are
-          reminded <span className="font-medium text-ink">automatically every week</span> — no
-          manual trigger needed. Track progress on the Certificate follow-up page.
+          Students in completed batches who haven&apos;t entered their Certificate ID are reminded{" "}
+          <span className="font-medium text-ink">automatically every week</span> — no manual trigger
+          needed. Track progress on the Certificate follow-up page.
         </p>
       </Card>
     </PortalLayout>

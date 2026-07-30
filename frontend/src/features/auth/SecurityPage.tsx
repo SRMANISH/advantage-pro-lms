@@ -109,8 +109,8 @@ export function SecurityPage({ role }: { role: RoleDef }) {
         ) : enrollment ? (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-ink">
-              Scan this with your authenticator app (Google Authenticator, Authy, 1Password…),
-              or enter the key manually.
+              Scan this with your authenticator app (Google Authenticator, Authy, 1Password…), or
+              enter the key manually.
             </p>
             <div className="flex justify-center rounded-xl bg-white p-4">
               <QRCodeSVG value={enrollment.otpauth_url} size={176} />

@@ -9,7 +9,11 @@ export function TableSkeleton({ rows = 6, cols = 4 }: { rows?: number; cols?: nu
       </div>
       <div className="divide-y divide-brdr">
         {Array.from({ length: rows }).map((_, r) => (
-          <div key={r} className="grid gap-4 px-4 py-3" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+          <div
+            key={r}
+            className="grid gap-4 px-4 py-3"
+            style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+          >
             {Array.from({ length: cols }).map((_, c) => (
               <Skeleton key={c} className="h-4" />
             ))}
