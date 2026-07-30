@@ -13,12 +13,18 @@
 > |---|---|
 > | Forgot / reset password | ✅ Two-step (email OTP → phone OTP → reset), enumeration-safe, throttled, resend-capped |
 > | Change-password screen | ✅ Implemented, with the validator rules shown in the UI |
-> | Upload size / type validation | ✅ Per-kind size caps, extension + content-type allowlists, **magic-byte sniffing**, and filename sanitisation with MEDIA_ROOT containment |
+> | Upload size / type validation | ✅ Per-kind size caps, extension + content-type allowlists, **magic-byte sniffing**, and **server-generated UUID storage keys** — the client filename never reaches a path — with MEDIA_ROOT containment on save/open/delete |
 > | Shared-cache throttling (Redis) | ✅ Redis-backed; `prod.py` fails fast without `REDIS_URL` |
 > | Dependency scanning in CI | ✅ `pip-audit` + `npm audit` + secret scan + deploy check (`.github/workflows/ci.yml`) |
 > | Security headers / CSP | ✅ Documented and shipped in `deploy/nginx.conf` |
 > | Staff 2FA | ✅ Optional TOTP for staff accounts |
 > | Object storage | ✅ Adapter seam + X-Accel delivery; provider swap is env-only |
+> | Prod booting on dev stubs | ✅ `prod.py` refuses to start on console adapters unless `LMS_ALLOW_CONSOLE_ADAPTERS` is set |
+> | Demo data reachable in prod | ✅ `seed_demo` raises `CommandError` unless `DEBUG` or `--force` |
+> | Brute-forcing a TOTP code | ✅ 5-attempt per-device cap, claimed atomically — a throttle alone cannot stop an IP-rotating attacker |
+> | Super Admin self-lockout | ✅ Role change refuses self-demotion and demotion of the last active Super Admin |
+> | Duplicate device-change requests / absence reminders | ✅ Enforced by database constraints, not by check-then-write application logic |
+> | Unbounded list endpoints | ✅ Feedback inbox and forum monitor are server-paginated |
 >
 > The one caveat that still stands, unchanged: **nothing has yet run on a production VPS.**
 
@@ -29,9 +35,9 @@ done on Hostinger. Grades: ✅ done · 🟡 partial/dev-only · ⛔ missing._
 ---
 
 ## 0. Snapshot
-- **Backend:** Django + DRF, 16 domain apps, **~117 tests passing**, ruff/black clean, migrations tracked.
-- **Frontend:** React + Vite + TS + Tailwind, per-role portals + sidebar shell + landing page; wired to the API.
-- **Runs locally** on SQLite + console/local adapters. **Not yet deployed; not yet on PostgreSQL or real providers.**
+- **Backend:** Django + DRF, 15 apps with models + 4 model-less aggregator packages (`dashboard`, `performance`, `reports`, `upsell`), **387 tests passing**, black/mypy clean, migrations tracked.
+- **Frontend:** React + Vite + TS + Tailwind, per-role portals + sidebar shell + landing page; wired to the API. **35 vitest tests** + Playwright E2E specs, both run in CI.
+- **Runs locally** on SQLite + console/local adapters; PostgreSQL via `docker-compose.yml`. **Not yet deployed to a VPS, and no real provider credentials have been exercised.**
 - **Architecture is sound and decoupled** (REST API + ports/adapters). The remaining work is mostly **integration + ops + a UI redesign**, not rewrites.
 
 ---
@@ -85,7 +91,7 @@ done on Hostinger. Grades: ✅ done · 🟡 partial/dev-only · ⛔ missing._
 
 | Module | Backend | What's stubbed / left |
 |--------|:--:|------|
-| Accounts / auth / role login | ✅ | Add forgot/reset + change password; optional staff 2FA. |
+| Accounts / auth / role login | ✅ | Forgot/reset + change password shipped and throttled; staff TOTP 2FA shipped with a 5-attempt device cap. |
 | Two-step setup (OTP) | ✅ | Codes only **logged to console** until real email/SMS wired; `dev_code` exposed in DEBUG (off in prod). |
 | Device policy | 🟡 | Logic + faculty approval done; **fingerprint is weak (FE)**. "Change only during live class" is faculty-discretion, not strictly gated to a live session. |
 | Courses / batches | ✅ | Complete. |
@@ -151,11 +157,11 @@ Every adapter is selected by an env var (`LMS_*_ADAPTER`) — wiring a provider 
 ---
 
 ## 7. DEVOPS / QA / OBSERVABILITY
-- ⛔ **CI/CD** — gates configured (ruff/black/mypy/pytest, eslint/tsc/vitest) but no pipeline runs them. Add GitHub Actions (pairs with the deferred GitHub setup).
+- ✅ **CI/CD** — GitHub Actions runs four jobs: backend (ruff/black/mypy/pytest with `--cov-fail-under=85`), frontend (eslint/tsc/vitest/build), security (`pip-audit`, `npm audit`, gitleaks, `check --deploy`), and Playwright E2E. _(was ⛔)_ **The pipeline has not yet had a green run on GitHub** — it is unverified until the first PR.
 - ⛔ **Monitoring/alerting** — add Sentry (errors) + uptime + basic metrics.
 - ⛔ **Structured logging** + log shipping.
 - ⛔ **Backups** + restore drills.
-- 🟡 **Tests** — strong on security/business logic; add E2E + more edge/concurrency + run mypy. No load testing yet.
+- ✅ **Tests** — 387 backend + 35 frontend, plus Playwright E2E and a dedicated concurrency suite; mypy runs in CI; Locust load test written and run once against a local server. _(was 🟡)_
 
 ---
 
@@ -168,10 +174,10 @@ Every adapter is selected by an env var (`LMS_*_ADAPTER`) — wiring a provider 
 ## 9. PRIORITISED ROADMAP
 
 **Phase 1 — must-have to launch (blockers):**
-1. PostgreSQL run + verify; Redis for cache/throttle. 2. Real adapters: SMTP email, SMS, WhatsApp, object storage. 3. Secrets + HTTPS + Nginx/gunicorn/systemd on Hostinger. 4. Cron jobs live. 5. **Forgot/reset password** + change password. 6. Upload size/type limits. 7. Backups + basic Sentry/logging. 8. Remove demo accounts; create real Super Admin.
+1. PostgreSQL run + verify; Redis for cache/throttle _(compose + `prod.py` fail-fast done; not yet run on a VPS)_. 2. Real adapters: SMTP email, SMS, WhatsApp, object storage _(all written; no live credentials exercised)_. 3. Secrets + HTTPS + Nginx/gunicorn/systemd on Hostinger _(`deploy/nginx.conf` + `docker-compose.prod.yml` written, never deployed)_. 4. Cron jobs live. 5. ~~Forgot/reset password + change password~~ ✅ done. 6. ~~Upload size/type limits~~ ✅ done (size, extension, declared type, magic bytes, UUID storage keys). 7. Backups + basic Sentry/logging. 8. Remove demo accounts; create real Super Admin _(`seed_demo` now refuses to run unless `DEBUG` or `--force`)_.
 
 **Phase 2 — should-have:**
-UI redesign; CI pipeline + mypy; E2E tests; full-text search (PG); video hardening (object storage signed URLs / HLS); stronger device fingerprint; email templates.
+~~CI pipeline + mypy~~ ✅ done; ~~E2E tests~~ ✅ done; UI redesign; full-text search (PG); video hardening (object storage signed URLs / HLS); stronger device fingerprint; email templates.
 
 **Phase 3 — nice-to-have:**
 WhatsApp templated campaigns; analytics; i18n; Zoom/Meet auto-create; load testing; PWA/offline.

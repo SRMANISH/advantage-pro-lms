@@ -96,7 +96,7 @@ advantage-pro-lms/
 - **Test strategy:** test pyramid (many unit, fewer integration, few E2E); TDD for core logic (validation, grading, attendance, RBAC). Backend pytest + pytest-django + factory_boy; frontend Vitest + React Testing Library; optional Playwright E2E.
 - **Version control:** trunk-based with short-lived **one-branch-per-module**, PR + self-review checklist before sign-off.
 - **CI/CD:** on every push — lint + type-check + tests + **SAST (bandit/semgrep)** + **dependency & secret scanning (pip-audit, npm audit, gitleaks)**. Automated deploy wired when Hostinger is connected.
-- **Quality gates:** ruff + black + mypy (backend); eslint + prettier + tsc (frontend); pre-commit hooks. Nothing merges red.
+- **Quality gates:** ruff + black + mypy (backend); eslint + prettier + tsc (frontend); pre-commit hooks. Nothing merges red. _All of these now run in GitHub Actions (`.github/workflows/ci.yml`) alongside pytest with an 85% coverage floor, vitest, Playwright E2E, `pip-audit`, `npm audit` and gitleaks._
 - **Docs:** OpenAPI (drf-spectacular) for the API, short **ADRs** for decisions, per-module spec in `docs/`.
 - **Config & releases:** 12-factor env config, reversible DB migrations, dev/staging/prod parity via Docker.
 - **Per-module workflow:** Design (model + API contract + UI sketch) → backend (models, serializers, permissions, endpoints, tests) → frontend → tests green → security check → demo to you → **your sign-off** → next module.
@@ -358,5 +358,5 @@ Palette derived from the Advantage Pro logo (brand blue + emblem violet accent).
   - ✅ **Prod fail-fast** — settings refuse to boot with a dev `SECRET_KEY` or default `ALLOWED_HOSTS`.
   - ✅ `docs/DEPLOYMENT.md` — full Hostinger go-live runbook (env, gunicorn/nginx, cron, provider swap, checklist).
   - ⬜ Still to do: actually run/verify on PostgreSQL (needs a PG instance), upload size/type limits,
-    Sentry + structured logging, CI pipeline, then real providers + deploy.
+    Sentry + structured logging, ~~CI pipeline~~ ✅ done, then real providers + deploy.
 - **Tests: ~117 backend passing.**

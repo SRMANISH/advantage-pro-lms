@@ -268,7 +268,7 @@ as defects is noise.
 
 ## 6. Open-gap register
 
-Style follows `FUNCTIONAL_REVIEW.md`'s R-xx register. **P-01…P-08 were found in this review
+Style follows `FUNCTIONAL_REVIEW.md`'s R-xx register. **P-01…P-08 and P-15…P-18 were found in this review
 and are closed.** Remaining items are open.
 
 | ID | Sev | Finding | Status |
@@ -287,6 +287,10 @@ and are closed.** Remaining items are open.
 | **P-12** | Info | Locust numbers are local SQLite/single-process, not a staging benchmark | 🔷 **Open** — re-run before quoting SLAs |
 | **P-13** | ⚠️ **Infra** | **Nothing has run on a production VPS.** Postgres, Redis, nginx, X-Accel, gunicorn, qcluster, Sentry and backup restore are configured and documented but unexercised | 🔴 **Open — the one true caveat** |
 | **P-14** | Medium | TOTP verification had **no application-level attempt cap** — a 6-digit secret could be guessed indefinitely, bounded only by request rate (which an attacker can spread across IPs) | ✅ **Closed** — per-device `failed_attempts` cap mirroring the OTP pattern, cleared on success, reset by re-enrollment |
+| **P-15** | Medium | `UserRoleView` allowed a Super Admin to be demoted with no floor — including the last one, and including the acting account. Super Admin is the only role that can grant roles, so the result is unrecoverable through the UI | ✅ **Closed** (Phase 2) — self-demotion and last-active-Super-Admin demotion both refused. `UserStatusView` was checked and needs no guard: it only accepts student and faculty targets |
+| **P-16** | Medium | `DeviceChangeRequest` had no constraint behind its `get_or_create`, so two tabs or a retried login each raised a request for the same device — two approval cards, either of which binds the device | ✅ **Closed** (Phase 2) — partial unique index scoped to PENDING, so a rejected device can still be re-requested; migration collapses pre-existing duplicates first |
+| **P-17** | Low | Absence-reminder dedup was an in-memory set built from today's Notification rows — two overlapping runs both read it as empty and both sent | ✅ **Closed** (Phase 2) — `AbsenceReminderLog` unique on (student, day), claimed before the send; migration backfills from existing notifications so the deploy itself does not re-send |
+| **P-18** | Medium | The feedback inbox and the forum doubt monitor serialised their entire (unbounded, monotonically growing) datasets on every open | ✅ **Closed** (Phase 3) — both server-paginated; the monitor's whole-dataset counts ride beside the page rather than inside it |
 
 ### Correction to P-01 — severity was overstated
 
@@ -319,13 +323,17 @@ Medium**, not an exploitable High. Recorded here rather than quietly downgraded.
 
 ---
 
-## 7. Remediation performed (Phases 2–3)
+## 7. Remediation performed
 
 | Phase | Commit | Delivered |
 |---|---|---|
 | **2 — Security hardening** | `e1c9c3a` | P-01 traversal, P-02 throttling, P-03 prod fail-fast, P-04 seeder guard — 4 fixes, 35 new tests |
 | **Duplication** | `fa91849` | P-08 — batch selector, `BatchSelect`, shared test helpers, 84 orphaned imports removed |
 | **3 — CI, deploy, docs** | `afcf5b8` | P-05 security + e2e CI jobs, P-06 qcluster contradiction + systemd/compose/nginx, P-07 doc drift |
+| **Phase 1 — uploads** | `cb03352` | P-01 UUID storage keys + rejection backstop + containment, P-14 TOTP attempt cap, verification throttle on 8 views |
+| **Phase 2 — integrity** | `2c67826` | P-15 Super Admin lockout, P-16 device-request constraint, P-17 absence-reminder claim — all three moved into the database |
+| **Phase 3 — pagination** | `8622aa2` | P-18 — feedback inbox and forum monitor paginated, `paginate_rows` gained an `extra` envelope |
+| **Phase 4 — hygiene** | `f33bca9` | P-08 remainder — last 4 test files onto shared helpers; raw tables/selects onto the design system; `Button` gained an anchor form |
 
 Earlier hardening (before this review) is recorded in `AUDIT2.md` and `FUNCTIONAL_REVIEW.md`.
 
