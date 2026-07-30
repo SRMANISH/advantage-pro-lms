@@ -3,13 +3,9 @@
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
+from accounts.models import UserStatus
 from core.roles import Role
-from .helpers import client_for
-
-
-def user(username, role, status=UserStatus.ACTIVE):
-    return User.objects.create_user(username=username, password="x", role=role, status=status)
+from .helpers import client_for, user
 
 
 def _status_url(u):

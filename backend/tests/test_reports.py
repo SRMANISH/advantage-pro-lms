@@ -4,21 +4,14 @@ import datetime
 
 import pytest
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
-from .helpers import client_for
+from .helpers import client_for, user
 
 STUDENTS = "/api/v1/reports/students/"
 ATTENDANCE = "/api/v1/reports/attendance/"
 PERFORMANCE = "/api/v1/reports/performance/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE, full_name=username
-    )
 
 
 @pytest.fixture
@@ -31,10 +24,10 @@ def world(db):
         start_date=datetime.date(2026, 1, 1),
         end_date=datetime.date(2026, 4, 1),
     )
-    fac = user("fac", Role.FACULTY)
+    fac = user("fac", Role.FACULTY, full_name="fac")
     batch.faculty.add(fac)
-    counselor = user("co", Role.COUNSELOR)
-    student = user("S1", Role.STUDENT)
+    counselor = user("co", Role.COUNSELOR, full_name="co")
+    student = user("S1", Role.STUDENT, full_name="S1")
     Enrollment.objects.create(student=student, batch=batch, registration_number="S1")
     return {"batch": batch, "fac": fac, "counselor": counselor, "student": student}
 

@@ -3,11 +3,11 @@
 import datetime
 
 import pytest
-from rest_framework.test import APIClient
 
 from accounts.models import User, UserStatus
 from batches.models import Batch, BatchState, Course
 from core.roles import Role
+from .helpers import client_for
 
 COURSES_URL = "/api/v1/courses/"
 BATCHES_URL = "/api/v1/batches/"
@@ -42,12 +42,6 @@ def users(db):
 @pytest.fixture
 def course(db):
     return Course.objects.create(code="FS", name="Full Stack")
-
-
-def client_for(user):
-    c = APIClient()
-    c.force_authenticate(user=user)
-    return c
 
 
 def make_batch(course, code="B1", **extra):

@@ -2,7 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { BatchSelect, Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
+import {
+  BatchSelect,
+  Card,
+  EmptyState,
+  SectionHeading,
+  TableShell,
+  TableSkeleton,
+  THead,
+} from "../../design-system";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
 import { engagementApi } from "./api";
@@ -63,32 +71,30 @@ export function EngagementReportPage({ role }: { role: RoleDef }) {
         {plans.isLoading ? (
           <TableSkeleton rows={4} cols={6} />
         ) : plans.data && plans.data.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border border-brdr">
-            <table className="w-full text-sm">
-              <thead className="bg-sky text-navy">
-                <tr>
-                  <th className="px-3 py-2 text-left">Registration ID</th>
-                  <th className="px-3 py-2 text-left">Name</th>
-                  <th className="px-3 py-2 text-left">Interested course</th>
-                  <th className="px-3 py-2 text-left">Timing</th>
-                  <th className="px-3 py-2 text-left">Goal</th>
-                  <th className="px-3 py-2 text-left">Contact time</th>
+          <TableShell>
+            <THead>
+              <tr>
+                <th className="px-3 py-2 text-left">Registration ID</th>
+                <th className="px-3 py-2 text-left">Name</th>
+                <th className="px-3 py-2 text-left">Interested course</th>
+                <th className="px-3 py-2 text-left">Timing</th>
+                <th className="px-3 py-2 text-left">Goal</th>
+                <th className="px-3 py-2 text-left">Contact time</th>
+              </tr>
+            </THead>
+            <tbody>
+              {plans.data.map((p, i) => (
+                <tr key={i} className="border-t border-brdr">
+                  <td className="px-3 py-2">{p.registration_number}</td>
+                  <td className="px-3 py-2">{p.student_name}</td>
+                  <td className="px-3 py-2">{p.interested_course || "—"}</td>
+                  <td className="px-3 py-2 text-muted">{p.expected_timing || "—"}</td>
+                  <td className="px-3 py-2 text-muted">{p.goal || "—"}</td>
+                  <td className="px-3 py-2 text-muted">{p.preferred_contact_time || "—"}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {plans.data.map((p, i) => (
-                  <tr key={i} className="border-t border-brdr">
-                    <td className="px-3 py-2">{p.registration_number}</td>
-                    <td className="px-3 py-2">{p.student_name}</td>
-                    <td className="px-3 py-2">{p.interested_course || "—"}</td>
-                    <td className="px-3 py-2 text-muted">{p.expected_timing || "—"}</td>
-                    <td className="px-3 py-2 text-muted">{p.goal || "—"}</td>
-                    <td className="px-3 py-2 text-muted">{p.preferred_contact_time || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </TableShell>
         ) : (
           <EmptyState title="No next-plan responses yet" />
         )}

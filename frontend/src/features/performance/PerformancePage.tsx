@@ -9,8 +9,10 @@ import {
   ListSkeleton,
   Paginator,
   SectionHeading,
+  TableShell,
   TableSkeleton,
   TableToolbar,
+  THead,
   useTableTools,
 } from "../../design-system";
 import { attendanceApi } from "../attendance/api";
@@ -112,9 +114,8 @@ function BatchBoard() {
                 onQuery={table.setQuery}
                 placeholder="Search by Registration ID or name…"
               />
-              <div className="overflow-x-auto rounded-lg border border-brdr">
-              <table className="w-full text-sm">
-                <thead className="bg-sky text-navy">
+              <TableShell>
+                <THead>
                   <tr>
                     <th className="px-3 py-2 text-left">Rank</th>
                     <th className="px-3 py-2 text-left">Registration ID</th>
@@ -125,7 +126,7 @@ function BatchBoard() {
                     <th className="px-3 py-2 text-left">Att.</th>
                     <th className="px-3 py-2 text-left">Overall</th>
                   </tr>
-                </thead>
+                </THead>
                 <tbody>
                   {table.rows.map((r) => (
                     <tr key={r.student} className="border-t border-brdr">
@@ -140,8 +141,7 @@ function BatchBoard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
-              </div>
+              </TableShell>
               <Paginator
                 page={table.page}
                 pageCount={table.pageCount}

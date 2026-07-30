@@ -4,9 +4,9 @@ import pyotp
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import TOTPDevice, User, UserStatus
+from accounts.models import TOTPDevice
 from core.roles import Role
-from .helpers import client_for
+from .helpers import client_for, user
 
 ENROLL = "/api/v1/auth/totp/enroll/"
 CONFIRM = "/api/v1/auth/totp/confirm/"
@@ -15,11 +15,7 @@ STATUS = "/api/v1/auth/totp/status/"
 LOGIN = "/api/v1/auth/login/"
 
 
-def user(username, role, password="Secret123!"):
-    u = User.objects.create_user(
-        username=username, password=password, role=role, status=UserStatus.ACTIVE
-    )
-    return u
+PASSWORD = "Secret123!"  # real logins happen in this module, so it must pass validation
 
 
 def _enroll_and_confirm(client) -> str:
@@ -33,7 +29,7 @@ def _enroll_and_confirm(client) -> str:
 
 @pytest.mark.django_db
 def test_status_defaults_to_disabled():
-    admin = user("adm", Role.ADMIN)
+    admin = user("adm", Role.ADMIN, password=PASSWORD)
     resp = client_for(admin).get(STATUS)
     assert resp.status_code == 200
     assert resp.json() == {"enabled": False}
@@ -41,7 +37,7 @@ def test_status_defaults_to_disabled():
 
 @pytest.mark.django_db
 def test_enroll_then_confirm_enables_totp():
-    admin = user("adm", Role.ADMIN)
+    admin = user("adm", Role.ADMIN, password=PASSWORD)
     c = client_for(admin)
     enroll = c.post(ENROLL, format="json")
     assert enroll.status_code == 200
@@ -57,7 +53,7 @@ def test_enroll_then_confirm_enables_totp():
 
 @pytest.mark.django_db
 def test_confirm_with_wrong_code_does_not_enable():
-    admin = user("adm", Role.ADMIN)
+    admin = user("adm", Role.ADMIN, password=PASSWORD)
     c = client_for(admin)
     c.post(ENROLL, format="json")
     resp = c.post(CONFIRM, {"code": "000000"}, format="json")
@@ -67,7 +63,7 @@ def test_confirm_with_wrong_code_does_not_enable():
 
 @pytest.mark.django_db
 def test_reenrolling_while_confirmed_is_rejected():
-    admin = user("adm", Role.ADMIN)
+    admin = user("adm", Role.ADMIN, password=PASSWORD)
     c = client_for(admin)
     _enroll_and_confirm(c)
     resp = c.post(ENROLL, format="json")
@@ -76,7 +72,7 @@ def test_reenrolling_while_confirmed_is_rejected():
 
 @pytest.mark.django_db
 def test_student_cannot_use_totp_endpoints():
-    student = user("S1", Role.STUDENT)
+    student = user("S1", Role.STUDENT, password=PASSWORD)
     c = client_for(student)
     assert c.get(STATUS).status_code == 403
     assert c.post(ENROLL, format="json").status_code == 403
@@ -84,7 +80,7 @@ def test_student_cannot_use_totp_endpoints():
 
 @pytest.mark.django_db
 def test_login_without_totp_enabled_is_unaffected():
-    user("adm", Role.ADMIN, password="Secret123!")
+    user("adm", Role.ADMIN, password=PASSWORD)
     resp = APIClient().post(
         LOGIN, {"username": "adm", "password": "Secret123!"}, content_type="application/json"
     )
@@ -93,7 +89,7 @@ def test_login_without_totp_enabled_is_unaffected():
 
 @pytest.mark.django_db
 def test_login_with_totp_enabled_requires_code_then_succeeds():
-    admin = user("adm", Role.ADMIN, password="Secret123!")
+    admin = user("adm", Role.ADMIN, password=PASSWORD)
     secret = _enroll_and_confirm(client_for(admin))
 
     # Step 1: password only -> blocked, asks for the code.
@@ -122,7 +118,7 @@ def test_login_with_totp_enabled_requires_code_then_succeeds():
 
 @pytest.mark.django_db
 def test_disable_requires_current_password():
-    admin = user("adm", Role.ADMIN, password="Secret123!")
+    admin = user("adm", Role.ADMIN, password=PASSWORD)
     c = client_for(admin)
     _enroll_and_confirm(c)
 
@@ -138,7 +134,7 @@ def test_disable_requires_current_password():
 
 @pytest.mark.django_db
 def test_disabling_totp_reverts_login_to_password_only():
-    admin = user("adm", Role.ADMIN, password="Secret123!")
+    admin = user("adm", Role.ADMIN, password=PASSWORD)
     c = client_for(admin)
     _enroll_and_confirm(c)
     c.post(DISABLE, {"password": "Secret123!"}, format="json")
@@ -158,7 +154,7 @@ def test_totp_confirm_locks_the_device_after_max_attempts():
     cap lives on the device itself rather than only in the throttle."""
     from accounts.totp import MAX_ATTEMPTS
 
-    staff = user("fac_cap", Role.FACULTY)
+    staff = user("fac_cap", Role.FACULTY, password=PASSWORD)
     api = client_for(staff)
     secret = api.post(ENROLL, format="json").json()["secret"]
 
@@ -178,7 +174,7 @@ def test_totp_confirm_locks_the_device_after_max_attempts():
 
 @pytest.mark.django_db
 def test_a_correct_code_clears_the_attempt_counter():
-    staff = user("fac_clear", Role.FACULTY)
+    staff = user("fac_clear", Role.FACULTY, password=PASSWORD)
     api = client_for(staff)
     secret = api.post(ENROLL, format="json").json()["secret"]
 
@@ -195,7 +191,7 @@ def test_restarting_enrollment_resets_the_cap():
     """The documented recovery path must actually work."""
     from accounts.totp import MAX_ATTEMPTS
 
-    staff = user("fac_reset", Role.FACULTY)
+    staff = user("fac_reset", Role.FACULTY, password=PASSWORD)
     api = client_for(staff)
     api.post(ENROLL, format="json")
     for _ in range(MAX_ATTEMPTS):

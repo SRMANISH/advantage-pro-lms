@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { BatchSelect, Card, SectionHeading } from "../../design-system";
+import { BatchSelect, Button, Card, SectionHeading } from "../../design-system";
 import { attendanceApi } from "../attendance/api";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -15,13 +15,11 @@ export function ReportsPage({ role }: { role: RoleDef }) {
   const [batchId, setBatchId] = useState("");
   const canStudents = STUDENT_EXPORT_ROLES.has(user?.role ?? "");
 
+  // Stays an anchor (via Button's href form) so the browser downloads natively.
   const DownloadLink = ({ path, label }: { path: string; label: string }) => (
-    <a
-      href={`/api/v1/reports/${path}/?batch=${batchId}`}
-      className="rounded-lg bg-sky px-4 py-2 text-sm font-medium text-navy hover:bg-brand/10"
-    >
+    <Button variant="soft" href={`/api/v1/reports/${path}/?batch=${batchId}`}>
       Download {label} (CSV)
-    </a>
+    </Button>
   );
 
   return (

@@ -72,8 +72,8 @@ export function EngagementPrompts() {
       <Overlay>
         <h2 className="mb-1 text-lg font-medium text-ink">Follow us on LinkedIn</h2>
         <p className="mb-4 text-sm text-muted">
-          Following the Advantage Pro LinkedIn page is required to stay updated on results,
-          openings and announcements. Open the page, follow us, then confirm below.
+          Following the Advantage Pro LinkedIn page is required to stay updated on results, openings
+          and announcements. Open the page, follow us, then confirm below.
         </p>
         <div className="flex flex-wrap gap-2">
           <a href={LINKEDIN_URL} target="_blank" rel="noreferrer">

@@ -6,10 +6,14 @@ import {
   BatchSelect,
   Button,
   Card,
+  Input,
   ListSkeleton,
   ProgressRing,
   SectionHeading,
+  Select,
+  TableShell,
   TableSkeleton,
+  THead,
 } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -57,8 +61,7 @@ function MyAttendance() {
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-semibold text-ink">{r.batch_name}</h2>
                 <p className="mt-1 text-sm text-muted">
-                  You are present on{" "}
-                  <span className="font-semibold text-ink">{r.present}</span> of{" "}
+                  You are present on <span className="font-semibold text-ink">{r.present}</span> of{" "}
                   <span className="font-semibold text-ink">{r.total}</span> active days.
                 </p>
                 <p className="mt-0.5 text-xs text-muted">
@@ -114,44 +117,46 @@ function BatchRoster() {
         <Card>
           <h2 className="mb-3 text-base font-medium text-ink">Roster</h2>
           {roster.data && roster.data.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border border-brdr">
-              <table className="w-full text-sm">
-                <thead className="bg-sky text-navy">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Registration ID</th>
-                    <th className="px-3 py-2 text-left">Name</th>
-                    <th className="px-3 py-2 text-left">Present</th>
-                    <th className="px-3 py-2 text-left">%</th>
-                    {canFollowUp && <th className="px-3 py-2 text-left">Follow-up</th>}
+            <TableShell>
+              <THead>
+                <tr>
+                  <th className="px-3 py-2 text-left">Registration ID</th>
+                  <th className="px-3 py-2 text-left">Name</th>
+                  <th className="px-3 py-2 text-left">Present</th>
+                  <th className="px-3 py-2 text-left">%</th>
+                  {canFollowUp && <th className="px-3 py-2 text-left">Follow-up</th>}
+                </tr>
+              </THead>
+              <tbody>
+                {roster.data.map((r) => (
+                  <tr key={r.registration_number} className="border-t border-brdr">
+                    <td className="px-3 py-2">{r.registration_number}</td>
+                    <td className="px-3 py-2">{r.student_name}</td>
+                    <td className="px-3 py-2 text-muted">
+                      {r.present}/{r.total}
+                    </td>
+                    <td
+                      className={`px-3 py-2 font-medium ${r.percent < 50 ? "text-red-600" : "text-navy"}`}
+                    >
+                      {r.percent}%
+                    </td>
+                    {canFollowUp && (
+                      <td className="px-3 py-2">
+                        {sent.has(r.student) ? (
+                          <span className="text-xs text-[color:var(--color-text-success,#1E8E5A)]">
+                            Sent ✓
+                          </span>
+                        ) : (
+                          <Button variant="ghost" onClick={() => followUp.mutate(r.student)}>
+                            Send reminder
+                          </Button>
+                        )}
+                      </td>
+                    )}
                   </tr>
-                </thead>
-                <tbody>
-                  {roster.data.map((r) => (
-                    <tr key={r.registration_number} className="border-t border-brdr">
-                      <td className="px-3 py-2">{r.registration_number}</td>
-                      <td className="px-3 py-2">{r.student_name}</td>
-                      <td className="px-3 py-2 text-muted">
-                        {r.present}/{r.total}
-                      </td>
-                      <td className={`px-3 py-2 font-medium ${r.percent < 50 ? "text-red-600" : "text-navy"}`}>
-                        {r.percent}%
-                      </td>
-                      {canFollowUp && (
-                        <td className="px-3 py-2">
-                          {sent.has(r.student) ? (
-                            <span className="text-xs text-[color:var(--color-text-success,#1E8E5A)]">Sent ✓</span>
-                          ) : (
-                            <Button variant="ghost" onClick={() => followUp.mutate(r.student)}>
-                              Send reminder
-                            </Button>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </TableShell>
           ) : (
             <p className="text-sm text-muted">No students in this batch.</p>
           )}
@@ -195,12 +200,12 @@ function DailyLoginPanel({ batchId, canFollowUp }: { batchId: string; canFollowU
           <label className="text-sm text-muted" htmlFor="daily-date">
             Date
           </label>
-          <input
+          <Input
             id="daily-date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+            className="h-9 w-auto"
           />
         </div>
       </div>
@@ -212,74 +217,73 @@ function DailyLoginPanel({ batchId, canFollowUp }: { batchId: string; canFollowU
           <p className="mb-2 text-xs text-muted">
             {rows.length - absentees} logged in · {absentees} did not log in
           </p>
-          <div className="overflow-x-auto rounded-lg border border-brdr">
-            <table className="w-full text-sm">
-              <thead className="bg-sky text-navy">
-                <tr>
-                  <th className="px-3 py-2 text-left">Registration ID</th>
-                  <th className="px-3 py-2 text-left">Name</th>
-                  <th className="px-3 py-2 text-left">Logged in</th>
-                  {canFollowUp && <th className="px-3 py-2 text-left">Follow-up</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.student} className="border-t border-brdr">
-                    <td className="px-3 py-2">{r.registration_number}</td>
-                    <td className="px-3 py-2">{r.student_name}</td>
+          <TableShell>
+            <THead>
+              <tr>
+                <th className="px-3 py-2 text-left">Registration ID</th>
+                <th className="px-3 py-2 text-left">Name</th>
+                <th className="px-3 py-2 text-left">Logged in</th>
+                {canFollowUp && <th className="px-3 py-2 text-left">Follow-up</th>}
+              </tr>
+            </THead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.student} className="border-t border-brdr">
+                  <td className="px-3 py-2">{r.registration_number}</td>
+                  <td className="px-3 py-2">{r.student_name}</td>
+                  <td className="px-3 py-2">
+                    {r.logged_in ? (
+                      <span className="text-[color:var(--color-text-success,#1E8E5A)]">✓ Yes</span>
+                    ) : (
+                      <span className="text-red-600">✗ No</span>
+                    )}
+                  </td>
+                  {canFollowUp && (
                     <td className="px-3 py-2">
-                      {r.logged_in ? (
-                        <span className="text-[color:var(--color-text-success,#1E8E5A)]">✓ Yes</span>
-                      ) : (
-                        <span className="text-red-600">✗ No</span>
-                      )}
-                    </td>
-                    {canFollowUp && (
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <select
-                            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
-                            value={r.follow_up_status}
-                            disabled={r.logged_in}
-                            onChange={(e) =>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          aria-label={`Follow-up status for ${r.student_name}`}
+                          className="h-9 w-auto"
+                          value={r.follow_up_status}
+                          disabled={r.logged_in}
+                          onChange={(e) =>
+                            setStatus.mutate({
+                              studentId: r.student,
+                              status: e.target.value as FollowUpStatus,
+                            })
+                          }
+                        >
+                          {FOLLOW_UP_STATUSES.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </Select>
+                        <Input
+                          type="text"
+                          aria-label={`Follow-up note for ${r.student_name}`}
+                          placeholder="Add note…"
+                          defaultValue={r.follow_up_note}
+                          disabled={r.logged_in}
+                          className="h-9 w-40"
+                          onBlur={(e) => {
+                            const note = e.target.value.trim();
+                            if (note && note !== r.follow_up_note) {
                               setStatus.mutate({
                                 studentId: r.student,
-                                status: e.target.value as FollowUpStatus,
-                              })
+                                status: r.follow_up_status,
+                                note,
+                              });
                             }
-                          >
-                            {FOLLOW_UP_STATUSES.map((s) => (
-                              <option key={s.value} value={s.value}>
-                                {s.label}
-                              </option>
-                            ))}
-                          </select>
-                          <input
-                            type="text"
-                            aria-label={`Follow-up note for ${r.student_name}`}
-                            placeholder="Add note…"
-                            defaultValue={r.follow_up_note}
-                            disabled={r.logged_in}
-                            className="h-9 w-40 rounded-lg border border-brdr bg-surface px-2 text-sm"
-                            onBlur={(e) => {
-                              const note = e.target.value.trim();
-                              if (note && note !== r.follow_up_note) {
-                                setStatus.mutate({
-                                  studentId: r.student,
-                                  status: r.follow_up_status,
-                                  note,
-                                });
-                              }
-                            }}
-                          />
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          }}
+                        />
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </TableShell>
         </>
       ) : (
         <p className="text-sm text-muted">No students in this batch.</p>
