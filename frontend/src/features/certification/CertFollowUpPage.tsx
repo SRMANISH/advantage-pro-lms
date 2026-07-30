@@ -65,7 +65,7 @@ export function CertFollowUpPage({ role }: { role: RoleDef }) {
                         {r.certified ? (
                           <Badge>{r.certificate_id}</Badge>
                         ) : (
-                          <span className="text-red-600">pending</span>
+                          <span className="text-red-600">Pending</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-muted">{r.reminder_count}</td>

@@ -63,7 +63,7 @@ class MatrixActionView(APIView):
         raw = request.data.get("roles")
         if not isinstance(raw, list) or not all(r in Role.values for r in raw):
             return Response(
-                {"detail": "roles must be a list of valid role values."},
+                {"detail": "Roles must be a list of valid role values."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         roles = sorted(set(raw))

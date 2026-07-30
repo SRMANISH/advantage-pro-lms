@@ -84,7 +84,7 @@ class DeviceRequestDecideView(APIView):
         elif decision == "reject":
             device.reject_request(req, request.user, reason)
         else:
-            return Response({"detail": "decision must be approve or reject."}, status=400)
+            return Response({"detail": "Decision must be either approve or reject."}, status=400)
         record_action(
             actor=request.user,
             action=f"device_{decision}",

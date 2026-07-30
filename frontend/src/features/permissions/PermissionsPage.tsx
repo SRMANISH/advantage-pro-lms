@@ -101,7 +101,7 @@ export function PermissionsPage({ role }: { role: RoleDef }) {
                     <td className="px-3 py-2">
                       {row.overridden ? (
                         <span className="inline-flex items-center gap-2">
-                          <Badge tone="warning">custom</Badge>
+                          <Badge tone="warning">Custom</Badge>
                           <Button
                             variant="ghost"
                             onClick={() => reset.mutate(row.action)}
@@ -111,7 +111,7 @@ export function PermissionsPage({ role }: { role: RoleDef }) {
                           </Button>
                         </span>
                       ) : (
-                        <span className="text-xs text-muted">default</span>
+                        <span className="text-xs text-muted">Default</span>
                       )}
                     </td>
                   </tr>

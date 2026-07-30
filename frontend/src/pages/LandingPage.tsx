@@ -174,7 +174,7 @@ function SignInCard() {
             autoComplete="username"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="e.g. s101@example.com or S101"
+            placeholder="Example: s101@example.com or S101"
           />
         </div>
         <div>

@@ -57,7 +57,7 @@ function MyAttendance() {
         rows.data.map((r) => (
           <Card key={r.batch}>
             <div className="flex flex-wrap items-center gap-6">
-              <ProgressRing value={r.percent} label="attendance" />
+              <ProgressRing value={r.percent} label="Attendance" />
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-semibold text-ink">{r.batch_name}</h2>
                 <p className="mt-1 text-sm text-muted">

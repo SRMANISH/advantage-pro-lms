@@ -72,7 +72,7 @@ class BatchSerializer(serializers.ModelSerializer):
         start = attrs.get("start_date") or getattr(self.instance, "start_date", None)
         end = attrs.get("end_date") or getattr(self.instance, "end_date", None)
         if start and end and end < start:
-            raise serializers.ValidationError("end_date cannot be before start_date.")
+            raise serializers.ValidationError("End date cannot be before the start date.")
         # Class days + times are mandatory when creating a batch (req 14). On edit, only
         # validate what's supplied.
         if self.instance is None:

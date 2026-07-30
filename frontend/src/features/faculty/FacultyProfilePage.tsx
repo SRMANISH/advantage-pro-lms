@@ -48,7 +48,7 @@ export function FacultyProfilePage({ role }: { role: RoleDef }) {
               <textarea
                 id="fac-skills"
                 className="min-h-20 w-full rounded-lg border border-brdr bg-surface p-2 text-sm"
-                placeholder="e.g. React, Django, PostgreSQL, System Design"
+                placeholder="Example: React, Django, PostgreSQL, System Design"
                 value={skills}
                 onChange={(e) => setSkills(e.target.value)}
               />
@@ -60,7 +60,7 @@ export function FacultyProfilePage({ role }: { role: RoleDef }) {
               <textarea
                 id="fac-certs"
                 className="min-h-20 w-full rounded-lg border border-brdr bg-surface p-2 text-sm"
-                placeholder="e.g. AWS Solutions Architect, Google Cloud Professional"
+                placeholder="Example: AWS Solutions Architect, Google Cloud Professional"
                 value={certs}
                 onChange={(e) => setCerts(e.target.value)}
               />

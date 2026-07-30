@@ -141,7 +141,7 @@ class LinkedInActionView(APIView):
             "skipped": LinkedInFollow.Status.SKIPPED,
         }
         if action not in mapping:
-            return Response({"detail": "action must be opened/confirmed/skipped."}, status=400)
+            return Response({"detail": "Action must be opened, confirmed or skipped."}, status=400)
         follow.status = mapping[action]
         if action == "confirmed":
             follow.confirmed_at = timezone.now()
@@ -161,7 +161,7 @@ class GoogleReviewActionView(APIView):
             "skipped": GoogleReview.Status.SKIPPED,
         }
         if action not in mapping:
-            return Response({"detail": "action must be opened/submitted/skipped."}, status=400)
+            return Response({"detail": "Action must be opened, submitted or skipped."}, status=400)
         review.status = mapping[action]
         if action == "submitted":
             review.submitted_at = timezone.now()

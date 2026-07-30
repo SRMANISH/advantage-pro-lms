@@ -201,7 +201,7 @@ function GradeRow({ submission, onGraded }: { submission: Submission; onGraded: 
     <div className="rounded-lg bg-sky p-3">
       <div className="mb-1 flex items-center gap-2 text-sm">
         <span className="font-medium text-ink">{submission.student_name}</span>
-        {submission.is_late && <Badge>late</Badge>}
+        {submission.is_late && <Badge>Late</Badge>}
       </div>
       {submission.text && <p className="mb-1 text-sm text-ink">{submission.text}</p>}
       {submission.file_url && (
@@ -295,7 +295,7 @@ function StudentTaskCard({ task }: { task: TaskItem }) {
       {mine ? (
         <div className="rounded-lg bg-sky p-3 text-sm">
           <span className="font-medium text-navy">Submitted</span>
-          {mine.is_late && <Badge className="ml-2">late</Badge>}
+          {mine.is_late && <Badge className="ml-2">Late</Badge>}
           {mine.score != null ? (
             <p className="mt-1 text-ink">
               Score: {mine.score}

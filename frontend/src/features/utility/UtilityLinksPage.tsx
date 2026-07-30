@@ -121,7 +121,7 @@ export function UtilityLinksPage({ role }: { role: RoleDef }) {
                       )}
                       <span className="text-sm font-semibold text-ink">{l.title}</span>
                     </div>
-                    {l.pinned && <Badge tone="warning">pinned</Badge>}
+                    {l.pinned && <Badge tone="warning">Pinned</Badge>}
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <a

@@ -53,9 +53,9 @@ export function ChannelsPage({ role }: { role: RoleDef }) {
                 <td className="px-3 py-2 font-mono text-xs text-muted">{c.adapter}</td>
                 <td className="px-3 py-2">
                   {c.dev_stub ? (
-                    <Badge tone="warning">dev stub</Badge>
+                    <Badge tone="warning">Dev stub</Badge>
                   ) : (
-                    <Badge tone="success">live</Badge>
+                    <Badge tone="success">Live</Badge>
                   )}
                 </td>
               </tr>
@@ -154,9 +154,9 @@ function ConnectionCard({ channel, onSaved }: { channel: Channel; onSaved: () =>
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-semibold capitalize text-ink">{channel.kind}</span>
         {channel.secret_set ? (
-          <Badge tone="success">secret set</Badge>
+          <Badge tone="success">Secret set</Badge>
         ) : (
-          <Badge tone="neutral">no secret</Badge>
+          <Badge tone="neutral">No secret</Badge>
         )}
       </div>
       <div className="grid gap-3">
@@ -169,7 +169,7 @@ function ConnectionCard({ channel, onSaved }: { channel: Channel; onSaved: () =>
           </label>
           <Input
             id={`prov-${channel.kind}`}
-            placeholder="e.g. smtp, msg91, whatsapp_cloud, s3"
+            placeholder="Example: smtp, msg91, whatsapp_cloud, s3"
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
           />

@@ -23,7 +23,7 @@ def resolve_batch(request, *, allow_body: bool = True):
     if not batch_id and allow_body:
         batch_id = request.data.get("batch") if hasattr(request, "data") else None
     if not batch_id:
-        return None, Response({"detail": "batch query param required."}, status=400)
+        return None, Response({"detail": "Select a batch first."}, status=400)
 
     batch = Batch.objects.filter(id=batch_id).first()
     if not batch:

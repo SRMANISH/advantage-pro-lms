@@ -367,9 +367,9 @@ function GradeRow({ attempt, onGraded }: { attempt: TestAttemptRow; onGraded: ()
           <span className="text-muted">({attempt.registration_number})</span>
         </div>
         {attempt.graded ? (
-          <Badge tone="success">graded {attempt.score}/{attempt.total}</Badge>
+          <Badge tone="success">Graded {attempt.score}/{attempt.total}</Badge>
         ) : (
-          <Badge tone="warning">awaiting grade</Badge>
+          <Badge tone="warning">Awaiting grade</Badge>
         )}
       </div>
       <div className="mb-3 flex flex-wrap gap-3 text-sm">

@@ -39,9 +39,9 @@ export function ReportsPage({ role }: { role: RoleDef }) {
         <Card>
           <h2 className="mb-3 text-base font-medium text-ink">Exports</h2>
           <div className="flex flex-wrap gap-3">
-            {canStudents && <DownloadLink path="students" label="students" />}
-            <DownloadLink path="attendance" label="attendance" />
-            <DownloadLink path="performance" label="performance" />
+            {canStudents && <DownloadLink path="students" label="Students" />}
+            <DownloadLink path="attendance" label="Attendance" />
+            <DownloadLink path="performance" label="Performance" />
           </div>
         </Card>
       )}

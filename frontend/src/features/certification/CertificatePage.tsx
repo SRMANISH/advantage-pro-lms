@@ -52,9 +52,9 @@ function CertCard({ row }: { row: CertRow }) {
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-base font-medium text-ink">{row.batch_name}</h2>
         {row.certified ? (
-          <Badge tone="success">certified</Badge>
+          <Badge tone="success">Certified</Badge>
         ) : (
-          <Badge tone="warning">pending</Badge>
+          <Badge tone="warning">Pending</Badge>
         )}
       </div>
       {row.certified ? (

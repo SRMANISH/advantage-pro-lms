@@ -173,11 +173,11 @@ function Row({
               {live.title}
             </span>
             {cancelled ? (
-              <Badge tone="danger">cancelled</Badge>
+              <Badge tone="danger">Cancelled</Badge>
             ) : past ? (
-              <Badge tone="neutral">completed</Badge>
+              <Badge tone="neutral">Completed</Badge>
             ) : (
-              <Badge tone="success">upcoming</Badge>
+              <Badge tone="success">Upcoming</Badge>
             )}
           </div>
           <div className="truncate text-xs text-muted">
@@ -189,7 +189,7 @@ function Row({
       {cancelled ? null : isStudent ? (
         live.checked_in ? (
           <div className="flex items-center gap-2">
-            <Badge>checked in</Badge>
+            <Badge>Checked in</Badge>
             <a href={live.meeting_link} target="_blank" rel="noreferrer" className="text-sm text-brand-strong underline">
               Join
             </a>

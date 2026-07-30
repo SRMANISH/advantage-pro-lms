@@ -168,7 +168,7 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
                   </div>
                 </div>
                 <span className="flex items-center gap-1.5">
-                  {t.overdue && <Badge tone="danger">overdue</Badge>}
+                  {t.overdue && <Badge tone="danger">Overdue</Badge>}
                   <StatusBadge status={t.status} />
                 </span>
               </button>

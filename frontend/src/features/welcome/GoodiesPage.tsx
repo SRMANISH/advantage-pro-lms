@@ -64,7 +64,7 @@ export function GoodiesPage({ role }: { role: RoleDef }) {
                       <td className="px-3 py-2">{r.student_name}</td>
                       <td className="px-3 py-2">{r.batch_code}</td>
                       <td className="max-w-xs px-3 py-2 text-muted">
-                        {r.address || <span className="italic">not provided</span>}
+                        {r.address || <span className="italic">Not provided</span>}
                       </td>
                       <td className="px-3 py-2">
                         <Badge tone={r.goodies_received ? "success" : "neutral"}>
@@ -73,11 +73,19 @@ export function GoodiesPage({ role }: { role: RoleDef }) {
                       </td>
                       <td className="px-3 py-2">
                         {r.goodies_sent ? (
-                          <Button variant="ghost" onClick={() => setSent.mutate({ enrollment: r.enrollment, sent: false })}>
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              setSent.mutate({ enrollment: r.enrollment, sent: false })
+                            }
+                          >
                             ✓ Sent
                           </Button>
                         ) : (
-                          <Button variant="soft" onClick={() => setSent.mutate({ enrollment: r.enrollment, sent: true })}>
+                          <Button
+                            variant="soft"
+                            onClick={() => setSent.mutate({ enrollment: r.enrollment, sent: true })}
+                          >
                             Mark sent
                           </Button>
                         )}

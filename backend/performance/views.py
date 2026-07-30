@@ -41,7 +41,7 @@ class BatchPerformanceView(APIView):
     def get(self, request):
         batch_id = request.query_params.get("batch")
         if not batch_id:
-            return Response({"detail": "batch query param required."}, status=400)
+            return Response({"detail": "Select a batch first."}, status=400)
         batch = Batch.objects.filter(id=batch_id).first()
         if not batch:
             return Response({"detail": "Batch not found."}, status=404)

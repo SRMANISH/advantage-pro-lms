@@ -155,7 +155,7 @@ export function LoginPage({ role }: LoginPageProps) {
                 autoComplete="username"
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
-                placeholder="e.g. your Registration ID"
+                placeholder="Example: your Registration ID"
               />
             </div>
             <div>
