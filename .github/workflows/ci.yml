@@ -45,8 +45,10 @@ jobs:
         run: mypy .
       - name: Migrations are up to date
         run: python manage.py makemigrations --check --dry-run
-      - name: Tests
-        run: pytest
+      - name: Tests (with coverage)
+        # Coverage config lives in pyproject.toml. --cov-fail-under guards against a
+        # silent slide; raise the floor as coverage improves, never lower it to go green.
+        run: pytest --cov --cov-report=term-missing --cov-fail-under=85
 
   frontend:
     runs-on: ubuntu-latest
@@ -69,3 +71,107 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+
+  security:
+    # Dependency and secret scanning. Kept in its own job so a vulnerability advisory
+    # surfaces distinctly from a test failure.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks needs history to scan past commits
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: pip-audit (Python dependencies)
+        run: |
+          pip install pip-audit
+          pip-audit -r backend/requirements.txt --strict
+
+      - name: npm audit (production bundle)
+        working-directory: frontend
+        # The shipped bundle must be clean. Dev-only toolchain advisories are surfaced
+        # separately below rather than blocking every PR.
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: npm audit (dev toolchain, advisory only)
+        working-directory: frontend
+        run: npm audit || true
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Django deployment check (production settings)
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
+          DJANGO_SECRET_KEY: ci-only-placeholder-secret-key-not-used-anywhere-real
+          DJANGO_ALLOWED_HOSTS: lms.example.com
+          REDIS_URL: redis://localhost:6379/0
+          # Real adapter paths so the prod guard passes; nothing is actually sent.
+          LMS_EMAIL_ADAPTER: core.adapters.smtp.SmtpEmailAdapter
+          LMS_SMS_ADAPTER: core.adapters.msg91.Msg91SmsAdapter
+          LMS_WHATSAPP_ADAPTER: core.adapters.whatsapp_cloud.WhatsAppCloudAdapter
+        run: |
+          pip install -r requirements.txt
+          python manage.py check --deploy --fail-level WARNING
+
+  e2e:
+    # The Playwright specs cover the money-flows (enrol -> setup -> login, doubt
+    # lifecycle, test/task submit -> grade, device block -> approve, complete ->
+    # certify). Wired in so a broken end-to-end flow blocks the merge.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend
+        working-directory: backend
+        run: pip install -r requirements-dev.txt
+
+      - name: Migrate and seed the demo dataset
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.dev
+        # --force because DEBUG is off in CI and the seeder refuses to run unguarded.
+        run: |
+          python manage.py migrate --noinput
+          python manage.py seed_demo --force
+
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run end-to-end specs
+        working-directory: frontend
+        # playwright.config.ts boots (or reuses) the Django and Vite dev servers itself.
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.dev
+        run: npm run e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

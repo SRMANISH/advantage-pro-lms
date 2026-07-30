@@ -1,3 +1,12 @@
+# DEVELOPMENT ONLY — do not deploy this file.
+#
+# It runs dev settings with DEBUG on and a throwaway secret, and deliberately has no Redis
+# and no django-q2 worker: in dev the task queue runs inline, so notifications send
+# synchronously and none is needed. Production requires both (queued sends would otherwise
+# never be delivered) plus real secrets and TLS.
+#
+# For the production topology see docker-compose.prod.yml and docs/DEPLOYMENT.md §5.
+
 services:
   db:
     image: postgres:16

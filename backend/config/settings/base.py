@@ -132,6 +132,13 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exceptions.exception_handler",
 }
 
+# `manage.py check --deploy` runs in CI at --fail-level WARNING so a security.W* regression
+# breaks the build. drf-spectacular's W001/W002 ("unable to guess serializer" on the plain
+# APIViews that return hand-built dicts) would otherwise drown that signal in ~77 lines of
+# known, accepted noise — see docs/PROJECT_OVERVIEW.md §13.7. The schema still generates
+# cleanly; these views simply appear without typed request/response bodies.
+SILENCED_SYSTEM_CHECKS = ["drf_spectacular.W001", "drf_spectacular.W002"]
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "Advantage Pro LMS API",
     "DESCRIPTION": "Internal batch-centric LMS for Advantage Pro.",

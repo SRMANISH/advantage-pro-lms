@@ -1,5 +1,27 @@
 # Advantage Pro LMS — A‑to‑Z Production Readiness Analysis
 
+> ## ⚠️ Historical document — largely superseded
+>
+> This was written at **~117 backend tests**, before the audit programme, the Procedure-v2
+> build, and the production-hardening phases. The current consolidated assessment is
+> **[`docs/PRODUCTION_REVIEW.md`](./PRODUCTION_REVIEW.md)** — read that first.
+>
+> It is kept for history, but several items below are **no longer accurate**. Specifically,
+> every one of these former ⛔ blockers is now implemented and tested:
+>
+> | Was a blocker here | Current state |
+> |---|---|
+> | Forgot / reset password | ✅ Two-step (email OTP → phone OTP → reset), enumeration-safe, throttled, resend-capped |
+> | Change-password screen | ✅ Implemented, with the validator rules shown in the UI |
+> | Upload size / type validation | ✅ Per-kind size caps, extension + content-type allowlists, **magic-byte sniffing**, and filename sanitisation with MEDIA_ROOT containment |
+> | Shared-cache throttling (Redis) | ✅ Redis-backed; `prod.py` fails fast without `REDIS_URL` |
+> | Dependency scanning in CI | ✅ `pip-audit` + `npm audit` + secret scan + deploy check (`.github/workflows/ci.yml`) |
+> | Security headers / CSP | ✅ Documented and shipped in `deploy/nginx.conf` |
+> | Staff 2FA | ✅ Optional TOTP for staff accounts |
+> | Object storage | ✅ Adapter seam + X-Accel delivery; provider swap is env-only |
+>
+> The one caveat that still stands, unchanged: **nothing has yet run on a production VPS.**
+
 _Snapshot of the codebase as built. Honest assessment of what is production-grade, what is
 in bits/pieces or stubbed, what must be wired to real data stores/services, and what must be
 done on Hostinger. Grades: ✅ done · 🟡 partial/dev-only · ⛔ missing._
@@ -22,14 +44,14 @@ done on Hostinger. Grades: ✅ done · 🟡 partial/dev-only · ⛔ missing._
 | App shell / nav | ✅ | Sidebar + icons + responsive drawer in place. |
 | API wiring | ✅ | All features call the real API (axios + session cookie + CSRF). |
 | Loading / empty / error states | 🟡 | Minimal. Need consistent skeletons, error toasts, empty illustrations, retry. |
-| Error boundaries | ⛔ | No React error boundary — one render error blanks the app. Add boundaries. |
+| Error boundaries | ✅ | Global React error boundary in place. _(was ⛔)_ |
 | Form validation | 🟡 | Mostly relies on backend errors. Add inline client validation. |
 | Accessibility (a11y) | 🟡 | Some aria labels; needs a pass (focus order, contrast already AA, keyboard nav, labels). |
 | Video player | 🟡 | In-app `<video>` + moving watermark + no-download deterrents. No HLS/adaptive/DRM; seeded videos are placeholders. |
-| Device identifier | ⛔ | `lib/device.ts` is a `localStorage` UUID — cleared storage = "new device"; trivially bypassed. Needs a real fingerprint (e.g. FingerprintJS) for the device policy to mean anything. |
-| Auth UX | 🟡 | No "forgot password" UI; no password-change screen (see backend gap). |
+| Device identifier | ✅ | FingerprintJS visitorId, recomputed each time (never trusts cached storage). Still a deterrent, not a hardware lock — see PROJECT_OVERVIEW §13.1. _(was ⛔)_ |
+| Auth UX | ✅ | Forgot-password and change-password screens shipped, with the active validator rules surfaced inline. _(was 🟡)_ |
 | Branding/meta | ⛔ | No favicon, page `<title>`/meta, social tags, 404 page styling. |
-| Frontend tests | 🟡 | Only 1 component test. Add component + a few E2E (Playwright) flows. |
+| Frontend tests | ✅ | 35 vitest unit tests + 12 Playwright E2E money-flow specs, both enforced in CI. _(was 🟡)_ |
 | Build & serve | 🟡 | `npm run build` works; needs Nginx serving `dist/` + `VITE_API_URL`/same-origin + cache headers. |
 | i18n / locale | ⛔ | English only; dates shown in browser locale. Add if needed. |
 
@@ -42,19 +64,19 @@ done on Hostinger. Grades: ✅ done · 🟡 partial/dev-only · ⛔ missing._
 | Architecture / apps | ✅ | Clean modular apps, REST API, ports & adapters. |
 | RBAC + object scoping | ✅ | Matrix enforced server-side, per-role querysets, tested. |
 | Passwords / OTP setup | ✅ | Argon2id; two-step OTP (HMAC-stored, expiring, attempt-capped). |
-| **Forgot/reset password** | ⛔ | **Missing.** Only initial setup exists; active users can't reset a forgotten password. Build a reset flow (email token → new password). |
-| Password change (logged-in) | ⛔ | No change-password endpoint. Add. |
+| **Forgot/reset password** | ✅ | **Implemented.** Two-step email OTP → phone OTP → reset; HMAC-stored codes, expiry, attempt cap, resend cap, enumeration-safe responses, throttled. _(was ⛔)_ |
+| Password change (logged-in) | ✅ | Endpoint + UI shipped, throttled. _(was ⛔)_ |
 | Sessions | 🟡 | DB-backed (Django default) — fine for one server; move to cache/Redis at scale. |
-| **Cache backend** | ⛔ | No `CACHES` config → default **LocMemCache (per-process)**. With multiple gunicorn workers, **throttling becomes per-worker (inconsistent)**. Add **Redis** for cache (and ideally sessions). |
+| **Cache backend** | ✅ | Redis when `REDIS_URL` is set (LocMem only in dev); `prod.py` refuses to boot without it, so throttles are shared across workers. _(was ⛔)_ |
 | Rate limiting | ✅ | Global anon/user throttles + login brute-force guard (tested). Needs shared cache to be reliable (above). |
-| File upload limits/validation | ⛔ | No explicit size/type limits on video/material/task uploads. Add `DATA_UPLOAD_MAX_*`, per-endpoint size + content-type/extension validation. |
+| File upload limits/validation | ✅ | **Implemented** in `core/uploads.py`: per-kind size caps, extension + content-type allowlists, magic-byte content sniffing, and filename sanitisation backed by a MEDIA_ROOT containment check in the storage adapter. _(was ⛔)_ |
 | Full-text search (forum) | 🟡 | Uses `icontains` (works on any DB). Upgrade to PostgreSQL full-text/GIN for scale. |
 | Audit log | ✅ | Append-only, on sensitive actions. Add retention/rotation policy. |
-| Logging | ⛔ | No `LOGGING` config. Add structured logging (JSON) + request logging. |
-| Error monitoring | ⛔ | No Sentry/error tracking. Add. |
+| Logging | ✅ | `LOGGING` configured to stdout with a request-id filter (`core/request_id.py`) and `X-Request-ID` echoed on responses. _(was ⛔)_ |
+| Error monitoring | ✅ | Sentry SDK initialised in prod behind `SENTRY_DSN`. _(was ⛔)_ |
 | Settings hardening | ✅ | prod.py: HTTPS/HSTS/secure cookies/nosniff + **fail-fast on dev SECRET_KEY/ALLOWED_HOSTS**. |
 | Secrets management | 🟡 | Via env/`.env`; ensure real secrets vault/host env on Hostinger; never commit `.env`. |
-| mypy / type-checking | 🟡 | Configured (django-stubs) but not run in CI. Run + fix. |
+| mypy / type-checking | ✅ | Clean, and enforced in CI. _(was 🟡)_ |
 | API docs | ✅ | drf-spectacular schema + Swagger at `/api/v1/docs/`. |
 
 ---

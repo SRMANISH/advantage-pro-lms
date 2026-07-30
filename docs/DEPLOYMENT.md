@@ -76,8 +76,25 @@ add_header Content-Security-Policy "default-src 'self'; img-src 'self' https: da
 (If you later add a strict `script-src` nonce pipeline you can drop `'unsafe-inline'` from
 `style-src` via hashed styles; not worth it for this internal tool today.)
 
-## 5. Scheduler — cron (no Celery/Redis required)
-The time-based features are **idempotent management commands**; point cron at them:
+## 5. Background work — cron **and** a django-q2 worker (both required in production)
+
+There are two distinct kinds of background work, and production needs both. An earlier
+version of this document said "no Celery/Redis required" — that was wrong for production and
+is corrected here, because following it silently breaks outbound messaging.
+
+| | What it runs | How it runs |
+|---|---|---|
+| **Scheduled jobs** | The six idempotent management commands below (reminders, escalations, retention) | `cron` — each command is overlap-locked, so a slow run cannot double-fire |
+| **Async fan-out** | Every outbound email / SMS / WhatsApp queued by `notifications.dispatch` | **`manage.py qcluster`** (django-q2), backed by Redis |
+
+**Why the worker is not optional in prod.** `notifications/dispatch.py` sends in-app
+notifications synchronously but hands external channels to django-q2. In `dev` the queue runs
+inline (`Q_CLUSTER` sync), so everything appears to work without a worker. In production the
+task is *queued* — if no `qcluster` process is running, those messages sit in the queue and
+**nobody ever receives them**, with no error surfaced to the request. Likewise `prod.py`
+fails fast without `REDIS_URL`, because it backs both the shared throttle cache and that queue.
+
+Point cron at the scheduled commands:
 ```cron
 */5 * * * *  cd /srv/lms/backend && .venv/bin/python manage.py send_due_reminders          # live-class 1h/15m (skips cancelled)
 0   * * * *  cd /srv/lms/backend && .venv/bin/python manage.py run_escalations              # incomplete tests + 50% attendance
@@ -86,10 +103,96 @@ The time-based features are **idempotent management commands**; point cron at th
 0   9 * * *  cd /srv/lms/backend && .venv/bin/python manage.py send_engagement_reminders     # LinkedIn / Google review / next-plan
 0   3 * * 0  cd /srv/lms/backend && .venv/bin/python manage.py purge_old_data                 # retention: old audit logs + read notifications
 ```
-(If you later prefer a worker, swap cron for django-q2/Celery — the commands stay the same.)
+Every cron line must set `DJANGO_SETTINGS_MODULE=config.settings.prod` (see the systemd units
+in §5.1 — the cleanest way is to run them as systemd timers that inherit an `EnvironmentFile`).
+
 `purge_old_data` only removes activity data (audit logs, read notifications) past the retention
 window; it never touches enrolments, attendance, submissions, or certificates. Use `--dry-run`
 to preview.
+
+### 5.1 systemd units
+
+`/etc/lms.env` holds the environment for every unit (mode `0600`, owned by root):
+```ini
+DJANGO_SETTINGS_MODULE=config.settings.prod
+DJANGO_SECRET_KEY=<long-random>
+DJANGO_ALLOWED_HOSTS=lms.example.com
+DATABASE_URL=postgres://lms:<pw>@localhost:5432/advantage_pro_lms
+REDIS_URL=redis://localhost:6379/0
+MEDIA_XACCEL_PREFIX=/protected
+LMS_EMAIL_ADAPTER=core.adapters.smtp.SmtpEmailAdapter
+LMS_SMS_ADAPTER=core.adapters.msg91.Msg91SmsAdapter
+LMS_WHATSAPP_ADAPTER=core.adapters.whatsapp_cloud.WhatsAppCloudAdapter
+```
+(Boot fails fast if `SECRET_KEY`, `ALLOWED_HOSTS` or `REDIS_URL` are missing, or if any
+notification adapter is still the console stub — see §9.)
+
+**`/etc/systemd/system/lms-web.service`** — the API:
+```ini
+[Unit]
+Description=Advantage Pro LMS (gunicorn)
+After=network.target postgresql.service redis.service
+
+[Service]
+User=lms
+WorkingDirectory=/srv/lms/backend
+EnvironmentFile=/etc/lms.env
+ExecStart=/srv/lms/backend/.venv/bin/gunicorn config.wsgi:application \
+  --bind 127.0.0.1:8000 --workers 5 --timeout 60 --access-logfile -
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**`/etc/systemd/system/lms-qcluster.service`** — the async worker. **Without this, queued
+email/SMS/WhatsApp are never delivered:**
+```ini
+[Unit]
+Description=Advantage Pro LMS background worker (django-q2)
+After=network.target postgresql.service redis.service
+
+[Service]
+User=lms
+WorkingDirectory=/srv/lms/backend
+EnvironmentFile=/etc/lms.env
+ExecStart=/srv/lms/backend/.venv/bin/python manage.py qcluster
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+systemctl daemon-reload
+systemctl enable --now lms-web lms-qcluster
+systemctl status lms-qcluster        # confirm the worker is actually up
+```
+
+A scheduled command as a timer (repeat per command, or keep them in cron):
+```ini
+# lms-escalations.service
+[Service]
+Type=oneshot
+User=lms
+WorkingDirectory=/srv/lms/backend
+EnvironmentFile=/etc/lms.env
+ExecStart=/srv/lms/backend/.venv/bin/python manage.py run_escalations
+
+# lms-escalations.timer
+[Timer]
+OnCalendar=hourly
+Persistent=true
+[Install]
+WantedBy=timers.target
+```
+
+### 5.2 Compose reference
+- **`docker-compose.yml`** is **development only** — dev settings, `DEBUG=true`, a throwaway
+  secret, no Redis and no worker. Never deploy it.
+- **`docker-compose.prod.yml`** is the production-shaped reference: Postgres, Redis, gunicorn,
+  a `qcluster` worker, and nginx with the X-Accel media alias. Supply real secrets via an
+  env file; it is a topology reference, not a turnkey stack.
 
 ## 6. Providers (the adapter swap)
 Implement a class per channel against the interfaces in `core/adapters/base.py`

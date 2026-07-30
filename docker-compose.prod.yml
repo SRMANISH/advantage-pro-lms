@@ -1,0 +1,87 @@
+# Production-shaped topology reference for Advantage Pro LMS.
+#
+# This exists to make the required processes explicit — the plain docker-compose.yml is a
+# development convenience and deliberately omits Redis and the background worker.
+#
+# It is a REFERENCE, not a turnkey production stack. Before using it for real:
+#   * supply every secret via `prod.env` (never commit it) — see docs/DEPLOYMENT.md §5.1;
+#   * terminate TLS properly (certbot / a managed load balancer) rather than plain :80;
+#   * put Postgres on managed storage with a tested restore, not just a named volume;
+#   * work through the pre-launch checklist in docs/DEPLOYMENT.md §9.
+#
+# The four processes that must run: gunicorn (API), qcluster (async notification fan-out —
+# without it queued email/SMS/WhatsApp are never delivered), Postgres, and Redis. nginx
+# serves the built frontend and does the internal X-Accel media hand-off.
+#
+#   docker compose -f docker-compose.prod.yml --env-file prod.env up -d
+
+x-django: &django
+  build: ./backend
+  env_file: [prod.env]
+  environment:
+    # Pinned here so no service can accidentally boot with dev settings.
+    DJANGO_SETTINGS_MODULE: config.settings.prod
+  depends_on:
+    db: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  volumes:
+    - media:/srv/lms/media
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16
+    env_file: [prod.env]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # Backs the shared throttle cache AND the django-q2 queue; prod refuses to boot without it.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    <<: *django
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 5 --timeout 60
+             --access-logfile -"
+    expose: ["8000"]
+
+  qcluster:
+    <<: *django
+    # The async worker. If this is not running, notifications queue up and are never sent —
+    # the request still succeeds, so the failure is silent. Watch its logs after deploy.
+    command: ["python", "manage.py", "qcluster"]
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on: [web]
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/srv/lms/frontend:ro
+      # Mounted read-only and served only via X-Accel-Redirect (internal location).
+      - media:/srv/lms/media:ro
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  media:
