@@ -187,9 +187,13 @@ Throttled at 10/min. On a student login it **records login attendance** (§5.9) 
 policy.
 
 **Two-step account setup.** New accounts are created `PENDING` and emailed a single-use 48-hour
-link → **email OTP** → **phone OTP** → set password (validated against Django's validators). All
-codes are HMAC'd with expiry, attempt caps, and resend limits. `DEBUG` exposes `dev_code` for
-demos only. Forgot-password mirrors the same two-OTP flow; change-password exists for active users.
+link → **email OTP** → **phone OTP** → set password (validated against Django's validators). Codes
+are CSPRNG, stored only as an HMAC-SHA256 digest, compared in constant time, expire in 10 minutes,
+and are capped at 5 attempts. `DEBUG` exposes `dev_code` for demos only.
+
+Forgot-password mirrors the same two-OTP flow and **additionally** caps resends at 3 per reset
+token (`MAX_RESENDS`) with a 30-minute token TTL. **The setup flow has no equivalent resend cap** —
+see §13.9. Change-password exists for active users.
 
 **Enumeration-safe.** Forgot-password always returns `200` with the same response shape and a decoy
 token, so it cannot be used to discover which accounts exist.
@@ -550,6 +554,15 @@ overstating capability:
    request/response bodies. The schema generates with zero warnings; this is a known cosmetic gap.
 8. **Nothing has run on a production VPS yet.** Postgres/Redis/nginx/X-Accel/qcluster/Sentry/backup
    restore are configured and documented but not yet exercised on real infrastructure.
+9. **The account-setup flow has no resend cap.** `SetupStartView` re-issues an email OTP on every
+   call for a valid token, bounded only by the global 60/min anonymous IP throttle. The
+   password-reset flow does cap this (`MAX_RESENDS = 3`). Known asymmetry, not yet fixed.
+10. **The OTP attempt counter is a read-modify-write.** `accounts/setup.py::_verify` increments
+    `attempts` non-atomically, so concurrent requests can each observe the same count and exceed
+    the intended 5-attempt cap (bounded in practice by the anon throttle). Known, not yet fixed.
+11. **The real provider adapters (SMTP, WhatsApp Cloud) and 5 of the 7 cron entrypoints have no
+    test coverage** — the console/dev stubs and the underlying services are well covered, but the
+    code that actually runs in production is not. See the review notes.
 
 ---
 
