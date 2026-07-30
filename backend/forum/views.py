@@ -1,7 +1,5 @@
 """Doubt forum APIs: per-batch threads, replies, resolve, keyword search."""
 
-import uuid
-
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
@@ -21,7 +19,7 @@ from core.adapters.registry import get_storage
 from core.pagination import StandardResultsPagination
 from core.permissions import has_any_role
 from core.roles import Role
-from core.uploads import safe_filename, validate_upload
+from core.uploads import storage_name, validate_upload
 from enrollments.models import Enrollment
 from notifications.services import notify, notify_many
 
@@ -37,7 +35,7 @@ from .serializers import (
 def _store_attachment(thread, reply, upload, user) -> None:
     """Validate + persist one uploaded file as a forum attachment."""
     validate_upload(upload, "document")
-    key = f"forum/{uuid.uuid4()}/{safe_filename(upload.name)}"
+    key = f"forum/{storage_name(upload)}"
     get_storage().save(key, upload)
     ThreadAttachment.objects.create(
         thread=thread,

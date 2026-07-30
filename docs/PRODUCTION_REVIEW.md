@@ -6,7 +6,7 @@
 > [`FUNCTIONAL_REVIEW.md`](./FUNCTIONAL_REVIEW.md).
 >
 > Every figure below was produced by running the suites against this tree, not recalled:
-> **359 backend tests passing at 90% branch coverage**, ruff/black/mypy clean, zero migration
+> **374 backend tests passing at 90% branch coverage**, black/mypy clean, zero migration
 > drift, OpenAPI schema with zero warnings, frontend `tsc`/`eslint`/build clean with 35 unit
 > tests, **12/12 Playwright end-to-end specs green**, and `npm audit` reporting zero
 > vulnerabilities.
@@ -21,10 +21,18 @@
 **Overall: 91 / 100 — ready for a controlled launch once the deploy-day checklist is
 executed. There are no known code-level blockers.**
 
-This review began at 86/100. The seven-point improvement is not re-scoring the same code: it
-reflects remediation performed in Phases 2–3 (§7), the most significant of which was a
-**genuine path-traversal vulnerability** in the upload pipeline that no previous audit had
-caught.
+This review began at 86/100. The improvement is not re-scoring the same code: it reflects
+remediation performed across the hardening phases (§7) — upload keys that no longer carry
+client filenames, a storage-boundary containment guard, throttling and per-device attempt
+caps across every code-verification endpoint, fail-fast production configuration, and CI that
+now blocks vulnerable dependencies and broken end-to-end flows.
+
+> **One correction, stated up front.** An earlier version of this report claimed the upload
+> pipeline contained an exploitable path traversal. **It did not** — Django strips directory
+> components from an uploaded filename before application code sees it. The finding was
+> downgraded from High to a latent Medium once tests exercised the real end-to-end path. See
+> the P-01 correction in §6. The remediation was kept because the safety had been implicit
+> and untested, not because the hole was real.
 
 What holds this codebase up is unusual for an internal line-of-business application:
 
@@ -47,7 +55,7 @@ The one caveat that no amount of code can close: **nothing has yet run on a prod
 | Requirement alignment | **96** | All 26 procedure requirements and register R-01…R-16 implemented and test-backed |
 | Production readiness | **88** | Fail-fast config, hardened CI, documented process wiring — untested on real infrastructure |
 | Architecture & modularity | **93** | Clean layering, one delivery seam, deliberate and justified deviations |
-| Security | **92** | Traversal closed, auth surface throttled, secrets encrypted, zero `security.W*` |
+| Security | **92** | Server-generated storage keys + containment guard, auth surface throttled with per-device attempt caps, secrets encrypted, zero `security.W*` |
 | Performance | **85** | N+1s eliminated, set-based aggregates, real measurements taken — but only locally |
 | UI / UX | **88** | API-driven throughout, accessible, responsive, no mock data |
 
@@ -90,11 +98,14 @@ OpenAPI schema untyped for those endpoints.
 
 ### 2.4 Security — 92
 
-**Evidence.** Session auth with CSRF; argon2 hashing; optional staff TOTP; magic-byte upload
-sniffing; filename sanitisation with MEDIA_ROOT containment; provider secrets Fernet-encrypted
-at rest and never returned to clients; enumeration-safe login and password reset; every
-code-verification endpoint throttled; client IP recorded on sensitive actions; CSP and related
-headers at the nginx edge; **zero `security.W*` warnings** under production settings.
+**Evidence.** Session auth with CSRF; argon2 hashing; optional staff TOTP **with a per-device
+attempt cap**; magic-byte upload sniffing; storage keys built from a server-generated UUID
+plus the validated extension, never the client's filename, behind a MEDIA_ROOT containment
+guard applied uniformly to read, write and delete; provider secrets Fernet-encrypted at rest
+and never returned to clients; enumeration-safe login and password reset; every
+code-verification endpoint throttled per-user **and** per-IP; client IP recorded on sensitive
+actions; CSP and related headers at the nginx edge; **zero `security.W*` warnings** under
+production settings.
 
 **Why not higher.** Fernet keys derive from `SECRET_KEY`, so rotating it invalidates stored
 provider secrets (safe failure — they decrypt to empty and must be re-entered — but it is an
@@ -262,7 +273,7 @@ and are closed.** Remaining items are open.
 
 | ID | Sev | Finding | Status |
 |---|:--:|---|---|
-| **P-01** | **High** | Upload filenames were interpolated raw into storage keys with no sanitisation and no containment check — `../../evil.pdf` passed the extension allowlist and escaped `MEDIA_ROOT` (arbitrary file write) | ✅ **Closed** (Phase 2) — `safe_filename()` + all 7 key sites + adapter containment; 18 tests |
+| **P-01** | ~~High~~ → **Medium** | Upload filenames were interpolated raw into storage keys with no sanitisation and no containment check. **Severity corrected — see the note below: this was not the arbitrary file write first reported.** | ✅ **Closed** — server-generated UUID keys, rejection backstop, adapter containment; 29 tests |
 | **P-02** | Medium | 11 auth endpoints unthrottled (all of setup, reset verify/complete, change-password, all TOTP). `AnonRateThrottle` would have silently no-opped on the authenticated ones | ✅ **Closed** (Phase 2) — `OTPRateThrottle` keyed by user-or-IP; 9 tests |
 | **P-03** | Medium | Production could boot with console notification stubs — every OTP and alert logged and dropped, silently | ✅ **Closed** (Phase 2) — fail-fast naming each stubbed channel, with explicit opt-out |
 | **P-04** | Medium | `seed_demo` could run against any database, creating accounts with a publicly-known password | ✅ **Closed** (Phase 2) — refuses unless `DEBUG` or `--force` |
@@ -275,6 +286,36 @@ and are closed.** Remaining items are open.
 | **P-11** | Low | Table search filters the current server page rather than all pages (roster excepted) | 🔷 **Open** — acceptable at current data volumes |
 | **P-12** | Info | Locust numbers are local SQLite/single-process, not a staging benchmark | 🔷 **Open** — re-run before quoting SLAs |
 | **P-13** | ⚠️ **Infra** | **Nothing has run on a production VPS.** Postgres, Redis, nginx, X-Accel, gunicorn, qcluster, Sentry and backup restore are configured and documented but unexercised | 🔴 **Open — the one true caveat** |
+| **P-14** | Medium | TOTP verification had **no application-level attempt cap** — a 6-digit secret could be guessed indefinitely, bounded only by request rate (which an attacker can spread across IPs) | ✅ **Closed** — per-device `failed_attempts` cap mirroring the OTP pattern, cleared on success, reset by re-enrollment |
+
+### Correction to P-01 — severity was overstated
+
+The first version of this review reported P-01 as a **High**-severity arbitrary file write,
+claiming `"../../evil.pdf"` would escape `MEDIA_ROOT`. **That was wrong**, and the correction
+matters more than the original finding:
+
+Django's `UploadedFile` **already strips directory components when `.name` is assigned** —
+`../../../evil.pdf`, `..\..\evil.pdf` and `/etc/cron.d/evil.pdf` all arrive at application
+code as plain `evil.pdf`. So the raw-`upload.name` storage keys were contained by a layer
+below us, and no traversal was actually reachable through a normal multipart upload. The
+claim was made without testing the end-to-end path; it was disproved as soon as the
+regression tests exercised real `SimpleUploadedFile` objects.
+
+What was genuinely wrong, and is now fixed:
+
+1. **The safety was implicit and unasserted.** The code depended on Django's basenaming
+   without stating it or testing it. A Django change, or a key built from a filename that
+   never passed through `UploadedFile`, would have reintroduced the risk silently.
+   `tests/test_uploads.py` now pins that behaviour explicitly.
+2. **Client filenames in storage paths were unnecessary risk for no benefit** — encoding
+   quirks, collisions, and leaking user-chosen names into paths. Keys are now
+   `<uuid><validated-ext>`; the original name is preserved only where it is displayed
+   (`ThreadAttachment.filename`, the new `Test.resource_filename`).
+3. **No containment guard existed at the storage boundary.** `LocalStorageAdapter._path` now
+   resolves and refuses anything outside `MEDIA_ROOT`, uniformly across `save`/`open`/`delete`.
+
+Net: the remediation is still worth having as defence in depth, but it closed a **latent
+Medium**, not an exploitable High. Recorded here rather than quietly downgraded.
 
 ---
 

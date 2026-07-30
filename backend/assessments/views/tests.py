@@ -5,8 +5,6 @@ workbook, a Colab notebook link) for the faculty to grade by hand out of the tes
 max_score.
 """
 
-import uuid
-
 from django.db import IntegrityError, transaction
 from django.db.models import Count
 from django.utils import timezone
@@ -23,7 +21,7 @@ from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission
 from core.permissions_matrix import Action
 from core.roles import Role
-from core.uploads import safe_filename, validate_upload
+from core.uploads import storage_name, validate_upload
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify, notify_many
 
@@ -94,11 +92,20 @@ class TestViewSet(viewsets.ModelViewSet):
         upload = self.request.FILES.get("resource")
         if upload:
             validate_upload(upload, "document")
-            key = f"tests/resources/{uuid.uuid4()}/{safe_filename(upload.name)}"
+            key = f"tests/resources/{storage_name(upload)}"
             get_storage().save(key, upload)
             test.resource_key = key
             test.resource_content_type = getattr(upload, "content_type", "") or ""
-            test.save(update_fields=["resource_key", "resource_content_type", "updated_at"])
+            # validate_upload has already normalised .name to a safe basename.
+            test.resource_filename = upload.name
+            test.save(
+                update_fields=[
+                    "resource_key",
+                    "resource_content_type",
+                    "resource_filename",
+                    "updated_at",
+                ]
+            )
         record_action(
             actor=self.request.user,
             action="test_created",
@@ -179,7 +186,7 @@ class TestViewSet(viewsets.ModelViewSet):
             link=link,
         )
         if upload:
-            key = f"tests/{uuid.uuid4()}/{safe_filename(upload.name)}"
+            key = f"tests/{storage_name(upload)}"
             get_storage().save(key, upload)
             attempt.file_key = key
             attempt.content_type = getattr(upload, "content_type", "") or ""
@@ -202,7 +209,8 @@ class TestViewSet(viewsets.ModelViewSet):
             test.resource_key,
             test.resource_content_type or "application/octet-stream",
             disposition="attachment",
-            filename=test.resource_key.split("/")[-1] or "resource",
+            # The key is now a UUID, so serve the preserved original name instead.
+            filename=test.resource_filename or "resource",
         )
 
     @action(detail=True, methods=["get"])

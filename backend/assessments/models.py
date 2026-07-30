@@ -25,6 +25,9 @@ class Test(TimeStampedModel):
     # (file kind), or the Colab/notebook link they open (colab kind). Optional.
     resource_key = models.CharField(max_length=255, blank=True)
     resource_content_type = models.CharField(max_length=100, blank=True)
+    # The original upload name, kept for the download's Content-Disposition. The storage key
+    # itself is a server-generated UUID, so the client's filename never reaches the path.
+    resource_filename = models.CharField(max_length=255, blank=True)
     resource_url = models.URLField(max_length=500, blank=True)
     open_at = models.DateTimeField(null=True, blank=True)
     close_at = models.DateTimeField(null=True, blank=True)

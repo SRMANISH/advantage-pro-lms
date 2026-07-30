@@ -126,6 +126,9 @@ REST_FRAMEWORK = {
         "login": env("THROTTLE_LOGIN", default="10/min"),
         # Code-verification + credential-change endpoints (setup/reset OTP, TOTP).
         "otp": env("THROTTLE_OTP", default="20/min"),
+        # Tighter per-IP ceiling on the verification endpoints specifically, so one origin
+        # cannot spray codes across many accounts.
+        "verification": env("THROTTLE_VERIFICATION", default="10/min"),
         # Student -> management feedback fans out a WhatsApp per Super Admin; keep it low.
         "feedback": env("THROTTLE_FEEDBACK", default="5/hour"),
     },

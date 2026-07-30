@@ -12,6 +12,23 @@ class LoginRateThrottle(AnonRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": f"{role}:{ident}"}
 
 
+class VerificationRateThrottle(SimpleRateThrottle):
+    """Per-IP ceiling on code-verification endpoints (rate: 'verification').
+
+    Deliberately keyed on client IP alone, including for authenticated requests: it bounds
+    how fast one origin can submit codes at *any* account, which per-user keying does not.
+    It is applied alongside ``OTPRateThrottle`` (per-user) rather than instead of it — the
+    two answer different questions, and DRF requires every listed throttle to allow the
+    request. Neither replaces the per-code/per-device attempt caps in ``setup.py`` and
+    ``totp.py``, which are what actually bound total guesses against one secret.
+    """
+
+    scope = "verification"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
+
+
 class OTPRateThrottle(SimpleRateThrottle):
     """Tighter cap on code-verification and credential-change endpoints (rate: 'otp').
 

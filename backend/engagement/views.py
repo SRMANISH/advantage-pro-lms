@@ -1,7 +1,5 @@
 """Engagement APIs: student status + actions, Admin/MIS reports, and utility links."""
 
-import uuid
-
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -15,7 +13,7 @@ from content.delivery import deliver
 from core.adapters.registry import get_storage
 from core.permissions import has_any_role
 from core.roles import Role
-from core.uploads import safe_filename, validate_upload
+from core.uploads import storage_name, validate_upload
 from notifications.services import admins_and_mis, notify_many
 
 from .models import CourseNextPlan, GoogleReview, LinkedInFollow, UtilityLink
@@ -62,7 +60,7 @@ class UtilityLinksView(APIView):
         thumb = request.FILES.get("thumbnail")
         if thumb:
             validate_upload(thumb, "image")
-            key = f"utility/{uuid.uuid4()}/{safe_filename(thumb.name)}"
+            key = f"utility/{storage_name(thumb)}"
             get_storage().save(key, thumb)
             link.thumbnail_key = key
             link.thumbnail_content_type = getattr(thumb, "content_type", "") or ""

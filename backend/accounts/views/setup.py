@@ -14,7 +14,7 @@ from core.roles import Role
 from core.utils import get_client_ip
 
 from .. import setup as setup_service
-from ..throttling import OTPRateThrottle
+from ..throttling import OTPRateThrottle, VerificationRateThrottle
 from ..models import User
 
 
@@ -46,7 +46,7 @@ class SetupStartView(APIView):
 
 class SetupVerifyEmailView(APIView):
 
-    throttle_classes = [OTPRateThrottle]
+    throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -66,7 +66,7 @@ class SetupVerifyEmailView(APIView):
 
 class SetupVerifyPhoneView(APIView):
 
-    throttle_classes = [OTPRateThrottle]
+    throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -83,7 +83,7 @@ class SetupVerifyPhoneView(APIView):
 
 class SetupCompleteView(APIView):
 
-    throttle_classes = [OTPRateThrottle]
+    throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -112,6 +112,8 @@ class SetupCompleteView(APIView):
 
 class SetupResendView(APIView):
     """Admin/MIS/Super Admin: (re)issue a setup link for a pending student."""
+
+    throttle_classes = [VerificationRateThrottle]
 
     permission_classes = [has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS)]
 

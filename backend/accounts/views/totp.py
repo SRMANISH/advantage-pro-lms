@@ -11,7 +11,7 @@ from core.utils import get_client_ip
 
 from .. import totp as totp_service
 from ..models import TOTPDevice
-from ..throttling import OTPRateThrottle
+from ..throttling import OTPRateThrottle, VerificationRateThrottle
 
 
 class IsStaffUser(BasePermission):
@@ -52,7 +52,7 @@ class TOTPEnrollView(APIView):
 class TOTPConfirmView(APIView):
     """Verify the first code from the authenticator app and enable 2FA."""
 
-    throttle_classes = [OTPRateThrottle]
+    throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
 
     permission_classes = [IsStaffUser]
 
@@ -61,6 +61,13 @@ class TOTPConfirmView(APIView):
         if not device:
             return Response(
                 {"detail": "Start enrollment first."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if totp_service.attempts_exhausted(device):
+            # Distinguish "spent" from "wrong" — otherwise a user who has locked the device
+            # keeps retyping correct codes and getting "Invalid code" with no way forward.
+            return Response(
+                {"detail": "Too many incorrect codes. Restart enrollment to get a new secret."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
         if not totp_service.confirm(device, request.data.get("code", "")):
             return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)

@@ -97,6 +97,26 @@ def test_setup_complete_is_rate_limited(client, pending):
     assert last.status_code == 429
 
 
+@pytest.mark.django_db
+def test_setup_resend_is_rate_limited(db):
+    """Staff-triggered resend still sends mail, so it needs a per-IP ceiling of its own."""
+    from accounts.models import UserStatus as US
+    from django.contrib.auth import get_user_model
+
+    staff = get_user_model().objects.create_user(
+        username="mis_rs", password="x", role=Role.MIS, status=US.ACTIVE
+    )
+    import uuid as _uuid
+
+    api = APIClient()
+    api.force_authenticate(user=staff)
+    absent = str(_uuid.uuid4())  # well-formed but no such student -> clean 404, not a crash
+    last = hammer(
+        lambda: api.post("/api/v1/auth/setup/resend/", {"student_id": absent}, format="json")
+    )
+    assert last.status_code == 429
+
+
 # --------------------------- forgot password ---------------------------
 
 

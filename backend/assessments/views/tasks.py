@@ -1,7 +1,5 @@
 """Task APIs: build (faculty), list/submit (role-scoped), grade + file serve."""
 
-import uuid
-
 from django.db import IntegrityError
 from django.db.models import Count
 from django.utils import timezone
@@ -18,7 +16,7 @@ from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission
 from core.permissions_matrix import Action
 from core.roles import Role
-from core.uploads import safe_filename
+from core.uploads import storage_name
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify, notify_many
 
@@ -107,7 +105,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         upload = data.get("file")
         if upload:
-            key = f"tasks/{uuid.uuid4()}/{safe_filename(upload.name)}"
+            key = f"tasks/{storage_name(upload)}"
             get_storage().save(key, upload)
             submission.file_key = key
             submission.content_type = getattr(upload, "content_type", "") or ""

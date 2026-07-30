@@ -8,6 +8,7 @@ not a maximum). Limits are config-driven via settings so ops can tune them per d
 from __future__ import annotations
 
 import os
+import uuid
 
 from django.conf import settings
 from rest_framework import serializers
@@ -112,13 +113,14 @@ def _content_matches_extension(upload, ext: str) -> bool:
 
 
 def safe_filename(name: str) -> str:
-    """Reduce a client-supplied filename to a harmless basename.
+    """Reduce a client-supplied filename to a harmless basename, for **display only**.
 
-    Upload names are attacker-controlled and are interpolated into storage keys, so a name
-    like ``../../evil.pdf`` would otherwise escape MEDIA_ROOT when the key is joined to a
-    path. Strips directory components (both separators, since a Windows-style ``..\\`` must
-    not survive on a POSIX host either), drops any leftover dot-segments, and removes null
-    bytes and control characters. Idempotent, so it is safe to apply more than once.
+    Storage keys no longer contain the client's filename at all (see ``storage_name``), so
+    this exists for the places that show or re-serve the original name — e.g.
+    ``ThreadAttachment.filename`` and the Content-Disposition of a downloadable resource.
+    Strips directory components (both separators, since a Windows-style ``..\\`` must not
+    survive on a POSIX host either), leftover dot-segments, null bytes and control
+    characters. Idempotent.
     """
     name = (name or "").replace("\x00", "")
     # Normalise both separators before taking the basename: os.path.basename on POSIX does
@@ -130,11 +132,44 @@ def safe_filename(name: str) -> str:
     return name or "upload"
 
 
+def storage_name(upload) -> str:
+    """The final path segment for a storage key: a server-generated UUID plus the validated
+    extension — never the client's filename.
+
+    This is the primary defence against path traversal. Sanitising an attacker-controlled
+    name is a backstop that has to be right every time; not using the name at all cannot be
+    walked out of MEDIA_ROOT by construction. Call **after** ``validate_upload``, which is
+    what constrains the extension to the per-kind allowlist.
+    """
+    ext = os.path.splitext(safe_filename(getattr(upload, "name", "")))[1].lower()
+    return f"{uuid.uuid4()}{ext}"
+
+
+def _reject_unsafe_name(name: str) -> None:
+    """Refuse a filename that is trying to be a path.
+
+    A legitimate upload never contains a separator or a dot-segment, so rather than quietly
+    rewriting one we reject it — a caller that ignores ``storage_name`` and interpolates the
+    raw name still cannot escape, and the attempt is visible instead of silently normalised.
+    """
+    raw = name or ""
+    lowered = raw.lower()
+    if "\x00" in raw:
+        raise serializers.ValidationError("File name contains a null byte.")
+    # Decoded separators, plus the percent-encodings a proxy or client might not have decoded.
+    for token in ("/", "\\", "..", "%2f", "%5c", "%2e%2e", "%00"):
+        if token in lowered:
+            raise serializers.ValidationError(
+                "File name must not contain path separators or parent-directory segments."
+            )
+
+
 def validate_upload(upload, kind: str):
     """Validate an uploaded file by size, extension, and content type. Returns it on success.
 
-    Also normalises ``upload.name`` to a safe basename so callers that build a storage key
-    from it cannot be walked out of MEDIA_ROOT.
+    Rejects filenames that look like paths (separators, ``..``, null bytes, or their
+    percent-encodings). Note this is a backstop only: storage keys are built from
+    ``storage_name`` and never contain the client's filename.
     """
     exts, types, setting_name, default_mb = _KINDS[kind]
     max_mb = int(getattr(settings, setting_name, default_mb))
@@ -144,8 +179,9 @@ def validate_upload(upload, kind: str):
     if size > max_bytes:
         raise serializers.ValidationError(f"File is too large (maximum {max_mb} MB).")
 
-    # Sanitise before the extension check so a traversal attempt can't smuggle a valid
-    # extension past it, and so every caller that reads upload.name afterwards is safe.
+    # Reject path-like names outright, then normalise what remains so anything that reads
+    # upload.name afterwards (display fields, Content-Disposition) is safe.
+    _reject_unsafe_name(getattr(upload, "name", ""))
     name = safe_filename(getattr(upload, "name", ""))
     try:
         upload.name = name

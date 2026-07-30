@@ -147,3 +147,64 @@ def test_disabling_totp_reverts_login_to_password_only():
         LOGIN, {"username": "adm", "password": "Secret123!"}, content_type="application/json"
     )
     assert resp.status_code == 200
+
+
+# ---------- per-device attempt cap (independent of the request-rate throttle) ----------
+
+
+@pytest.mark.django_db
+def test_totp_confirm_locks_the_device_after_max_attempts():
+    """A 6-digit code needs a ceiling an attacker cannot sidestep by rotating IPs, so the
+    cap lives on the device itself rather than only in the throttle."""
+    from accounts.totp import MAX_ATTEMPTS
+
+    staff = user("fac_cap", Role.FACULTY)
+    api = client_for(staff)
+    secret = api.post(ENROLL, format="json").json()["secret"]
+
+    for _ in range(MAX_ATTEMPTS):
+        assert api.post(CONFIRM, {"code": "000000"}, format="json").status_code == 400
+
+    device = TOTPDevice.objects.get(user=staff)
+    assert device.failed_attempts == MAX_ATTEMPTS
+
+    # Even the genuinely correct code is now refused, with a distinct status and a message
+    # that tells the user how to recover.
+    spent = api.post(CONFIRM, {"code": pyotp.TOTP(secret).now()}, format="json")
+    assert spent.status_code == 429
+    assert "Restart enrollment" in spent.json()["detail"]
+    assert not TOTPDevice.objects.get(user=staff).confirmed
+
+
+@pytest.mark.django_db
+def test_a_correct_code_clears_the_attempt_counter():
+    staff = user("fac_clear", Role.FACULTY)
+    api = client_for(staff)
+    secret = api.post(ENROLL, format="json").json()["secret"]
+
+    api.post(CONFIRM, {"code": "000000"}, format="json")
+    assert TOTPDevice.objects.get(user=staff).failed_attempts == 1
+
+    assert api.post(CONFIRM, {"code": pyotp.TOTP(secret).now()}, format="json").status_code == 200
+    device = TOTPDevice.objects.get(user=staff)
+    assert device.failed_attempts == 0 and device.confirmed
+
+
+@pytest.mark.django_db
+def test_restarting_enrollment_resets_the_cap():
+    """The documented recovery path must actually work."""
+    from accounts.totp import MAX_ATTEMPTS
+
+    staff = user("fac_reset", Role.FACULTY)
+    api = client_for(staff)
+    api.post(ENROLL, format="json")
+    for _ in range(MAX_ATTEMPTS):
+        api.post(CONFIRM, {"code": "000000"}, format="json")
+    assert TOTPDevice.objects.get(user=staff).failed_attempts == MAX_ATTEMPTS
+
+    # Re-enrolling issues a fresh secret and clears the counter.
+    new_secret = api.post(ENROLL, format="json").json()["secret"]
+    assert TOTPDevice.objects.get(user=staff).failed_attempts == 0
+    assert (
+        api.post(CONFIRM, {"code": pyotp.TOTP(new_secret).now()}, format="json").status_code == 200
+    )

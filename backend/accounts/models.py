@@ -148,6 +148,10 @@ class TOTPDevice(TimeStampedModel):
     secret = models.CharField(max_length=32)
     confirmed = models.BooleanField(default=False)
     confirmed_at = models.DateTimeField(null=True, blank=True)
+    # Consecutive wrong codes. A rate throttle bounds requests per IP, but a 6-digit code
+    # still needs a per-device ceiling that an attacker cannot sidestep by rotating IPs.
+    # Reset to 0 on any successful verification.
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
 
     def __str__(self) -> str:
         return f"totp<{self.user_id}>"
