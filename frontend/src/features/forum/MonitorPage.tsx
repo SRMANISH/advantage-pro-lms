@@ -1,14 +1,26 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, EmptyState, ListSkeleton, SectionHeading } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ListSkeleton,
+  Paginator,
+  SectionHeading,
+} from "../../design-system";
+import { useServerTable } from "../../lib/useServerTable";
 import { PortalLayout } from "../portal/PortalLayout";
-import { forumApi } from "./api";
+import { forumApi, type MonitorResult, type MonitorThread } from "./api";
 
 export function MonitorPage({ role }: { role: RoleDef }) {
   const qc = useQueryClient();
-  const monitor = useQuery({ queryKey: ["forum-monitor"], queryFn: forumApi.monitor });
+  const monitor = useServerTable<MonitorThread, MonitorResult>({
+    key: ["forum-monitor"],
+    fetcher: (p) => forumApi.monitor(p),
+  });
   const [reminded, setReminded] = useState<Set<string>>(new Set());
   const remind = useMutation({
     mutationFn: (id: string) => forumApi.remind(id),
@@ -18,6 +30,7 @@ export function MonitorPage({ role }: { role: RoleDef }) {
     },
   });
 
+  // Whole-dataset context, so it stays correct on page 2.
   const window = monitor.data?.window_hours ?? 3;
 
   return (
@@ -30,14 +43,14 @@ export function MonitorPage({ role }: { role: RoleDef }) {
       <Card>
         {monitor.isLoading ? (
           <ListSkeleton items={4} />
-        ) : monitor.data && monitor.data.threads.length > 0 ? (
+        ) : monitor.rows.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
-            {monitor.data.threads.map((t) => (
+            {monitor.rows.map((t) => (
               <div key={t.id} className="flex items-center justify-between py-3">
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium text-ink">
                     {t.title}
-                    {t.overdue && <Badge tone="danger">overdue</Badge>}
+                    {t.overdue && <Badge tone="danger">Overdue</Badge>}
                   </div>
                   <div className="text-xs text-muted">
                     {t.batch_code} · {t.author_name} · waiting {t.hours_waiting}h
@@ -56,6 +69,12 @@ export function MonitorPage({ role }: { role: RoleDef }) {
         ) : (
           <EmptyState title="No unanswered doubts" hint="Faculty are on top of it." />
         )}
+        <Paginator
+          page={monitor.page}
+          pageCount={monitor.pageCount}
+          onPage={monitor.setPage}
+          total={monitor.total}
+        />
       </Card>
     </PortalLayout>
   );

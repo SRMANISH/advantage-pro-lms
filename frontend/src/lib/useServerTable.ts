@@ -11,9 +11,9 @@ import type { Page } from "./api";
  * (e.g. a batch filter) resets to page 1 so we never request an out-of-range page (DRF 404s
  * on those). Invalidating the base `key` refreshes every cached page after a mutation.
  */
-export function useServerTable<T>(opts: {
+export function useServerTable<T, P extends Page<T> = Page<T>>(opts: {
   key: unknown[];
-  fetcher: (params: Record<string, unknown>) => Promise<Page<T>>;
+  fetcher: (params: Record<string, unknown>) => Promise<P>;
   pageSize?: number;
   searchable?: boolean;
   params?: Record<string, string | undefined>;
@@ -58,6 +58,9 @@ export function useServerTable<T>(opts: {
 
   return {
     rows: result.data?.results ?? [],
+    // The whole envelope, for endpoints that return a page of rows *plus* whole-dataset
+    // context (status counts, a configured window) alongside it.
+    data: result.data,
     total,
     page,
     setPage,

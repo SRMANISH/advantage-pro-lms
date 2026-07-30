@@ -6,6 +6,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from audit.services import record_action
+from core.pagination import StandardResultsPagination
 from core.permissions import IsSuperAdmin
 from core.roles import Role
 from core.utils import get_client_ip
@@ -74,4 +75,10 @@ class FeedbackListView(APIView):
     permission_classes = [IsSuperAdmin]
 
     def get(self, request):
-        return Response(FeedbackSerializer(Feedback.objects.all(), many=True).data)
+        # Paginated: this grew unbounded with every submission and was serialised in full on
+        # every open. select_related because the serializer reads student.full_name per row.
+        paginator = StandardResultsPagination()
+        page = paginator.paginate_queryset(
+            Feedback.objects.select_related("student"), request, view=self
+        )
+        return paginator.get_paginated_response(FeedbackSerializer(page or [], many=True).data)

@@ -16,7 +16,7 @@ from batches.models import Batch
 from content.access import can_access_batch
 from content.delivery import deliver
 from core.adapters.registry import get_storage
-from core.pagination import StandardResultsPagination
+from core.pagination import StandardResultsPagination, paginate_rows
 from core.permissions import has_any_role
 from core.roles import Role
 from core.uploads import storage_name, validate_upload
@@ -217,22 +217,21 @@ class ForumMonitorView(APIView):
             .select_related("batch", "author")
             .order_by("created_at")
         )
-        rows = []
-        for t in unanswered:
+
+        def row(t):
             hours = (now - t.created_at).total_seconds() / 3600
-            rows.append(
-                {
-                    "id": str(t.id),
-                    "title": t.title,
-                    "batch_code": t.batch.code,
-                    "author_name": t.author.full_name or t.author.username,
-                    "status": t.status,
-                    "hours_waiting": round(hours, 1),
-                    "overdue": hours >= window,
-                    "faculty_pending": hours >= window,
-                    "created_at": t.created_at,
-                }
-            )
+            return {
+                "id": str(t.id),
+                "title": t.title,
+                "batch_code": t.batch.code,
+                "author_name": t.author.full_name or t.author.username,
+                "status": t.status,
+                "hours_waiting": round(hours, 1),
+                "overdue": hours >= window,
+                "faculty_pending": hours >= window,
+                "created_at": t.created_at,
+            }
+
         counts = {
             "open": Thread.objects.filter(status=ThreadStatus.OPEN).count(),
             "answered": Thread.objects.filter(status=ThreadStatus.ANSWERED).count(),
@@ -242,7 +241,16 @@ class ForumMonitorView(APIView):
             .distinct()
             .count(),
         }
-        return Response({"window_hours": window, "threads": rows, "counts": counts})
+        # Paginated: the unanswered queue is unbounded and this dashboard is the one place
+        # it is read in full. ``counts`` and ``window_hours`` describe the whole dataset, so
+        # they ride alongside the page rather than inside it.
+        return paginate_rows(
+            request,
+            unanswered,
+            row,
+            view=self,
+            extra={"window_hours": window, "counts": counts},
+        )
 
 
 class ForumBatchesView(APIView):

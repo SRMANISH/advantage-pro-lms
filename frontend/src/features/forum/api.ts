@@ -65,9 +65,12 @@ export interface MonitorCounts {
   answered_by_ts: number;
 }
 
+/** Paginated envelope: `results` is the current page of unanswered threads, while
+ *  `counts` and `window_hours` describe the whole dataset. */
 export interface MonitorResult {
+  count: number;
+  results: MonitorThread[];
   window_hours: number;
-  threads: MonitorThread[];
   counts: MonitorCounts;
 }
 
@@ -115,8 +118,8 @@ export const forumApi = {
   async batches(): Promise<ForumBatch[]> {
     return (await api.get<ForumBatch[]>("/forum/batches/")).data;
   },
-  async monitor(): Promise<MonitorResult> {
-    return (await api.get<MonitorResult>("/forum/monitor/")).data;
+  async monitor(params: Record<string, unknown> = {}): Promise<MonitorResult> {
+    return (await api.get<MonitorResult>("/forum/monitor/", { params })).data;
   },
   async remind(id: string): Promise<void> {
     await api.post(`/threads/${id}/remind/`);

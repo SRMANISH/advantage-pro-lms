@@ -53,9 +53,10 @@ def test_only_super_admin_reads_the_inbox(world):
     client_for(world["student"]).post(
         "/api/v1/feedback/", {"subject": "s", "message": "m"}, format="json"
     )
-    # Super Admin sees it.
+    # Super Admin sees it, in a paginated envelope.
     inbox = client_for(world["sa"]).get("/api/v1/feedback/inbox/")
-    assert inbox.status_code == 200 and len(inbox.json()) == 1
+    assert inbox.status_code == 200
+    assert inbox.json()["count"] == 1 and len(inbox.json()["results"]) == 1
 
     # No one else can — not even Admin/MIS.
     admin = user("ad", Role.ADMIN)
@@ -80,3 +81,25 @@ def test_feedback_is_rate_limited_per_student(world):
     for _ in range(5):
         assert c.post("/api/v1/feedback/", body, format="json").status_code == 201
     assert c.post("/api/v1/feedback/", body, format="json").status_code == 429
+
+
+@pytest.mark.django_db
+def test_feedback_inbox_is_paginated(world):
+    """The inbox grows with every submission and was serialised in full on every open."""
+    Feedback.objects.bulk_create(
+        [
+            Feedback(student=world["student"], subject=f"s{i}", message="m")
+            for i in range(30)  # > the 25 default page size
+        ]
+    )
+    sa = client_for(world["sa"])
+
+    first = sa.get("/api/v1/feedback/inbox/").json()
+    assert first["count"] == 30
+    assert len(first["results"]) == 25
+    assert first["next"]
+
+    second = sa.get("/api/v1/feedback/inbox/", {"page": 2}).json()
+    assert len(second["results"]) == 5
+    # No row is served twice or skipped across the boundary.
+    assert not {r["id"] for r in first["results"]} & {r["id"] for r in second["results"]}

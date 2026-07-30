@@ -49,8 +49,11 @@ def test_monitor_lists_unanswered_and_flags_overdue(world):
     resp = client_for(world["ts"]).get(MONITOR)
     assert resp.status_code == 200
     body = resp.json()
-    titles = {t["title"]: t for t in body["threads"]}
+    # Paginated envelope: rows under "results", whole-dataset context alongside it.
+    titles = {t["title"]: t for t in body["results"]}
     assert set(titles) == {"New", "Old"}  # answered excluded
+    assert body["count"] == 2
+    assert "counts" in body and "window_hours" in body
     assert titles["Old"]["overdue"] is True
     assert titles["New"]["overdue"] is False
     assert fresh.title in titles
@@ -75,3 +78,26 @@ def test_student_cannot_use_monitor_or_remind(world):
     assert (
         client_for(world["student"]).post(f"/api/v1/threads/{thread.id}/remind/").status_code == 403
     )
+
+
+@pytest.mark.django_db
+def test_forum_monitor_is_paginated(world):
+    """The unanswered queue is unbounded, and this dashboard is where it is read in full."""
+    Thread.objects.bulk_create(
+        [
+            Thread(batch=world["batch"], author=world["student"], title=f"T{i}", body="b")
+            for i in range(30)  # > the 25 default page size
+        ]
+    )
+    ts = client_for(world["ts"])
+
+    first = ts.get(MONITOR).json()
+    assert first["count"] == 30
+    assert len(first["results"]) == 25
+    # Whole-dataset context still rides alongside the page, not inside it.
+    assert first["counts"]["open"] == 30
+    assert first["window_hours"]
+
+    second = ts.get(MONITOR, {"page": 2}).json()
+    assert len(second["results"]) == 5
+    assert second["counts"]["open"] == 30  # counts describe everything, not this page

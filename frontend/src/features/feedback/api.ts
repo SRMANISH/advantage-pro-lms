@@ -1,4 +1,4 @@
-import { api } from "../../lib/api";
+import { api, fetchPage, type Page } from "../../lib/api";
 
 export interface FeedbackRow {
   id: string;
@@ -15,7 +15,8 @@ export const feedbackApi = {
   async send(payload: { subject: string; message: string }): Promise<void> {
     await api.post("/feedback/", payload);
   },
-  async inbox(): Promise<FeedbackRow[]> {
-    return (await api.get<FeedbackRow[]>("/feedback/inbox/")).data;
+  /** Server-paginated: the inbox grows with every submission. */
+  async inbox(params: Record<string, unknown> = {}): Promise<Page<FeedbackRow>> {
+    return fetchPage<FeedbackRow>("/feedback/inbox/", params);
   },
 };
