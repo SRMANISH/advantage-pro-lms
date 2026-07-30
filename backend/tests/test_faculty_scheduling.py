@@ -4,24 +4,12 @@ faculty skills profile surfaced at assignment."""
 import datetime
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import FacultyProfile, User, UserStatus
+from accounts.models import FacultyProfile
 from batches.models import Batch, BatchState, Course
 from batches.scheduling import faculty_schedule_conflicts
 from core.roles import Role
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
+from .helpers import client_for, user
 
 
 @pytest.fixture

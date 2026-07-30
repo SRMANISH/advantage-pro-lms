@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
+import { BatchSelect, Card, EmptyState, SectionHeading, TableSkeleton } from "../../design-system";
 import { batchesApi } from "../batches/api";
 import { PortalLayout } from "../portal/PortalLayout";
 import { engagementApi } from "./api";
@@ -32,22 +32,15 @@ export function EngagementReportPage({ role }: { role: RoleDef }) {
       />
 
       <Card className="mb-6">
-        <label htmlFor="eng-batch" className="mb-1 block text-sm text-muted">
-          Filter by batch
-        </label>
-        <select
+        <BatchSelect
           id="eng-batch"
-          className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm sm:max-w-sm"
+          label="Filter by batch"
+          placeholder="All batches"
           value={batchId}
-          onChange={(e) => setBatchId(e.target.value)}
-        >
-          <option value="">All batches</option>
-          {batches.data?.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.code} — {b.name}
-            </option>
-          ))}
-        </select>
+          onChange={setBatchId}
+          batches={batches.data}
+          className="sm:max-w-sm"
+        />
       </Card>
 
       <div className="mb-6 grid gap-4 md:grid-cols-2">

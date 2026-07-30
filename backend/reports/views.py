@@ -3,29 +3,15 @@
 import csv
 
 from django.http import HttpResponse
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
 from attendance.services import batch_attendance_summaries
-from batches.models import Batch
+from batches.selectors import resolve_batch
 from core.permissions import has_any_role
 from core.roles import Role
 from enrollments.models import Enrollment
 from performance.services import batch_performance
-
-
-def _batch_for(request):
-    """Resolve ?batch= and enforce faculty-own-batch. Returns (batch, error_response)."""
-    batch_id = request.query_params.get("batch")
-    if not batch_id:
-        return None, Response({"detail": "batch query param required."}, status=400)
-    batch = Batch.objects.filter(id=batch_id).first()
-    if not batch:
-        return None, Response({"detail": "Batch not found."}, status=404)
-    if request.user.role == Role.FACULTY and not batch.faculty.filter(id=request.user.id).exists():
-        return None, Response({"detail": "Not your batch."}, status=403)
-    return batch, None
 
 
 def _csv(filename: str, header: list[str], rows) -> HttpResponse:
@@ -42,7 +28,7 @@ class StudentsReport(APIView):
     permission_classes = [has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.FACULTY)]
 
     def get(self, request):
-        batch, error = _batch_for(request)
+        batch, error = resolve_batch(request, allow_body=False)
         if error:
             return error
         enrollments = Enrollment.objects.filter(batch=batch).select_related("student")
@@ -69,7 +55,7 @@ class AttendanceReport(APIView):
     ]
 
     def get(self, request):
-        batch, error = _batch_for(request)
+        batch, error = resolve_batch(request, allow_body=False)
         if error:
             return error
         students = list(User.objects.filter(enrollments__batch=batch).distinct())
@@ -93,7 +79,7 @@ class PerformanceReport(APIView):
     ]
 
     def get(self, request):
-        batch, error = _batch_for(request)
+        batch, error = resolve_batch(request, allow_body=False)
         if error:
             return error
         rows = (

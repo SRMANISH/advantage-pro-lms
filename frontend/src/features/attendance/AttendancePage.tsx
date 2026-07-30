@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
 import {
+  BatchSelect,
   Button,
   Card,
   ListSkeleton,
@@ -101,22 +102,12 @@ function BatchRoster() {
   return (
     <div className="grid gap-4">
       <Card>
-        <label htmlFor="attendance-batch" className="mb-1 block text-sm text-muted">
-          Batch
-        </label>
-        <select
+        <BatchSelect
           id="attendance-batch"
-          className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
           value={batchId}
-          onChange={(e) => setBatchId(e.target.value)}
-        >
-          <option value="">Select a batch…</option>
-          {batches.data?.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.code} — {b.name}
-            </option>
-          ))}
-        </select>
+          onChange={setBatchId}
+          batches={batches.data}
+        />
       </Card>
 
       {batchId && (

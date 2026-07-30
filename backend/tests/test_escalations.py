@@ -5,7 +5,6 @@ import datetime
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from assessments.models import Choice, Question, Test
 from batches.models import Batch, BatchState, Course
 from core.roles import Role
@@ -13,14 +12,9 @@ from enrollments.models import Enrollment
 from escalations.models import Escalation
 from escalations.services import run_escalations
 from notifications.models import Notification
+from .helpers import user
 
 RUN_URL = "/api/v1/escalations/run/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
 
 
 @pytest.fixture

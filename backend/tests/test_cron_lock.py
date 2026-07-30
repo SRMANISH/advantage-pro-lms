@@ -5,19 +5,13 @@ import datetime
 import pytest
 from django.core.management import call_command
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, BatchState, Course
 from core.cron import LockHeld, cron_lock
 from core.roles import Role
 from enrollments.models import Enrollment
 from escalations.models import Escalation
 from escalations.services import run_escalations
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
+from .helpers import user
 
 
 @pytest.mark.django_db

@@ -6,9 +6,7 @@ import datetime
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from attendance.models import AttendanceEvent, AttendanceSource
 from attendance.services import expected_days, login_present_days
 from audit.models import AuditLog
@@ -16,18 +14,7 @@ from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from liveclasses.models import LiveClass
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
+from .helpers import client_for, user
 
 
 @pytest.fixture

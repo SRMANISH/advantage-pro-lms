@@ -4,27 +4,14 @@ import datetime
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, Course
 from core.roles import Role
 from notifications.models import Notification
 from notifications.services import notify
+from .helpers import client_for, user
 
 LIST_URL = "/api/v1/notifications/"
-
-
-def user(username, role, **extra):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE, **extra
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 @pytest.mark.django_db

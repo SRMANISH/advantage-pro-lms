@@ -20,19 +20,7 @@ from enrollments.models import Enrollment
 from liveclasses.models import LiveClass, LiveClassStatus
 from liveclasses.services import active_live_class_for_student
 from performance.services import batch_performance_cached
-
-
-def user(username, role, **extra):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE, **extra
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
-
+from .helpers import user
 
 # ---------- R-04: cancelled class must not open the device-approval window ----------
 

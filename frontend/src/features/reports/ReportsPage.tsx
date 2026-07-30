@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Card, SectionHeading } from "../../design-system";
+import { BatchSelect, Card, SectionHeading } from "../../design-system";
 import { attendanceApi } from "../attendance/api";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -29,22 +29,12 @@ export function ReportsPage({ role }: { role: RoleDef }) {
       <SectionHeading title="Reports & exports" subtitle="Download per-batch CSVs." />
 
       <Card className="mb-6">
-        <label htmlFor="reports-batch" className="mb-1 block text-sm text-muted">
-          Batch
-        </label>
-        <select
+        <BatchSelect
           id="reports-batch"
-          className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
           value={batchId}
-          onChange={(e) => setBatchId(e.target.value)}
-        >
-          <option value="">Select a batch…</option>
-          {batches.data?.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.code} — {b.name}
-            </option>
-          ))}
-        </select>
+          onChange={setBatchId}
+          batches={batches.data}
+        />
       </Card>
 
       {batchId && (

@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from accounts.models import User
 from audit.services import record_action
 from batches.models import Batch
+from batches.selectors import resolve_batch
 from core.permissions import has_any_role
 from core.roles import Role
 from core.utils import get_client_ip
@@ -22,19 +23,6 @@ from .services import daily_roster, is_rest_day, set_followup, student_summary
 ReviewRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR, Role.FACULTY)
 # Absentee follow-up is owned by both Counselor and MIS (plus Admin).
 FollowUpRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR)
-
-
-def _resolve_batch(request):
-    """Return (batch, error_response). Enforces faculty-own-batch scoping."""
-    batch_id = request.query_params.get("batch") or request.data.get("batch")
-    if not batch_id:
-        return None, Response({"detail": "batch query param required."}, status=400)
-    batch = Batch.objects.filter(id=batch_id).first()
-    if not batch:
-        return None, Response({"detail": "Batch not found."}, status=404)
-    if request.user.role == Role.FACULTY and not batch.faculty.filter(id=request.user.id).exists():
-        return None, Response({"detail": "Not your batch."}, status=403)
-    return batch, None
 
 
 class MyAttendanceView(APIView):
@@ -53,17 +41,9 @@ class BatchAttendanceView(APIView):
     permission_classes = [ReviewRoles]
 
     def get(self, request):
-        batch_id = request.query_params.get("batch")
-        if not batch_id:
-            return Response({"detail": "batch query param required."}, status=400)
-        batch = Batch.objects.filter(id=batch_id).first()
-        if not batch:
-            return Response({"detail": "Batch not found."}, status=404)
-        if (
-            request.user.role == Role.FACULTY
-            and not batch.faculty.filter(id=request.user.id).exists()
-        ):
-            return Response({"detail": "Not your batch."}, status=403)
+        batch, error = resolve_batch(request, allow_body=False)
+        if error:
+            return error
 
         students = User.objects.filter(enrollments__batch=batch).distinct()
         rows = [
@@ -137,7 +117,7 @@ class DailyAttendanceView(APIView):
     permission_classes = [ReviewRoles]
 
     def get(self, request):
-        batch, error = _resolve_batch(request)
+        batch, error = resolve_batch(request)
         if error:
             return error
         day = None
@@ -166,7 +146,7 @@ class FollowUpStatusView(APIView):
     permission_classes = [FollowUpRoles]
 
     def post(self, request):
-        batch, error = _resolve_batch(request)
+        batch, error = resolve_batch(request)
         if error:
             return error
         serializer = FollowUpStatusSerializer(data=request.data)

@@ -3,29 +3,16 @@
 import datetime
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, BatchState, Course
 from certification.models import Certificate
 from certification.services import run_certificate_reminders
 from core.roles import Role
 from enrollments.models import Enrollment
+from .helpers import client_for, user
 
 ME = "/api/v1/certification/me/"
 SUBMIT = "/api/v1/certification/submit/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 def make_batch(state):

@@ -3,9 +3,7 @@
 import datetime
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from assessments.models import Choice, Question, Task, Test
 from attendance.models import AbsenceFollowUp, AttendanceEvent
 from attendance.services import (
@@ -18,21 +16,10 @@ from batches.models import Batch, BatchState, Course
 from content.models import Video
 from core.roles import Role
 from enrollments.models import Enrollment
+from .helpers import client_for, user
 
 ME_URL = "/api/v1/attendance/me/"
 BATCH_URL = "/api/v1/attendance/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 @pytest.fixture

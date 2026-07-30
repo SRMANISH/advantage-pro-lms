@@ -5,6 +5,7 @@ import type { RoleDef } from "../../app/roles";
 import {
   Badge,
   Button,
+  BatchSelect,
   Card,
   EmptyState,
   FileUpload,
@@ -64,22 +65,12 @@ function ManageTasks() {
   return (
     <div className="grid gap-6">
       <Card>
-        <label htmlFor="tasks-batch" className="mb-1 block text-sm text-muted">
-          Batch
-        </label>
-        <select
+        <BatchSelect
           id="tasks-batch"
-          className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
           value={batchId}
-          onChange={(e) => setBatchId(e.target.value)}
-        >
-          <option value="">Select a batch…</option>
-          {batches.data?.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.code} — {b.name}
-            </option>
-          ))}
-        </select>
+          onChange={setBatchId}
+          batches={batches.data}
+        />
       </Card>
 
       {batchId && (

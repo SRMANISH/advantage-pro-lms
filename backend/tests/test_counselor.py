@@ -3,28 +3,15 @@
 import datetime
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from notifications.models import Notification
+from .helpers import client_for, user
 
 BATCHES_URL = "/api/v1/attendance/batches/"
 FOLLOWUP_URL = "/api/v1/attendance/follow-up/"
-
-
-def user(username, role, **extra):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE, **extra
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 @pytest.fixture

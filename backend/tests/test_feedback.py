@@ -3,26 +3,13 @@
 import datetime
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, BatchState, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from feedback.models import Feedback
 from notifications.models import Notification
-
-
-def user(username, role, **extra):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE, **extra
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
+from .helpers import client_for, user
 
 
 @pytest.fixture

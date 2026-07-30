@@ -1,25 +1,12 @@
 """Activity/audit access is restricted to Faculty and MIS (updated procedure)."""
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from audit.models import AuditLog
 from core.roles import Role
+from .helpers import client_for, user
 
 URL = "/api/v1/activity/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 @pytest.mark.django_db

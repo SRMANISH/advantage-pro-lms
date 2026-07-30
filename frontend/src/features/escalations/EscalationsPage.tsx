@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { RoleDef } from "../../app/roles";
 import {
   Badge,
+  BatchSelect,
   Button,
   Card,
   EmptyState,
@@ -73,19 +74,17 @@ export function EscalationsPage({ role }: { role: RoleDef }) {
       <Card className="mt-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-medium text-ink">Raised escalations</h2>
-          <select
-            aria-label="Filter escalations by batch"
-            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
-            value={batchId}
-            onChange={(e) => setBatchId(e.target.value)}
-          >
-            <option value="">All batches</option>
-            {batches.data?.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.code} — {b.name}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-64">
+            <BatchSelect
+              id="escalations-batch"
+              label="Filter escalations by batch"
+              hideLabel
+              placeholder="All batches"
+              value={batchId}
+              onChange={setBatchId}
+              batches={batches.data}
+            />
+          </div>
         </div>
         {escalations.isLoading ? (
           <TableSkeleton rows={4} cols={4} />

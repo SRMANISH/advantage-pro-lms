@@ -4,27 +4,14 @@ import datetime
 
 import pytest
 from django.utils import timezone
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from forum.models import Reply, Thread
+from .helpers import client_for, user
 
 MONITOR = "/api/v1/forum/monitor/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 @pytest.fixture

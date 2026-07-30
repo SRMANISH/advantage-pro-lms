@@ -4,26 +4,14 @@ ongoing-batch faculty guards, started-batch delete rules."""
 import datetime
 
 import pytest
-from rest_framework.test import APIClient
 
 from accounts.device import handle_device_login
-from accounts.models import DeviceBinding, DeviceChangeRequest, User, UserStatus
+from accounts.models import DeviceBinding, DeviceChangeRequest
 from batches.models import Batch, BatchState, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from forum.models import Thread
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
+from .helpers import client_for, user
 
 
 @pytest.fixture

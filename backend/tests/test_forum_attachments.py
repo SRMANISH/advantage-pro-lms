@@ -4,29 +4,16 @@ import datetime
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, Course
 from core.roles import Role
 from enrollments.models import Enrollment
 from forum.models import Thread, ThreadAttachment
+from .helpers import client_for, user
 
 THREADS = "/api/v1/threads/"
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 @pytest.fixture

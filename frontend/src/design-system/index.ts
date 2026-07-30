@@ -1,5 +1,6 @@
 export { Avatar } from "./components/Avatar";
 export { Badge } from "./components/Badge";
+export { BatchSelect, type BatchOption } from "./components/BatchSelect";
 export { Button } from "./components/Button";
 export { Card } from "./components/Card";
 export { CountUp } from "./components/CountUp";

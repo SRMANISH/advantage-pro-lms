@@ -1,24 +1,12 @@
 """Staff account creation: Super Admin any staff role; Admin Counsellor only."""
 
 import pytest
-from rest_framework.test import APIClient
 
 from accounts.models import SetupToken, User, UserStatus
 from core.roles import Role
+from .helpers import client_for, user
 
 URL = "/api/v1/auth/staff/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 def payload(username, role, email="new@example.com"):

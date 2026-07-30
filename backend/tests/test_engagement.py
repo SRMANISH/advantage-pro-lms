@@ -3,27 +3,14 @@
 import datetime
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from batches.models import Batch, BatchState, Course
 from core.roles import Role
 from engagement.models import CourseNextPlan, GoogleReview, LinkedInFollow
 from enrollments.models import Enrollment
+from .helpers import client_for, user
 
 ME = "/api/v1/engagement/me/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 def completed_batch(code="DONE"):

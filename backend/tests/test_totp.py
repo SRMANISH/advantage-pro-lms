@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import TOTPDevice, User, UserStatus
 from core.roles import Role
+from .helpers import client_for
 
 ENROLL = "/api/v1/auth/totp/enroll/"
 CONFIRM = "/api/v1/auth/totp/confirm/"
@@ -19,12 +20,6 @@ def user(username, role, password="Secret123!"):
         username=username, password=password, role=role, status=UserStatus.ACTIVE
     )
     return u
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 def _enroll_and_confirm(client) -> str:

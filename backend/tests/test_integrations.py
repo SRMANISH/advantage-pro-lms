@@ -1,25 +1,12 @@
 """req 21: Super-Admin-editable third-party connections (masked secrets)."""
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import User, UserStatus
 from core.roles import Role
 from notifications.models import IntegrationSetting
+from .helpers import client_for, user
 
 URL = "/api/v1/settings/channels/"
-
-
-def user(username, role):
-    return User.objects.create_user(
-        username=username, password="x", role=role, status=UserStatus.ACTIVE
-    )
-
-
-def client_for(u):
-    c = APIClient()
-    c.force_authenticate(user=u)
-    return c
 
 
 @pytest.mark.django_db

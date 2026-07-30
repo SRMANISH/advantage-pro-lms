@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { Badge, Button, Card, EmptyState, Input, ListSkeleton } from "../../design-system";
+import {
+  Badge,
+  BatchSelect,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+  ListSkeleton,
+} from "../../design-system";
 import { batchesApi } from "../batches/api";
 import {
   assessmentsApi,
@@ -106,22 +114,12 @@ export function ManageTests() {
   return (
     <div className="grid gap-6">
       <Card>
-        <label htmlFor="tests-batch" className="mb-1 block text-sm text-muted">
-          Batch
-        </label>
-        <select
+        <BatchSelect
           id="tests-batch"
-          className="h-10 w-full rounded-lg border border-brdr bg-surface px-3 text-sm"
           value={batchId}
-          onChange={(e) => setBatchId(e.target.value)}
-        >
-          <option value="">Select a batch…</option>
-          {batches.data?.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.code} — {b.name}
-            </option>
-          ))}
-        </select>
+          onChange={setBatchId}
+          batches={batches.data}
+        />
       </Card>
 
       {batchId && (
