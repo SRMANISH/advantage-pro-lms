@@ -23,7 +23,7 @@ from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission
 from core.permissions_matrix import Action
 from core.roles import Role
-from core.uploads import validate_upload
+from core.uploads import safe_filename, validate_upload
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify, notify_many
 
@@ -94,7 +94,7 @@ class TestViewSet(viewsets.ModelViewSet):
         upload = self.request.FILES.get("resource")
         if upload:
             validate_upload(upload, "document")
-            key = f"tests/resources/{uuid.uuid4()}/{upload.name}"
+            key = f"tests/resources/{uuid.uuid4()}/{safe_filename(upload.name)}"
             get_storage().save(key, upload)
             test.resource_key = key
             test.resource_content_type = getattr(upload, "content_type", "") or ""
@@ -179,7 +179,7 @@ class TestViewSet(viewsets.ModelViewSet):
             link=link,
         )
         if upload:
-            key = f"tests/{uuid.uuid4()}/{upload.name}"
+            key = f"tests/{uuid.uuid4()}/{safe_filename(upload.name)}"
             get_storage().save(key, upload)
             attempt.file_key = key
             attempt.content_type = getattr(upload, "content_type", "") or ""

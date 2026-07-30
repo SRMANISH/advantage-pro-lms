@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from core.adapters.registry import get_storage
 from core.roles import Role
-from core.uploads import validate_upload
+from core.uploads import safe_filename, validate_upload
 
 from .access import can_access_batch
 from .models import Material, Video
@@ -69,7 +69,7 @@ class VideoUploadSerializer(serializers.ModelSerializer):
 
     def create(self, validated):
         upload = validated.pop("file")
-        key = f"videos/{uuid.uuid4()}/{upload.name}"
+        key = f"videos/{uuid.uuid4()}/{safe_filename(upload.name)}"
         get_storage().save(key, upload)
         validated["storage_key"] = key
         validated["content_type"] = getattr(upload, "content_type", "") or "video/mp4"
@@ -113,7 +113,7 @@ class MaterialUploadSerializer(serializers.ModelSerializer):
 
     def create(self, validated):
         upload = validated.pop("file")
-        key = f"materials/{uuid.uuid4()}/{upload.name}"
+        key = f"materials/{uuid.uuid4()}/{safe_filename(upload.name)}"
         get_storage().save(key, upload)
         validated["storage_key"] = key
         validated["content_type"] = (

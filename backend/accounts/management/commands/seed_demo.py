@@ -4,7 +4,8 @@ import datetime
 import io
 import random
 
-from django.core.management.base import BaseCommand
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from accounts.models import User, UserStatus
@@ -51,7 +52,24 @@ VIDEOS = [
 class Command(BaseCommand):
     help = "Seed demo accounts, a populated batch, content, assessments, forum and attendance."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Seed even when DEBUG is off. Required outside development — this command "
+            "creates accounts with a well-known password.",
+        )
+
     def handle(self, *args, **options):
+        # These accounts all share a hardcoded, publicly-known password. Running this against
+        # a real deployment would hand out working logins for every role, so refuse unless
+        # DEBUG is on (development) or the operator explicitly forces it.
+        if not settings.DEBUG and not options["force"]:
+            raise CommandError(
+                "Refusing to seed demo data with DEBUG=False — this creates accounts with a "
+                "publicly-known password. Re-run with --force if you are certain this is a "
+                "development or demo environment, never on production."
+            )
         random.seed(42)
         users = self._seed_accounts()
         faculty = users["faculty1"]

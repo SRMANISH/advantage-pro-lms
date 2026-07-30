@@ -2,3 +2,4 @@
 # Coverage data
 .coverage
 htmlcov/
+.pytest_media_traversal/

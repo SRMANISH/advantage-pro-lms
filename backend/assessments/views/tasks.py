@@ -18,6 +18,7 @@ from core.adapters.registry import get_storage
 from core.permissions import MatrixPermission
 from core.permissions_matrix import Action
 from core.roles import Role
+from core.uploads import safe_filename
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify, notify_many
 
@@ -106,7 +107,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         upload = data.get("file")
         if upload:
-            key = f"tasks/{uuid.uuid4()}/{upload.name}"
+            key = f"tasks/{uuid.uuid4()}/{safe_filename(upload.name)}"
             get_storage().save(key, upload)
             submission.file_key = key
             submission.content_type = getattr(upload, "content_type", "") or ""

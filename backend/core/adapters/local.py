@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 from django.conf import settings
+from django.core.exceptions import SuspiciousFileOperation
 
 from .base import EmailAdapter, SchedulerAdapter, SmsAdapter, StorageAdapter, WhatsAppAdapter
 
@@ -23,7 +24,13 @@ class LocalStorageAdapter(StorageAdapter):
     def _path(self, key: str) -> Path:
         root = Path(settings.MEDIA_ROOT)
         root.mkdir(parents=True, exist_ok=True)
-        return root / key
+        candidate = (root / key).resolve()
+        # Defence in depth: filenames are sanitised at the boundary (core.uploads), but the
+        # adapter is the last thing standing between a key and the filesystem, so refuse
+        # anything that resolves outside MEDIA_ROOT rather than trusting the caller.
+        if not candidate.is_relative_to(root.resolve()):
+            raise SuspiciousFileOperation(f"Storage key escapes MEDIA_ROOT: {key!r}")
+        return candidate
 
     def save(self, key: str, fileobj: BinaryIO) -> str:
         path = self._path(key)

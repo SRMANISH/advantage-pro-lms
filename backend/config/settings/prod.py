@@ -5,11 +5,13 @@ from django.core.exceptions import ImproperlyConfigured
 from .base import *  # noqa: F401,F403
 from .base import (
     ALLOWED_HOSTS,
+    LMS_ADAPTERS,
     MIDDLEWARE,
     REDIS_URL,
     SECRET_KEY,
     SENTRY_DSN,
     SENTRY_TRACES_SAMPLE_RATE,
+    env,
 )
 
 DEBUG = False
@@ -42,6 +44,26 @@ if not REDIS_URL:
         "across workers and the background task queue (qcluster). Without it, login "
         "throttling is per-process and notifications send synchronously in-request."
     )
+
+# The notification adapters default to console stubs, which log instead of sending. Shipping
+# that to production is silent, not loud: setup links, OTPs, absence chasers and the Super
+# Admin feedback WhatsApp would all "succeed" while nobody receives anything. Fail fast
+# unless the operator has explicitly opted out (e.g. a staging box with no provider yet).
+_STUB_PREFIX = "core.adapters.local"
+if not env.bool("LMS_ALLOW_CONSOLE_ADAPTERS", default=False):
+    _stubbed = sorted(
+        channel
+        for channel in ("email", "sms", "whatsapp")
+        if LMS_ADAPTERS.get(channel, "").startswith(_STUB_PREFIX)
+    )
+    if _stubbed:
+        raise ImproperlyConfigured(
+            "These notification channels are still using the local console stub in "
+            f"production: {', '.join(_stubbed)}. Messages would be logged and silently "
+            "dropped. Set the matching LMS_<CHANNEL>_ADAPTER env var to a real provider "
+            "(see docs/DEPLOYMENT.md §6), or set LMS_ALLOW_CONSOLE_ADAPTERS=true to "
+            "acknowledge this deliberately."
+        )
 
 # HTTPS / transport security
 SECURE_SSL_REDIRECT = True

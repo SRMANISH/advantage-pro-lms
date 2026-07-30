@@ -15,7 +15,7 @@ from core.utils import get_client_ip
 
 from .. import password as password_service
 from .. import setup as setup_service
-from ..throttling import LoginRateThrottle
+from ..throttling import LoginRateThrottle, OTPRateThrottle
 
 
 def _reset_token(request):
@@ -58,6 +58,8 @@ class ForgotPasswordStartView(APIView):
 
 
 class ForgotPasswordVerifyEmailView(APIView):
+
+    throttle_classes = [OTPRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -76,6 +78,8 @@ class ForgotPasswordVerifyEmailView(APIView):
 
 
 class ForgotPasswordVerifyPhoneView(APIView):
+
+    throttle_classes = [OTPRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -91,6 +95,8 @@ class ForgotPasswordVerifyPhoneView(APIView):
 
 
 class ForgotPasswordCompleteView(APIView):
+
+    throttle_classes = [OTPRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -136,6 +142,8 @@ class ForgotPasswordResendView(APIView):
 
 class ChangePasswordView(APIView):
     """Logged-in users change their own password."""
+
+    throttle_classes = [OTPRateThrottle]
 
     permission_classes = [IsAuthenticated]
 

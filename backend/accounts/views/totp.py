@@ -11,6 +11,7 @@ from core.utils import get_client_ip
 
 from .. import totp as totp_service
 from ..models import TOTPDevice
+from ..throttling import OTPRateThrottle
 
 
 class IsStaffUser(BasePermission):
@@ -34,6 +35,8 @@ class TOTPStatusView(APIView):
 class TOTPEnrollView(APIView):
     """Start (or restart) enrollment: issues a pending secret + QR provisioning URI."""
 
+    throttle_classes = [OTPRateThrottle]
+
     permission_classes = [IsStaffUser]
 
     def post(self, request):
@@ -48,6 +51,8 @@ class TOTPEnrollView(APIView):
 
 class TOTPConfirmView(APIView):
     """Verify the first code from the authenticator app and enable 2FA."""
+
+    throttle_classes = [OTPRateThrottle]
 
     permission_classes = [IsStaffUser]
 
@@ -65,6 +70,8 @@ class TOTPConfirmView(APIView):
 
 class TOTPDisableView(APIView):
     """Turn 2FA off — requires the current password as confirmation."""
+
+    throttle_classes = [OTPRateThrottle]
 
     permission_classes = [IsStaffUser]
 

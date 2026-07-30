@@ -21,7 +21,7 @@ from core.adapters.registry import get_storage
 from core.pagination import StandardResultsPagination
 from core.permissions import has_any_role
 from core.roles import Role
-from core.uploads import validate_upload
+from core.uploads import safe_filename, validate_upload
 from enrollments.models import Enrollment
 from notifications.services import notify, notify_many
 
@@ -37,7 +37,7 @@ from .serializers import (
 def _store_attachment(thread, reply, upload, user) -> None:
     """Validate + persist one uploaded file as a forum attachment."""
     validate_upload(upload, "document")
-    key = f"forum/{uuid.uuid4()}/{upload.name}"
+    key = f"forum/{uuid.uuid4()}/{safe_filename(upload.name)}"
     get_storage().save(key, upload)
     ThreadAttachment.objects.create(
         thread=thread,

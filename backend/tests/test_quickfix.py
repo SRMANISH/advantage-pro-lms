@@ -184,7 +184,9 @@ def test_seed_demo_repairs_drifted_account_role():
     User.objects.create_user(
         username="admin1", password="x", role=Role.MIS, status=UserStatus.SUSPENDED
     )
-    call_command("seed_demo")
+    # Django's test runner forces DEBUG=False, so the seeder's production guard applies
+    # here — pass --force the way a developer seeding a demo box would.
+    call_command("seed_demo", "--force")
     admin1 = User.objects.get(username="admin1")
     assert admin1.role == Role.ADMIN
     assert admin1.status == UserStatus.ACTIVE

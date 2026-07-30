@@ -111,8 +111,31 @@ def _content_matches_extension(upload, ext: str) -> bool:
     return any(head[offset : offset + len(sig)] == sig for offset, sig in signatures)
 
 
+def safe_filename(name: str) -> str:
+    """Reduce a client-supplied filename to a harmless basename.
+
+    Upload names are attacker-controlled and are interpolated into storage keys, so a name
+    like ``../../evil.pdf`` would otherwise escape MEDIA_ROOT when the key is joined to a
+    path. Strips directory components (both separators, since a Windows-style ``..\\`` must
+    not survive on a POSIX host either), drops any leftover dot-segments, and removes null
+    bytes and control characters. Idempotent, so it is safe to apply more than once.
+    """
+    name = (name or "").replace("\x00", "")
+    # Normalise both separators before taking the basename: os.path.basename on POSIX does
+    # not treat a backslash as a separator, so do it explicitly.
+    name = name.replace("\\", "/").split("/")[-1]
+    name = "".join(ch for ch in name if ch.isprintable())
+    name = name.strip().strip(".")
+    # Anything that reduces to nothing (or to a pure dot-segment) gets a neutral fallback.
+    return name or "upload"
+
+
 def validate_upload(upload, kind: str):
-    """Validate an uploaded file by size, extension, and content type. Returns it on success."""
+    """Validate an uploaded file by size, extension, and content type. Returns it on success.
+
+    Also normalises ``upload.name`` to a safe basename so callers that build a storage key
+    from it cannot be walked out of MEDIA_ROOT.
+    """
     exts, types, setting_name, default_mb = _KINDS[kind]
     max_mb = int(getattr(settings, setting_name, default_mb))
     max_bytes = max_mb * 1024 * 1024
@@ -121,7 +144,13 @@ def validate_upload(upload, kind: str):
     if size > max_bytes:
         raise serializers.ValidationError(f"File is too large (maximum {max_mb} MB).")
 
-    name = getattr(upload, "name", "") or ""
+    # Sanitise before the extension check so a traversal attempt can't smuggle a valid
+    # extension past it, and so every caller that reads upload.name afterwards is safe.
+    name = safe_filename(getattr(upload, "name", ""))
+    try:
+        upload.name = name
+    except AttributeError:  # pragma: no cover - some file-likes expose a read-only name
+        pass
     ext = os.path.splitext(name)[1].lower()
     if ext not in exts:
         raise serializers.ValidationError(

@@ -14,6 +14,7 @@ from core.roles import Role
 from core.utils import get_client_ip
 
 from .. import setup as setup_service
+from ..throttling import OTPRateThrottle
 from ..models import User
 
 
@@ -23,6 +24,8 @@ def _resolve_token(request):
 
 class SetupStartView(APIView):
     """Open the setup link -> send the email OTP."""
+
+    throttle_classes = [OTPRateThrottle]
 
     permission_classes = [AllowAny]
 
@@ -42,6 +45,8 @@ class SetupStartView(APIView):
 
 
 class SetupVerifyEmailView(APIView):
+
+    throttle_classes = [OTPRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -60,6 +65,8 @@ class SetupVerifyEmailView(APIView):
 
 
 class SetupVerifyPhoneView(APIView):
+
+    throttle_classes = [OTPRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -75,6 +82,8 @@ class SetupVerifyPhoneView(APIView):
 
 
 class SetupCompleteView(APIView):
+
+    throttle_classes = [OTPRateThrottle]
     permission_classes = [AllowAny]
 
     def post(self, request):
