@@ -1,0 +1,76 @@
+# CodeRabbit configuration.
+# Full project context for reviewers: docs/PROJECT_OVERVIEW.md
+language: "en-US"
+
+reviews:
+  profile: "assertive"
+  high_level_summary: true
+  review_status: true
+  collapse_walkthrough: false
+  poem: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+
+  # Generated, vendored, or lock files carry no review value here.
+  path_filters:
+    - "!**/migrations/**"
+    - "!**/package-lock.json"
+    - "!frontend/dist/**"
+    - "!**/__pycache__/**"
+    - "!**/*.min.js"
+    - "!**/*.svg"
+
+  path_instructions:
+    - path: "backend/**/*.py"
+      instructions: |
+        Django 5 + DRF backend, modular monolith. Hold this code to the project's rules:
+        - Permissions come ONLY from core/permissions_matrix.py (an `Action` + MATRIX entry)
+          enforced by MatrixPermission. Flag any hardcoded role check in a view/serializer.
+        - Any change to MATRIX must update tests/test_permissions.py in the same commit.
+        - Object-level scoping (faculty -> own batches, student -> own records) is required
+          on top of the matrix; flag list/detail endpoints that skip it.
+        - Every "at most once" rule must be backed by a DB constraint AND a race-safe create
+          (get_or_create / bulk_create(ignore_conflicts=True)). Flag check-then-create patterns.
+        - All file serving must go through content.delivery.deliver(). Flag new FileResponse
+          usage or imports of private streaming helpers.
+        - List endpoints that can grow must paginate (StandardResultsPagination or
+          core.pagination.paginate_rows). Flag unbounded serialization of a full queryset.
+        - Flag N+1s: per-row queries inside serializer methods should use a Prefetch with
+          to_attr, or a single grouped query.
+        - Migrations must be reversible with safe defaults; no dropping columns holding live
+          data without a back-fill.
+        - Secrets are never returned to clients; provider secrets are Fernet-encrypted at rest.
+
+    - path: "frontend/**/*.{ts,tsx}"
+      instructions: |
+        React 18 + TypeScript + Vite + Tailwind + TanStack Query v5.
+        - Route/nav role gating here is COSMETIC; the server is authoritative. Do not suggest
+          relying on it for security, but do flag UI that exposes an action a role cannot perform.
+        - Server state belongs in TanStack Query; flag ad-hoc useEffect fetching.
+        - Data-dense tables must use server pagination (lib/useServerTable + fetchPage).
+          Flag "fetch a big page then slice/filter client-side" — it silently hides rows.
+        - Reuse src/design-system components rather than re-styling primitives inline.
+        - Accessibility is enforced (jsx-a11y, zero errors): labels need htmlFor/id, custom
+          overlays need keyboard dismissal, motion must respect reduced-motion.
+        - Wide tables must scroll inside overflow-x-auto, not overflow-hidden.
+
+    - path: "backend/tests/**/*.py"
+      instructions: |
+        pytest + pytest-django. Tests are function-based.
+        - test_permissions.py is the pinned role x action matrix; treat changes there as
+          intentional contract changes and check they match core/permissions_matrix.py.
+        - Prefer asserting behaviour through the API surface over internals.
+        - Concurrency tests simulate "both requests passed the read-check" rather than
+          orchestrating OS threads against the DB (portable across SQLite/Postgres).
+
+    - path: "frontend/e2e/**/*.ts"
+      instructions: |
+        Playwright, workers: 1 against real dev servers with seeded demo data.
+        - Student pages mount stacked prompts (welcome check, then engagement); specs must
+          clear them via the shared fixture rather than ad-hoc clicks.
+        - Prefer role-based and id selectors over brittle deep CSS class chains.
+
+chat:
+  auto_reply: true
