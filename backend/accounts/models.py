@@ -134,6 +134,20 @@ class DeviceChangeRequest(TimeStampedModel):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["status"])]
+        constraints = [
+            # Two simultaneous logins from the same new device must collapse into one
+            # request. The application uses get_or_create, but that is check-then-insert
+            # and races under concurrency, so the guarantee has to live in the database.
+            # Scoped to PENDING: a user may legitimately re-request a device that was
+            # rejected earlier, and historical approved/rejected rows must stay put.
+            models.UniqueConstraint(
+                fields=["user", "new_device_id"],
+                # Literal rather than Status.PENDING: a nested Meta cannot see the enclosing
+                # class body's names, and this is the value Django serialises anyway.
+                condition=models.Q(status="pending"),
+                name="uniq_pending_device_change_per_user_device",
+            )
+        ]
 
 
 class TOTPDevice(TimeStampedModel):

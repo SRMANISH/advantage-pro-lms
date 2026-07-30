@@ -210,31 +210,32 @@ def absentee_students(batch, day=None):
 def remind_absentees(day=None) -> int:
     """Notify students who missed login today across active, in-window batches.
 
-    Idempotent: at most one ``absence_reminder`` per student per day. Returns the
-    number of reminders sent. Counselor and MIS follow up off the same login data.
+    Idempotent across concurrent runs: an ``AbsenceReminderLog`` row for (student, day) is
+    claimed before the send, and a unique constraint means only one caller can claim it.
+    Returns the number of reminders sent. Counselor and MIS follow up off the same login
+    data.
     """
     from batches.models import Batch, BatchState
-    from notifications.models import Notification
     from notifications.services import notify
+
+    from .models import AbsenceReminderLog
 
     day = day or timezone.localdate()
     # With weekends excluded from attendance, a Saturday/Sunday "you didn't log in today"
     # message would go to the whole roster — suppress it.
     if is_rest_day(day):
         return 0
-    # One query for everyone already reminded today (was a per-student .exists()); grown
-    # in-loop so a student absent in two batches is still reminded at most once per day.
-    reminded = set(
-        Notification.objects.filter(kind="absence_reminder", created_at__date=day).values_list(
-            "recipient_id", flat=True
-        )
-    )
     sent = 0
     for batch in Batch.objects.filter(state=BatchState.ACTIVE):
         if day < batch.start_date or day > batch.end_date:
             continue
         for student in absentee_students(batch, day):
-            if student.id in reminded:
+            # The insert *is* the claim. This replaced an in-memory set built from today's
+            # Notification rows, which two overlapping runs could both read as empty before
+            # either wrote. It still covers the in-process case it always did: a student
+            # absent in two batches finds their own row on the second batch's pass.
+            _, claimed = AbsenceReminderLog.objects.get_or_create(student=student, day=day)
+            if not claimed:
                 continue
             notify(
                 student,
@@ -244,7 +245,6 @@ def remind_absentees(day=None) -> int:
                 subject="We missed you today",
                 channels=("in_app", "email", "sms"),
             )
-            reminded.add(student.id)
             sent += 1
     return sent
 

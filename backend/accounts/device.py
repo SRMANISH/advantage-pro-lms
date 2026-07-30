@@ -15,6 +15,7 @@ deterrent against casual account sharing, not a hardware-level lock.
 
 from __future__ import annotations
 
+from django.db import IntegrityError
 from django.utils import timezone
 
 from notifications.services import notify, notify_many
@@ -74,16 +75,28 @@ def handle_device_login(student, device_id: str, course_ended: bool = False) -> 
     from liveclasses.services import active_live_class_for_student
 
     active = active_live_class_for_student(student)
-    request, created = DeviceChangeRequest.objects.get_or_create(
-        user=student,
-        new_device_id=device_id,
-        status=DeviceChangeRequest.Status.PENDING,
-        defaults={
-            "old_device_id": binding.device_id,
-            "during_class": active is not None,
-            "class_context": active.title if active else "",
-        },
-    )
+    # A partial unique index on (user, new_device_id) WHERE status='pending' backs this:
+    # get_or_create on its own is check-then-insert, so two tabs (or a retried request)
+    # would each see "no pending request" and each raise one — two approval cards for one
+    # device. With the constraint the database picks a single winner and get_or_create
+    # re-reads the loser's row, so only one notification goes out.
+    try:
+        _, created = DeviceChangeRequest.objects.get_or_create(
+            user=student,
+            new_device_id=device_id,
+            status=DeviceChangeRequest.Status.PENDING,
+            defaults={
+                "old_device_id": binding.device_id,
+                "during_class": active is not None,
+                "class_context": active.title if active else "",
+            },
+        )
+    except IntegrityError:
+        # Narrow but real: we lost the insert race and the winning request was approved or
+        # rejected before get_or_create could read it back, so its re-``get`` (which filters
+        # on status=PENDING) found nothing and re-raised. A request was still raised for this
+        # device — treat it as existing rather than 500-ing on the student's login.
+        created = False
     if created:
         who = student.full_name or student.username
         if active:

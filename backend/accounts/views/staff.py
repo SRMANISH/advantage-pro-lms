@@ -149,6 +149,30 @@ class UserRoleView(APIView):
                 {"detail": "Choose a valid staff role (students are managed via enrolment)."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # Super Admin is the only role that can grant roles at all, so demoting the last one
+        # (or yourself, when you may be the last one) is unrecoverable through the UI — it
+        # would leave the deployment with nobody able to appoint a replacement.
+        if target.role == Role.SUPER_ADMIN and new_role != Role.SUPER_ADMIN:
+            if target.id == request.user.id:
+                return Response(
+                    {
+                        "detail": "You cannot change your own Super Admin role. Ask another "
+                        "Super Admin to do it."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # Suspended accounts cannot sign in, so they do not count as a way back in.
+            others = User.objects.filter(role=Role.SUPER_ADMIN, status=UserStatus.ACTIVE).exclude(
+                id=target.id
+            )
+            if not others.exists():
+                return Response(
+                    {
+                        "detail": "This is the last active Super Admin. Promote another account "
+                        "to Super Admin before changing this one."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         # Moving a faculty off the faculty role removes them from their batches — blocked
         # while they have ongoing batches (delete/complete those first).
         if target.role == Role.FACULTY and new_role != Role.FACULTY:

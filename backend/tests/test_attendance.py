@@ -3,9 +3,10 @@
 import datetime
 
 import pytest
+from django.db import IntegrityError, transaction
 
 from assessments.models import Choice, Question, Task, Test
-from attendance.models import AbsenceFollowUp, AttendanceEvent
+from attendance.models import AbsenceFollowUp, AbsenceReminderLog, AttendanceEvent
 from attendance.services import (
     expected_days,
     record_login_attendance,
@@ -217,3 +218,67 @@ def test_batch_roster_access(world):
         client_for(world["student"]).get(f"{BATCH_URL}?batch={world['batch'].id}").status_code
         == 403
     )
+
+
+# --------------------------- absence-reminder dedup ---------------------------
+# The dedup used to be an in-memory set built from today's absence_reminder Notification
+# rows. Two overlapping runs — a retried cron, a manual trigger racing the scheduled one —
+# both read that set before either wrote, and both sent. The claim now lives in a row with
+# a unique (student, day) constraint, so only one run can win.
+
+
+def _reminder_world(code, username):
+    today = datetime.date.today()
+    course = Course.objects.create(code=code, name=code)
+    batch = Batch.objects.create(
+        code=code,
+        name=code,
+        course=course,
+        start_date=today - datetime.timedelta(days=5),
+        end_date=today + datetime.timedelta(days=30),
+        state=BatchState.ACTIVE,
+    )
+    student = user(username, Role.STUDENT)
+    Enrollment.objects.create(student=student, batch=batch, registration_number=username)
+    return student
+
+
+@pytest.mark.django_db
+def test_absence_reminder_dedup_survives_notification_history_being_gone():
+    """The regression test for the actual change.
+
+    Under the old implementation the dedup signal *was* the Notification row, so clearing
+    notifications made a second run re-send. The durable claim must hold on its own.
+    """
+    student = _reminder_world("FSD", "stuD")
+
+    assert remind_absentees() == 1
+    assert AbsenceReminderLog.objects.filter(student=student).count() == 1
+
+    student.notifications.filter(kind="absence_reminder").delete()
+
+    assert remind_absentees() == 0
+    assert not student.notifications.filter(kind="absence_reminder").exists()
+
+
+@pytest.mark.django_db
+def test_database_refuses_a_second_claim_for_the_same_student_and_day():
+    """Proves the guarantee is enforced by the database rather than by the loop's own
+    bookkeeping — otherwise genuinely concurrent runs would still both send."""
+    student = _reminder_world("FSE", "stuE")
+    today = datetime.date.today()
+    AbsenceReminderLog.objects.create(student=student, day=today)
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        AbsenceReminderLog.objects.create(student=student, day=today)
+
+
+@pytest.mark.django_db
+def test_absence_reminder_claim_is_per_day_not_forever():
+    """Yesterday's claim must not suppress today's reminder."""
+    student = _reminder_world("FSF", "stuF")
+    today = datetime.date.today()
+    AbsenceReminderLog.objects.create(student=student, day=today - datetime.timedelta(days=1))
+
+    assert remind_absentees() == 1
+    assert AbsenceReminderLog.objects.filter(student=student, day=today).exists()

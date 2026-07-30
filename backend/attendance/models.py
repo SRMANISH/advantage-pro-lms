@@ -80,3 +80,32 @@ class AbsenceFollowUp(TimeStampedModel):
             models.UniqueConstraint(fields=["student", "batch"], name="uniq_absence_followup")
         ]
         indexes = [models.Index(fields=["batch", "status"])]
+
+
+class AbsenceReminderLog(TimeStampedModel):
+    """One row per (student, day), claimed *before* the reminder is sent.
+
+    ``remind_absentees`` used to dedup by querying today's ``absence_reminder``
+    Notification rows into a set and skipping anyone already in it. That is
+    check-then-write: two overlapping runs — a retried cron, a manual trigger racing the
+    scheduled one, two workers off the same queue — both read the set before either
+    writes, and both send. Making the *insert* the claim moves the decision into the
+    database, where exactly one writer can win.
+
+    Deliberately at-most-once: the row is claimed first, so a send that fails afterwards
+    is not retried. A duplicate "we missed you today" is worse than a missed one here.
+    """
+
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="absence_reminder_logs"
+    )
+    day = models.DateField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["student", "day"], name="uniq_absence_reminder_per_day")
+        ]
+        indexes = [models.Index(fields=["day"])]
+
+    def __str__(self) -> str:
+        return f"absence_reminder<{self.student_id}@{self.day}>"

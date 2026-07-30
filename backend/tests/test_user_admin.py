@@ -79,3 +79,76 @@ def test_cannot_change_role_to_student():
     target = user("mis1", Role.MIS)
     resp = client_for(sa).post(_role_url(target), {"role": Role.STUDENT}, format="json")
     assert resp.status_code == 400
+
+
+# --------------------------- Super Admin lockout guards ---------------------------
+# Super Admin is the only role that can grant roles, so a demotion that removes the last
+# one is unrecoverable through the UI — there is nobody left who can appoint a replacement.
+# (Suspension is not a second route to the same state: UserStatusView only accepts student
+# and faculty targets, so a Super Admin cannot be suspended at all.)
+
+
+@pytest.mark.django_db
+def test_super_admin_cannot_demote_their_own_account():
+    sa = user("sa_self", Role.SUPER_ADMIN)
+    user("sa_other", Role.SUPER_ADMIN)  # a second one exists, so this is purely the self rule
+
+    resp = client_for(sa).post(_role_url(sa), {"role": Role.MIS}, format="json")
+
+    assert resp.status_code == 400
+    assert "your own" in resp.data["detail"].lower()
+    sa.refresh_from_db()
+    assert sa.role == Role.SUPER_ADMIN
+
+
+@pytest.mark.django_db
+def test_last_super_admin_cannot_be_demoted():
+    acting = user("sa_acting", Role.SUPER_ADMIN)
+    target = user("sa_target", Role.SUPER_ADMIN)
+    # Demoting `target` is fine while `acting` remains...
+    assert (
+        client_for(acting).post(_role_url(target), {"role": Role.MIS}, format="json").status_code
+        == 200
+    )
+
+    # ...but `acting` is now the last one, and cannot be demoted by anyone.
+    resp = client_for(acting).post(_role_url(acting), {"role": Role.MIS}, format="json")
+    assert resp.status_code == 400
+    acting.refresh_from_db()
+    assert acting.role == Role.SUPER_ADMIN
+
+
+@pytest.mark.django_db
+def test_sole_active_super_admin_cannot_be_demoted_by_another_account():
+    """Defence in depth — this branch is not reachable through login today.
+
+    CHANGE_USER_ROLE is in ``LOCKED_SA_ACTIONS``, so it cannot be granted to another role by
+    a PermissionOverride: any actor who reaches this view is a Super Admin. And if the actor
+    is a *different* Super Admin who can sign in, then by definition a second active Super
+    Admin exists and the guard never fires — the self-demotion rule above is the one that
+    actually protects the live deployment.
+
+    The check still earns its place: it is the invariant, not a restatement of the matrix. It
+    is exercised here with a PENDING Super Admin (an account created but never set up, which
+    cannot log in) to pin the intended behaviour if the matrix is ever widened.
+    """
+    pending_sa = user("sa_pending", Role.SUPER_ADMIN, status=UserStatus.PENDING)
+    sole_active = user("sa_sole", Role.SUPER_ADMIN)
+
+    resp = client_for(pending_sa).post(_role_url(sole_active), {"role": Role.MIS}, format="json")
+
+    assert resp.status_code == 400
+    assert "last active super admin" in resp.data["detail"].lower()
+    sole_active.refresh_from_db()
+    assert sole_active.role == Role.SUPER_ADMIN
+
+
+@pytest.mark.django_db
+def test_demoting_a_non_super_admin_is_unaffected():
+    """The guard must not leak into ordinary role changes."""
+    sa = user("sa_ok", Role.SUPER_ADMIN)
+    mis = user("mis_ok", Role.MIS)
+    resp = client_for(sa).post(_role_url(mis), {"role": Role.COUNSELOR}, format="json")
+    assert resp.status_code == 200
+    mis.refresh_from_db()
+    assert mis.role == Role.COUNSELOR
