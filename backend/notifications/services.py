@@ -5,6 +5,20 @@ from __future__ import annotations
 from .dispatch import queue_external
 from .models import Notification
 
+# Notifications must be sent AFTER the surrounding transaction commits, never inside it.
+#
+# An in-app row would roll back with the transaction, but an email, SMS or WhatsApp already
+# handed to a provider cannot be unsent — so a rolled-back operation would leave the user
+# holding a message about something that never happened. All current callers get this right
+# by calling notify()/notify_many() *after* their `with transaction.atomic():` block closes;
+# a caller that genuinely must notify from inside one should wrap it:
+#
+#     transaction.on_commit(lambda: notify(user, kind, message))
+#
+# The queue itself is a second line of defence, not a substitute: django-q2 is configured
+# with the ORM broker, so an enqueued task rolls back with the transaction that created it
+# (see config/settings/base.py). That protection disappears the moment the broker changes.
+
 
 def notify(user, kind, message, *, link="", subject=None, channels=("in_app",)):
     """Deliver a notification to one user.

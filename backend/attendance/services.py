@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 
 from .models import AbsenceFollowUp, AttendanceEvent, AttendanceSource, FollowUpStatus
@@ -185,14 +186,26 @@ def get_followup(student, batch) -> AbsenceFollowUp | None:
 
 
 def set_followup(student, batch, status: str, *, owner=None, note: str = "") -> AbsenceFollowUp:
-    """Upsert the Counselor/MIS follow-up record for a student's absences in a batch."""
-    followup, _ = AbsenceFollowUp.objects.get_or_create(student=student, batch=batch)
-    followup.status = status
-    if owner is not None:
-        followup.owner = owner
-    if note:
-        followup.note = note
-    followup.save()
+    """Upsert the Counselor/MIS follow-up record for a student's absences in a batch.
+
+    Locked because this is read-modify-write on a row two people share: a Counselor and MIS
+    can be working the same absentee list, and without the lock the later save silently
+    discards the other's note or status change with nothing to show it happened.
+
+    ``select_for_update`` is a silent no-op on SQLite (Django omits the clause rather than
+    erroring), so this is only a real lock on PostgreSQL — which is what production runs.
+    """
+    with transaction.atomic():
+        AbsenceFollowUp.objects.get_or_create(student=student, batch=batch)
+        # Re-read inside the lock: get_or_create above may have returned a copy that another
+        # writer has since changed.
+        followup = AbsenceFollowUp.objects.select_for_update().get(student=student, batch=batch)
+        followup.status = status
+        if owner is not None:
+            followup.owner = owner
+        if note:
+            followup.note = note
+        followup.save()
     return followup
 
 

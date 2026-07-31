@@ -237,10 +237,26 @@ class TestAttemptViewSet(viewsets.GenericViewSet):
             return Response({"detail": "Not your batch."}, status=status.HTTP_403_FORBIDDEN)
         serializer = GradeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        attempt.score = min(serializer.validated_data["score"], attempt.total)
-        attempt.feedback = serializer.validated_data.get("feedback", "")
-        attempt.graded = True
-        attempt.save(update_fields=["score", "feedback", "graded", "updated_at"])
+        # Two faculty grading the same attempt at once both read the row, both compute from
+        # their own stale copy, and the later save silently overwrites the earlier grade with
+        # no trace. Lock the row and re-read inside the lock so the cap below is applied
+        # against committed state.
+        #
+        # NOTE: select_for_update is a *silent no-op on SQLite* — Django omits the FOR UPDATE
+        # clause entirely rather than erroring. It does its job on PostgreSQL, which is what
+        # production runs; the local suite cannot prove the lock itself.
+        with transaction.atomic():
+            attempt = (
+                TestAttempt.objects.select_for_update()
+                .select_related("test", "student")
+                .get(pk=attempt.pk)
+            )
+            attempt.score = min(serializer.validated_data["score"], attempt.total)
+            attempt.feedback = serializer.validated_data.get("feedback", "")
+            attempt.graded = True
+            attempt.save(update_fields=["score", "feedback", "graded", "updated_at"])
+        # Deliberately outside the block: a notification sent inside would still go out if the
+        # transaction rolled back, and there is no unsending an email.
         notify(
             attempt.student,
             "test_graded",

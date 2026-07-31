@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.db.models import F, Q
+
 
 def run_certificate_reminders() -> int:
     """Remind students in completed batches who have not certified, at most weekly."""
@@ -27,9 +29,29 @@ def run_certificate_reminders() -> int:
 
     count = 0
     for enrollment in pending:
-        followup, _ = CertificateFollowUp.objects.get_or_create(enrollment=enrollment)
-        if followup.last_reminder_at and followup.last_reminder_at > week_ago:
-            continue  # already reminded this week
+        CertificateFollowUp.objects.get_or_create(enrollment=enrollment)
+        # Claim the week before sending, with the window in the WHERE clause rather than in
+        # Python. The old read-then-write let two overlapping runs — a retried cron, a manual
+        # trigger racing the scheduled one — both see a stale last_reminder_at and both send,
+        # so a student got the same "certificate pending" email and WhatsApp twice.
+        #
+        # A conditional UPDATE, not select_for_update: it is one statement the database
+        # applies to one row or none, it holds no lock across the send, and it behaves the
+        # same on SQLite as on PostgreSQL (row locking is silently dropped on SQLite), so the
+        # test suite genuinely exercises this.
+        claimed = (
+            CertificateFollowUp.objects.filter(enrollment=enrollment)
+            .filter(Q(last_reminder_at__isnull=True) | Q(last_reminder_at__lte=week_ago))
+            .update(
+                reminder_count=F("reminder_count") + 1,
+                last_reminder_at=now,
+                updated_at=now,
+            )
+        )
+        if not claimed:
+            continue  # already reminded this week, or another run got there first
+        # After the claim: at-most-once. A send that fails is not retried, because a duplicate
+        # chase-up is worse than a missed one — the next weekly run picks it up anyway.
         notify(
             enrollment.student,
             "certificate_pending",
@@ -38,8 +60,5 @@ def run_certificate_reminders() -> int:
             subject="Certificate pending",
             channels=("in_app", "email", "whatsapp"),
         )
-        followup.reminder_count += 1
-        followup.last_reminder_at = now
-        followup.save(update_fields=["reminder_count", "last_reminder_at", "updated_at"])
         count += 1
     return count

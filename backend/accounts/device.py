@@ -15,7 +15,7 @@ deterrent against casual account sharing, not a hardware-level lock.
 
 from __future__ import annotations
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from notifications.services import notify, notify_many
@@ -128,27 +128,54 @@ def handle_device_login(student, device_id: str, course_ended: bool = False) -> 
     )
 
 
-def approve_request(request, decided_by, reason: str = "") -> None:
-    binding, _ = DeviceBinding.objects.get_or_create(
-        user=request.user, defaults={"device_id": request.new_device_id}
+def _claim(request, decided_by, reason: str, new_status: str) -> bool:
+    """Move a PENDING request to ``new_status``, returning False if someone else got there first.
+
+    A single conditional UPDATE filtered on ``status=PENDING`` is the whole guarantee: the
+    database applies it to one row or none, so exactly one caller can win. That matters
+    because the view's earlier "is it pending?" read happened outside any transaction — a
+    faculty member and Tech Support clicking at the same moment would both pass it, both
+    write a decision, and both notify the student.
+
+    A conditional UPDATE rather than ``select_for_update`` for the claim itself, because it
+    holds no lock across the surrounding work and — unlike row locking, which Django silently
+    omits on SQLite — it behaves identically on both backends, so the test suite actually
+    exercises the guarantee it is asserting.
+    """
+    claimed = DeviceChangeRequest.objects.filter(
+        pk=request.pk, status=DeviceChangeRequest.Status.PENDING
+    ).update(
+        status=new_status,
+        decided_by=decided_by,
+        approver_role=decided_by.role,
+        approval_reason=reason,
+        decided_at=timezone.now(),
+        updated_at=timezone.now(),
     )
-    binding.device_id = request.new_device_id
-    binding.save(update_fields=["device_id", "updated_at"])
-    request.status = DeviceChangeRequest.Status.APPROVED
-    request.decided_by = decided_by
-    request.approver_role = decided_by.role
-    request.approval_reason = reason
-    request.decided_at = timezone.now()
-    request.save(
-        update_fields=[
-            "status",
-            "decided_by",
-            "approver_role",
-            "approval_reason",
-            "decided_at",
-            "updated_at",
-        ]
-    )
+    if not claimed:
+        return False
+    # Keep the in-memory instance consistent for the caller's audit record.
+    request.refresh_from_db()
+    return True
+
+
+def approve_request(request, decided_by, reason: str = "") -> bool:
+    """Approve and bind the device. False if the request was already decided by someone else."""
+    with transaction.atomic():
+        if not _claim(request, decided_by, reason, DeviceChangeRequest.Status.APPROVED):
+            return False
+        # select_for_update on the binding: the claim above serialises approvals of *this*
+        # request, but the same user could have a second request for a different device being
+        # approved concurrently, and both would write the one binding row.
+        binding, created = DeviceBinding.objects.select_for_update().get_or_create(
+            user=request.user, defaults={"device_id": request.new_device_id}
+        )
+        if not created:
+            binding.device_id = request.new_device_id
+            binding.save(update_fields=["device_id", "updated_at"])
+    # Outside the transaction on purpose: an email sent inside would still go out if the
+    # block rolled back. Only the caller that won the claim reaches here, so the student is
+    # notified exactly once.
     notify(
         request.user,
         "device_approved",
@@ -156,27 +183,17 @@ def approve_request(request, decided_by, reason: str = "") -> None:
         subject="Device approved",
         channels=("in_app", "email"),
     )
+    return True
 
 
-def reject_request(request, decided_by, reason: str = "") -> None:
-    request.status = DeviceChangeRequest.Status.REJECTED
-    request.decided_by = decided_by
-    request.approver_role = decided_by.role
-    request.approval_reason = reason
-    request.decided_at = timezone.now()
-    request.save(
-        update_fields=[
-            "status",
-            "decided_by",
-            "approver_role",
-            "approval_reason",
-            "decided_at",
-            "updated_at",
-        ]
-    )
+def reject_request(request, decided_by, reason: str = "") -> bool:
+    """Reject the request. False if it was already decided by someone else."""
+    if not _claim(request, decided_by, reason, DeviceChangeRequest.Status.REJECTED):
+        return False
     notify(
         request.user,
         "device_rejected",
         "Your new-device sign-in request was declined.",
         channels=("in_app",),
     )
+    return True

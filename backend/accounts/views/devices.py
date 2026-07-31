@@ -79,12 +79,19 @@ class DeviceRequestDecideView(APIView):
 
         decision = request.data.get("decision")
         reason = request.data.get("reason", "")
-        if decision == "approve":
-            device.approve_request(req, request.user, reason)
-        elif decision == "reject":
-            device.reject_request(req, request.user, reason)
-        else:
+        if decision not in ("approve", "reject"):
             return Response({"detail": "Decision must be either approve or reject."}, status=400)
+
+        # The PENDING check in the query above ran outside any transaction, so a faculty
+        # member and Tech Support clicking at the same moment would both pass it. The service
+        # functions re-assert it as a conditional UPDATE and return False to the loser, so
+        # exactly one decision is recorded and the student is notified once.
+        decide = device.approve_request if decision == "approve" else device.reject_request
+        if not decide(req, request.user, reason):
+            return Response(
+                {"detail": "This request has already been decided by someone else."},
+                status=status.HTTP_409_CONFLICT,
+            )
         record_action(
             actor=request.user,
             action=f"device_{decision}",
