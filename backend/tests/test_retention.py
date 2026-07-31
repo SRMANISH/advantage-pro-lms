@@ -53,7 +53,7 @@ def test_purge_dry_run_deletes_nothing():
 
 
 @pytest.mark.django_db
-def test_purge_never_touches_certificates(django_assert_num_queries=None):
+def test_purge_never_touches_certificates():
     from batches.models import Batch, BatchState, Course
     from enrollments.models import Enrollment
 
