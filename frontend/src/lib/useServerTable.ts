@@ -67,5 +67,9 @@ export function useServerTable<T, P extends Page<T> = Page<T>>(opts: {
     setQuery,
     isLoading: result.isLoading,
     isFetching: result.isFetching,
+    // Exposed so a page can render a failure distinctly from "no rows" — without these a
+    // failed fetch is indistinguishable from an empty table.
+    isError: result.isError,
+    refetch: result.refetch,
   };
 }

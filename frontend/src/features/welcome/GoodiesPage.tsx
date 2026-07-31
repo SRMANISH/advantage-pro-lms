@@ -7,6 +7,7 @@ import {
   Card,
   EmptyState,
   Paginator,
+  QueryError,
   SectionHeading,
   TableSkeleton,
   useToast,
@@ -43,6 +44,8 @@ export function GoodiesPage({ role }: { role: RoleDef }) {
       <Card>
         {table.isLoading ? (
           <TableSkeleton rows={6} cols={5} />
+        ) : table.isError ? (
+          <QueryError onRetry={() => table.refetch()} />
         ) : table.rows.length > 0 ? (
           <>
             <div className="overflow-x-auto">

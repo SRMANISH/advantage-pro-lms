@@ -9,6 +9,7 @@ import {
   EmptyState,
   ListSkeleton,
   Paginator,
+  QueryError,
   SectionHeading,
 } from "../../design-system";
 import { useServerTable } from "../../lib/useServerTable";
@@ -43,6 +44,8 @@ export function MonitorPage({ role }: { role: RoleDef }) {
       <Card>
         {monitor.isLoading ? (
           <ListSkeleton items={4} />
+        ) : monitor.isError ? (
+          <QueryError onRetry={() => monitor.refetch()} />
         ) : monitor.rows.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {monitor.rows.map((t) => (

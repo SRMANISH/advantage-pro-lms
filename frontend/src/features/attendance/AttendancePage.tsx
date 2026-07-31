@@ -8,6 +8,7 @@ import {
   Card,
   Input,
   ListSkeleton,
+  QueryError,
   ProgressRing,
   SectionHeading,
   Select,
@@ -53,6 +54,8 @@ function MyAttendance() {
     <div className="grid gap-4">
       {rows.isLoading ? (
         <ListSkeleton items={2} />
+      ) : rows.isError ? (
+        <QueryError onRetry={() => rows.refetch()} />
       ) : rows.data && rows.data.length > 0 ? (
         rows.data.map((r) => (
           <Card key={r.batch}>
@@ -212,6 +215,8 @@ function DailyLoginPanel({ batchId, canFollowUp }: { batchId: string; canFollowU
 
       {daily.isLoading ? (
         <TableSkeleton rows={5} cols={4} />
+      ) : daily.isError ? (
+        <QueryError onRetry={() => daily.refetch()} />
       ) : rows.length > 0 ? (
         <>
           <p className="mb-2 text-xs text-muted">

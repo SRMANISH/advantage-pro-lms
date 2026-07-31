@@ -15,6 +15,11 @@ def collapse_duplicate_pending(apps, schema_editor):
     queue. The later duplicates are redundant — approving any one of them binds the same
     device to the same student.
     """
+    # On NULL semantics: Postgres treats NULLs as distinct in a unique index, so if
+    # new_device_id were nullable this grouping would delete rows the index would happily
+    # have kept. Checked before relying on it — the field is CharField(null=False, blank=False)
+    # (accounts/models.py), so no row here can have one and the two agree. If that ever
+    # changes, this needs a `.exclude(new_device_id__isnull=True)` to match the index.
     DeviceChangeRequest = apps.get_model("accounts", "DeviceChangeRequest")
     seen: set[tuple] = set()
     doomed: list = []

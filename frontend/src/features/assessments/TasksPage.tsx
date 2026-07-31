@@ -11,6 +11,7 @@ import {
   FileUpload,
   Input,
   ListSkeleton,
+  QueryError,
   SectionHeading,
   cn,
   useToast,
@@ -253,6 +254,8 @@ function StudentTasks() {
     <div className="grid gap-4">
       {tasks.isLoading ? (
         <ListSkeleton items={3} />
+      ) : tasks.isError ? (
+        <QueryError onRetry={() => tasks.refetch()} />
       ) : tasks.data && tasks.data.length > 0 ? (
         tasks.data.map((t) => <StudentTaskCard key={t.id} task={t} />)
       ) : (

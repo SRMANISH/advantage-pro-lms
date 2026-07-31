@@ -9,6 +9,7 @@ import {
   EmptyState,
   Input,
   ListSkeleton,
+  QueryError,
 } from "../../design-system";
 import { batchesApi } from "../batches/api";
 import {
@@ -337,6 +338,8 @@ function GradeAttempts({ test, onBack }: { test: TestListItem; onBack: () => voi
       </h2>
       {attempts.isLoading ? (
         <ListSkeleton items={3} />
+      ) : attempts.isError ? (
+        <QueryError onRetry={() => attempts.refetch()} />
       ) : attempts.data && attempts.data.length > 0 ? (
         <div className="grid gap-3">
           {attempts.data.map((a) => (

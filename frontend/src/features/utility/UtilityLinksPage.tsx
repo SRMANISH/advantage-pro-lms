@@ -10,6 +10,7 @@ import {
   EmptyState,
   Input,
   ListSkeleton,
+  QueryError,
   SectionHeading,
   useToast,
 } from "../../design-system";
@@ -99,6 +100,8 @@ export function UtilityLinksPage({ role }: { role: RoleDef }) {
       <SectionHeading title="On the board" />
       {links.isLoading ? (
         <ListSkeleton items={3} />
+      ) : links.isError ? (
+        <QueryError onRetry={() => links.refetch()} />
       ) : links.data && links.data.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {links.data.map((l) => {

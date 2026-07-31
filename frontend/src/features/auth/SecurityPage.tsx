@@ -3,7 +3,16 @@ import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Button, Card, Input, SectionHeading, Spinner, useToast } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  Input,
+  SectionHeading,
+  Spinner,
+  useToast,
+  QueryError,
+} from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { totpApi, type TOTPEnrollment } from "./totpApi";
 
@@ -72,6 +81,8 @@ export function SecurityPage({ role }: { role: RoleDef }) {
       <Card className="max-w-md">
         {status.isLoading ? (
           <Spinner size={20} />
+        ) : status.isError ? (
+          <QueryError onRetry={() => status.refetch()} />
         ) : status.data?.enabled ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">

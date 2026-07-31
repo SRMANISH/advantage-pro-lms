@@ -10,6 +10,7 @@ import {
   Input,
   ListSkeleton,
   Paginator,
+  QueryError,
   SectionHeading,
   Select,
   TableToolbar,
@@ -146,6 +147,8 @@ export function StaffPage({ role }: { role: RoleDef }) {
         <h2 className="mb-3 text-base font-medium text-ink">Existing staff</h2>
         {staff.isLoading ? (
           <ListSkeleton items={3} />
+        ) : staff.isError ? (
+          <QueryError onRetry={() => staff.refetch()} />
         ) : staff.data && staff.data.length > 0 ? (
           <>
             <TableToolbar

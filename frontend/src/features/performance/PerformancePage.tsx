@@ -8,6 +8,7 @@ import {
   EmptyState,
   ListSkeleton,
   Paginator,
+  QueryError,
   SectionHeading,
   TableShell,
   TableSkeleton,
@@ -59,6 +60,8 @@ function MyPerformance() {
     <div className="grid gap-4">
       {rows.isLoading ? (
         <ListSkeleton items={2} />
+      ) : rows.isError ? (
+        <QueryError onRetry={() => rows.refetch()} />
       ) : rows.data && rows.data.length > 0 ? (
         rows.data.map((r) => (
           <Card key={r.batch}>
@@ -107,6 +110,8 @@ function BatchBoard() {
           <h2 className="mb-3 text-base font-medium text-ink">Ranked performance</h2>
           {board.isLoading ? (
             <TableSkeleton rows={6} cols={8} />
+          ) : board.isError ? (
+            <QueryError onRetry={() => board.refetch()} />
           ) : board.data && board.data.length > 0 ? (
             <>
               <TableToolbar

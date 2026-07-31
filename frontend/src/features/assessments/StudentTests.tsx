@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { Badge, Button, Card, Input, ListSkeleton } from "../../design-system";
+import { Badge, Button, Card, Input, ListSkeleton, QueryError } from "../../design-system";
 import { assessmentsApi, type Attempt, type TestDetail } from "./api";
 
 /* ---------------- Student: list & take ---------------- */
@@ -19,6 +19,8 @@ export function StudentTests() {
       <h2 className="mb-3 text-base font-medium text-ink">Your tests</h2>
       {tests.isLoading ? (
         <ListSkeleton items={3} />
+      ) : tests.isError ? (
+        <QueryError onRetry={() => tests.refetch()} />
       ) : tests.data && tests.data.length > 0 ? (
         <div className="flex flex-col divide-y divide-brdr">
           {tests.data.map((t) => (

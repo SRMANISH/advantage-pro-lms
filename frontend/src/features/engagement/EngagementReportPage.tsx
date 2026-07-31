@@ -6,6 +6,7 @@ import {
   BatchSelect,
   Card,
   EmptyState,
+  QueryError,
   SectionHeading,
   TableShell,
   TableSkeleton,
@@ -70,6 +71,8 @@ export function EngagementReportPage({ role }: { role: RoleDef }) {
         <h2 className="mb-3 text-base font-medium text-ink">Course next-plan responses</h2>
         {plans.isLoading ? (
           <TableSkeleton rows={4} cols={6} />
+        ) : plans.isError ? (
+          <QueryError onRetry={() => plans.refetch()} />
         ) : plans.data && plans.data.length > 0 ? (
           <TableShell>
             <THead>

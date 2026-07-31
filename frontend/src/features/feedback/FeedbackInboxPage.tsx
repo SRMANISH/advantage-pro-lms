@@ -5,6 +5,7 @@ import {
   EmptyState,
   ListSkeleton,
   Paginator,
+  QueryError,
   SectionHeading,
 } from "../../design-system";
 import { useServerTable } from "../../lib/useServerTable";
@@ -26,6 +27,8 @@ export function FeedbackInboxPage({ role }: { role: RoleDef }) {
       />
       {rows.isLoading ? (
         <ListSkeleton items={4} />
+      ) : rows.isError ? (
+        <QueryError onRetry={() => rows.refetch()} />
       ) : rows.rows.length > 0 ? (
         <div className="grid gap-3">
           {rows.rows.map((f) => (

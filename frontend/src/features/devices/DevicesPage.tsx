@@ -6,6 +6,7 @@ import {
   Card,
   EmptyState,
   ListSkeleton,
+  QueryError,
   SectionHeading,
   useToast,
 } from "../../design-system";
@@ -36,6 +37,8 @@ export function DevicesPage({ role }: { role: RoleDef }) {
       <Card>
         {requests.isLoading ? (
           <ListSkeleton items={3} />
+        ) : requests.isError ? (
+          <QueryError onRetry={() => requests.refetch()} />
         ) : requests.data && requests.data.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {requests.data.map((r) => (

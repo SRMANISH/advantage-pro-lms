@@ -9,6 +9,7 @@ import {
   EmptyState,
   Input,
   ListSkeleton,
+  QueryError,
   SectionHeading,
   Select,
   useToast,
@@ -241,6 +242,8 @@ export function BatchesPage({ role }: { role: RoleDef }) {
         </h2>
         {batches.isLoading ? (
           <ListSkeleton items={3} />
+        ) : batches.isError ? (
+          <QueryError onRetry={() => batches.refetch()} />
         ) : batches.data && batches.data.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {batches.data.map((batch) => (

@@ -12,6 +12,7 @@ export { Modal } from "./components/Modal";
 export { PageTransition } from "./components/PageTransition";
 export { PasswordRules } from "./components/PasswordRules";
 export { Progress } from "./components/Progress";
+export { QueryError } from "./components/QueryError";
 export { ProgressRing } from "./components/ProgressRing";
 export { SectionHeading } from "./components/SectionHeading";
 export { Select } from "./components/Select";

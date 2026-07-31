@@ -9,6 +9,7 @@ import {
   Card,
   EmptyState,
   Paginator,
+  QueryError,
   SectionHeading,
   TableSkeleton,
 } from "../../design-system";
@@ -88,6 +89,8 @@ export function EscalationsPage({ role }: { role: RoleDef }) {
         </div>
         {escalations.isLoading ? (
           <TableSkeleton rows={4} cols={4} />
+        ) : escalations.isError ? (
+          <QueryError onRetry={() => escalations.refetch()} />
         ) : escalations.rows.length > 0 ? (
           <>
             <div className="overflow-x-auto rounded-lg border border-brdr">

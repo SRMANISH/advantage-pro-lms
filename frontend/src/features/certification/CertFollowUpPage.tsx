@@ -6,6 +6,7 @@ import {
   Card,
   EmptyState,
   Paginator,
+  QueryError,
   SectionHeading,
   TableSkeleton,
 } from "../../design-system";
@@ -41,6 +42,8 @@ export function CertFollowUpPage({ role }: { role: RoleDef }) {
       <Card>
         {table.isLoading ? (
           <TableSkeleton rows={5} cols={6} />
+        ) : table.isError ? (
+          <QueryError onRetry={() => table.refetch()} />
         ) : table.rows.length > 0 ? (
           <>
             <div className="overflow-x-auto rounded-lg border border-brdr">

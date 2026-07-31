@@ -24,7 +24,7 @@ docs/        Build & design plans, ADRs
 cd backend
 python -m venv .venv
 .venv/Scripts/activate          # Windows
-pip install -r requirements/dev.txt
+pip install -r requirements-dev.txt
 cp .env.example .env            # adjust DATABASE_URL for PostgreSQL when ready
 python manage.py migrate
 python manage.py seed_demo   # optional: one active account per role (password: Demo!passLMS1)

@@ -7,6 +7,7 @@ import {
   Input,
   ListSkeleton,
   Paginator,
+  QueryError,
   SectionHeading,
 } from "../../design-system";
 import { useServerTable } from "../../lib/useServerTable";
@@ -68,6 +69,8 @@ export function ActivityPage({ role }: { role: RoleDef }) {
         </div>
         {rows.isLoading ? (
           <ListSkeleton items={4} />
+        ) : rows.isError ? (
+          <QueryError onRetry={() => rows.refetch()} />
         ) : rows.rows.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {rows.rows.map((r) => (

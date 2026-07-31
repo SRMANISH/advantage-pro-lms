@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "../utils/cn";
 
@@ -24,15 +24,47 @@ export function toast(message: string, tone: ToastTone = "info") {
   globalShow?.(message, tone);
 }
 
+const DISMISS_MS = 3500;
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
 
   const show = (message: string, tone: ToastTone = "info") => {
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, message, tone }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
   globalShow = show;
+
+  // Auto-dismiss owned by an effect rather than fired and forgotten inside show(). The old
+  // version left a live setTimeout holding a setState closure after unmount — on a route
+  // change or a hot reload that fires into a dead tree, which React warns about and which
+  // leaks the timer. Keying off `toasts` also means each toast gets exactly one timer even
+  // if show() is called twice in the same tick.
+  useEffect(() => {
+    const pending = timers.current;
+    for (const t of toasts) {
+      if (pending.has(t.id)) continue;
+      pending.set(
+        t.id,
+        setTimeout(() => {
+          pending.delete(t.id);
+          setToasts((prev) => prev.filter((x) => x.id !== t.id));
+        }, DISMISS_MS),
+      );
+    }
+  }, [toasts]);
+
+  // Unmount: drop every outstanding timer, and release the module-level bridge so a stale
+  // provider cannot keep receiving toasts after a remount.
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+      globalShow = null;
+    };
+  }, []);
 
   return (
     <ToastContext.Provider value={{ show }}>

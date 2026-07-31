@@ -19,18 +19,39 @@ def backfill_from_notifications(apps, schema_editor):
     Notification = apps.get_model("notifications", "Notification")
     AbsenceReminderLog = apps.get_model("attendance", "AbsenceReminderLog")
 
-    pairs = {
-        (recipient_id, timezone.localtime(created_at).date())
-        for recipient_id, created_at in Notification.objects.filter(
-            kind="absence_reminder"
-        ).values_list("recipient_id", "created_at")
-    }
-    if pairs:
-        AbsenceReminderLog.objects.bulk_create(
-            [AbsenceReminderLog(student_id=student, day=day) for student, day in pairs],
-            ignore_conflicts=True,
-            batch_size=500,
-        )
+    # Streamed in chunks rather than built as one set. The original loaded every
+    # absence_reminder notification in the database into memory at once — on an instance with
+    # a couple of years of history that is millions of rows, during a migration, which is the
+    # worst possible moment to exhaust memory: the deploy fails partway with the schema
+    # already changed. iterator() lets the database hold the cursor instead.
+    #
+    # The (student, day) unique constraint is what actually dedupes, via ignore_conflicts, so
+    # chunks do not need to be deduplicated against each other — only within themselves, which
+    # keeps the working set bounded by CHUNK rather than by the table.
+    CHUNK = 5_000
+    seen: set = set()
+    batch: list = []
+
+    def flush():
+        if batch:
+            AbsenceReminderLog.objects.bulk_create(batch, ignore_conflicts=True, batch_size=1000)
+            batch.clear()
+            seen.clear()
+
+    rows = (
+        Notification.objects.filter(kind="absence_reminder")
+        .values_list("recipient_id", "created_at")
+        .iterator(chunk_size=CHUNK)
+    )
+    for recipient_id, created_at in rows:
+        key = (recipient_id, timezone.localtime(created_at).date())
+        if key in seen:
+            continue
+        seen.add(key)
+        batch.append(AbsenceReminderLog(student_id=key[0], day=key[1]))
+        if len(batch) >= CHUNK:
+            flush()
+    flush()
 
 
 class Migration(migrations.Migration):

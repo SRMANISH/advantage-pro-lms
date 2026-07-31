@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Button, Card, SectionHeading, Spinner, useToast } from "../../design-system";
+import { Button, Card, SectionHeading, Spinner, useToast, QueryError } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
 import { facultyApi } from "./api";
 
@@ -39,6 +39,8 @@ export function FacultyProfilePage({ role }: { role: RoleDef }) {
       <Card className="max-w-xl">
         {profile.isLoading ? (
           <Spinner size={20} />
+        ) : profile.isError ? (
+          <QueryError onRetry={() => profile.refetch()} />
         ) : (
           <div className="flex flex-col gap-4">
             <div>

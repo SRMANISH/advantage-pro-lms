@@ -9,6 +9,7 @@ import {
   EmptyState,
   Input,
   ListSkeleton,
+  QueryError,
   SectionHeading,
 } from "../../design-system";
 import { PortalLayout } from "../portal/PortalLayout";
@@ -26,6 +27,8 @@ export function CertificatePage({ role }: { role: RoleDef }) {
 
       {rows.isLoading ? (
         <ListSkeleton items={2} />
+      ) : rows.isError ? (
+        <QueryError onRetry={() => rows.refetch()} />
       ) : rows.data && rows.data.length > 0 ? (
         <div className="grid gap-4">
           {rows.data.map((r) => (

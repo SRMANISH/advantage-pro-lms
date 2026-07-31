@@ -3,7 +3,15 @@ import { CalendarPlus, ChevronLeft, ChevronRight, Video } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Badge, Card, EmptyState, ListSkeleton, SectionHeading, cn } from "../../design-system";
+import {
+  Badge,
+  Card,
+  EmptyState,
+  ListSkeleton,
+  SectionHeading,
+  cn,
+  QueryError,
+} from "../../design-system";
 import { liveApi, type LiveClass } from "../liveclasses/api";
 import { PortalLayout } from "../portal/PortalLayout";
 import {
@@ -65,6 +73,8 @@ export function CalendarPage({ role }: { role: RoleDef }) {
 
       {classes.isLoading ? (
         <ListSkeleton items={4} />
+      ) : classes.isError ? (
+        <QueryError onRetry={() => classes.refetch()} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">

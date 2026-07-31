@@ -105,6 +105,39 @@ Redis broker therefore requires adding `on_commit` at every send site first.
 cache**, which genuinely does need to be shared across gunicorn workers. It is just not the
 queue broker. Sizing Redis for queue throughput would be sizing the wrong thing.
 
+### Backups and restore
+
+Two things must be backed up **together**, and a backup of one without the other restores to a
+broken state: the Postgres database, and the media volume. The database holds the storage keys
+(`Video.storage_key`, `ThreadAttachment.storage_key`, …); the volume holds the bytes those keys
+point at. Restore a database from Tuesday against media from Monday and every file uploaded on
+Tuesday is a row pointing at nothing — the API returns a key, nginx 404s, and nothing in the
+application notices.
+
+```bash
+# Nightly. Same timestamp for both, so a restore can pair them without guessing.
+STAMP=$(date +%F)
+docker compose -f docker-compose.prod.yml exec -T db   pg_dump -U "$POSTGRES_USER" -Fc advantage_pro_lms > "/backups/db-$STAMP.dump"
+docker run --rm -v lms_media:/media -v /backups:/out alpine   tar czf "/out/media-$STAMP.tar.gz" -C /media .
+```
+
+Restore, both halves from the same stamp:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T db   pg_restore -U "$POSTGRES_USER" -d advantage_pro_lms --clean --if-exists < "/backups/db-$STAMP.dump"
+docker run --rm -v lms_media:/media -v /backups:/in alpine   sh -c "rm -rf /media/* && tar xzf /in/media-$STAMP.tar.gz -C /media"
+```
+
+**A restore drill is required before launch, and quarterly after.** An untested backup is not a
+backup — it is an assumption, and the failure modes here are all quiet ones: a `pg_dump` that
+has been writing a zero-byte file since a credential change, a media volume that was never in
+the backup set at all, a dump that restores but with the wrong owner. Restore into a scratch
+environment, sign in, open a video and a forum attachment, and confirm the bytes are actually
+there. Write down the date you last did it.
+
+Note that `docs/LOADTEST.md` and this file both assume the `lms_media` volume name from
+`docker-compose.prod.yml`; if you rename it, both commands above change.
+
 ### Rotating SECRET_KEY
 
 `SECRET_KEY` is not only Django's signing key here — `core/crypto.py` derives the Fernet key

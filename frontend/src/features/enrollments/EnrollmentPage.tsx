@@ -9,6 +9,7 @@ import {
   EmptyState,
   FileUpload,
   Paginator,
+  QueryError,
   SectionHeading,
   TableShell,
   TableSkeleton,
@@ -173,6 +174,8 @@ export function EnrollmentPage({ role }: { role: RoleDef }) {
       <SectionHeading title="Enrolled students" />
       {table.isLoading ? (
         <TableSkeleton rows={6} cols={6} />
+      ) : table.isError ? (
+        <QueryError onRetry={() => table.refetch()} />
       ) : table.total > 0 || table.query ? (
         <>
           <TableToolbar

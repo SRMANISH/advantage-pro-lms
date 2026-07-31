@@ -8,6 +8,7 @@ import {
   EmptyState,
   Input,
   ListSkeleton,
+  QueryError,
   SectionHeading,
   useToast,
 } from "../../design-system";
@@ -90,6 +91,8 @@ export function CoursesPage({ role }: { role: RoleDef }) {
         <h2 className="mb-3 text-base font-medium text-ink">All courses</h2>
         {courses.isLoading ? (
           <ListSkeleton items={3} />
+        ) : courses.isError ? (
+          <QueryError onRetry={() => courses.refetch()} />
         ) : courses.data && courses.data.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
             {courses.data.map((c) => (
