@@ -268,7 +268,7 @@ as defects is noise.
 
 ## 6. Open-gap register
 
-Style follows `FUNCTIONAL_REVIEW.md`'s R-xx register. **P-01…P-08 and P-15…P-18 were found in this review
+Style follows `FUNCTIONAL_REVIEW.md`'s R-xx register. **P-01…P-08 and P-15…P-19 were found in this review
 and are closed.** Remaining items are open.
 
 | ID | Sev | Finding | Status |
@@ -291,6 +291,7 @@ and are closed.** Remaining items are open.
 | **P-16** | Medium | `DeviceChangeRequest` had no constraint behind its `get_or_create`, so two tabs or a retried login each raised a request for the same device — two approval cards, either of which binds the device | ✅ **Closed** (Phase 2) — partial unique index scoped to PENDING, so a rejected device can still be re-requested; migration collapses pre-existing duplicates first |
 | **P-17** | Low | Absence-reminder dedup was an in-memory set built from today's Notification rows — two overlapping runs both read it as empty and both sent | ✅ **Closed** (Phase 2) — `AbsenceReminderLog` unique on (student, day), claimed before the send; migration backfills from existing notifications so the deploy itself does not re-send |
 | **P-18** | Medium | The feedback inbox and the forum doubt monitor serialised their entire (unbounded, monotonically growing) datasets on every open | ✅ **Closed** (Phase 3) — both server-paginated; the monitor's whole-dataset counts ride beside the page rather than inside it |
+| **P-19** | Low | `Q_CLUSTER` built a `redis` broker block from `REDIS_URL` that django-q2 never reads — `get_broker()` tests `Conf.ORM` first, so the ORM broker always won. The settings, `DEPLOYMENT.md`, `PROJECT_OVERVIEW.md` and the prod compose file all described a Redis-backed queue that did not exist | ✅ **Closed** — dead key removed; the ORM broker kept deliberately (it gives queued tasks transactional rollback, which the send sites rely on since none use `on_commit`) and pinned by `tests/test_queue_broker.py`; docs corrected |
 
 ### Correction to P-01 — severity was overstated
 

@@ -85,14 +85,25 @@ is corrected here, because following it silently breaks outbound messaging.
 | | What it runs | How it runs |
 |---|---|---|
 | **Scheduled jobs** | The six idempotent management commands below (reminders, escalations, retention) | `cron` — each command is overlap-locked, so a slow run cannot double-fire |
-| **Async fan-out** | Every outbound email / SMS / WhatsApp queued by `notifications.dispatch` | **`manage.py qcluster`** (django-q2), backed by Redis |
+| **Async fan-out** | Every outbound email / SMS / WhatsApp queued by `notifications.dispatch` | **`manage.py qcluster`** (django-q2), backed by **PostgreSQL** — see below |
 
 **Why the worker is not optional in prod.** `notifications/dispatch.py` sends in-app
 notifications synchronously but hands external channels to django-q2. In `dev` the queue runs
 inline (`Q_CLUSTER` sync), so everything appears to work without a worker. In production the
 task is *queued* — if no `qcluster` process is running, those messages sit in the queue and
-**nobody ever receives them**, with no error surfaced to the request. Likewise `prod.py`
-fails fast without `REDIS_URL`, because it backs both the shared throttle cache and that queue.
+**nobody ever receives them**, with no error surfaced to the request.
+
+**The queue broker is the database, not Redis.** `django_q.brokers.get_broker()` checks
+`Conf.ORM` before `Conf.REDIS`, so `Q_CLUSTER["orm"] = "default"` wins and any `redis` key
+beside it is never read. That is deliberate: enqueueing writes a row through the same
+connection, so a task queued inside `transaction.atomic()` rolls back with it. Notifications
+are sent from inside atomic blocks and none of those sites use `transaction.on_commit`, so a
+Redis broker would leave an email or SMS queued for work that was rolled back. Moving to a
+Redis broker therefore requires adding `on_commit` at every send site first.
+
+`prod.py` still fails fast without `REDIS_URL` — Redis backs the **shared throttle/rate-limit
+cache**, which genuinely does need to be shared across gunicorn workers. It is just not the
+queue broker. Sizing Redis for queue throughput would be sizing the wrong thing.
 
 Point cron at the scheduled commands:
 ```cron

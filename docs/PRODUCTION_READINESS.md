@@ -120,12 +120,12 @@ done on Hostinger. Grades: ✅ done · 🟡 partial/dev-only · ⛔ missing._
 | Service | Today (dev) | Production target | Effort |
 |---------|------|------|:--:|
 | **Primary DB** | SQLite | **PostgreSQL** (configured via `DATABASE_URL`; **not yet run/tested on PG**) | M |
-| **Cache / Redis** | none (LocMemCache) | **Redis** for throttle + sessions (+ optional job queue) | S |
+| **Cache / Redis** | none (LocMemCache) | **Redis** for the shared throttle cache. Not the job queue — django-q2 uses the ORM broker (Postgres), which is what gives queued tasks transactional rollback | S |
 | **Object storage** (videos, notes, task files) | local filesystem (`LocalStorageAdapter`) | S3/Cloudflare R2/Hostinger storage → write a `StorageAdapter` + signed URLs | M |
 | **Email** | `ConsoleEmailAdapter` (logs) | Hostinger SMTP (Titan) → `EmailAdapter` + templates | S–M |
 | **SMS** | `ConsoleSmsAdapter` (logs) | 3rd-party gateway (e.g. MSG91/Twilio) → `SmsAdapter` | M |
 | **WhatsApp** | `ConsoleWhatsAppAdapter` (logs) | Meta Cloud API / provider → `WhatsAppAdapter` (templates) | M |
-| **Scheduler / jobs** | cron → mgmt commands (works) | Keep cron, or django-q2/Celery+Redis for a worker | S (cron) |
+| **Scheduler / jobs** | cron → mgmt commands (works) | cron for scheduled commands + a django-q2 `qcluster` worker for async fan-out (database-backed broker) | S (cron) |
 | **Live meeting** | manual link paste | fine as-is; optional Zoom/Meet API for auto-create | — |
 | **Video transcoding/CDN** | none | optional: HLS + CDN for scale/DRM | L |
 

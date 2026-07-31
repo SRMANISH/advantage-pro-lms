@@ -10,7 +10,9 @@
 #   * work through the pre-launch checklist in docs/DEPLOYMENT.md §9.
 #
 # The four processes that must run: gunicorn (API), qcluster (async notification fan-out —
-# without it queued email/SMS/WhatsApp are never delivered), Postgres, and Redis. nginx
+# without it queued email/SMS/WhatsApp are never delivered), Postgres (which is also the
+# queue broker — django-q2 uses the ORM broker, not Redis), and Redis (shared throttle
+# cache across gunicorn workers). nginx
 # serves the built frontend and does the internal X-Accel media hand-off.
 #
 #   docker compose -f docker-compose.prod.yml --env-file prod.env up -d

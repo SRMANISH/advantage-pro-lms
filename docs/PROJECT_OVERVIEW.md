@@ -515,7 +515,8 @@ CI runs the backend gates against **PostgreSQL 16**.
 ## 11. Deployment shape
 
 nginx (TLS, serves `frontend/dist/`, internal `X-Accel` media alias, security headers) → gunicorn
-(2×CPU+1) → Django; PostgreSQL 16; Redis; `manage.py qcluster` under systemd; cron for the six
+(2×CPU+1) → Django; PostgreSQL 16 (also the django-q2 queue broker); Redis (shared
+throttle/rate-limit cache only); `manage.py qcluster` under systemd; cron for the six
 commands; nightly `pg_dump`; Sentry DSN; health endpoint at `/api/v1/health/`.
 
 Full runbook: `docs/DEPLOYMENT.md`.

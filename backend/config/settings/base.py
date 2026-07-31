@@ -5,7 +5,6 @@ Security-sensitive and environment-specific values are read from the environment
 """
 
 from pathlib import Path
-from urllib.parse import urlparse
 
 import environ
 
@@ -300,24 +299,35 @@ WHATSAPP_PHONE_NUMBER_ID = env("WHATSAPP_PHONE_NUMBER_ID", default="")
 WHATSAPP_TEMPLATE_NAME = env("WHATSAPP_TEMPLATE_NAME", default="")
 WHATSAPP_TEMPLATE_LANG = env("WHATSAPP_TEMPLATE_LANG", default="en")
 
-# Background queue (django-q2). Dev/CI (no REDIS_URL): tasks execute inline/synchronously
-# so tests stay deterministic without a worker. Prod (REDIS_URL set): true async via a
-# `python manage.py qcluster` worker process against Redis.
+# Background queue (django-q2) for the external notification fan-out. Dev/CI (no REDIS_URL):
+# tasks execute inline/synchronously so tests stay deterministic without a worker. Prod
+# (REDIS_URL set): true async via a `python manage.py qcluster` worker process.
+#
+# The broker is the DATABASE, not Redis. ``django_q.brokers.get_broker`` tests ``Conf.ORM``
+# before ``Conf.REDIS``, so setting "orm" here wins unconditionally — a "redis" key alongside
+# it would never be read. One was previously built from REDIS_URL and was dead config: it
+# made the settings, the deployment docs and the compose file all describe a Redis-backed
+# queue that did not exist.
+#
+# Keeping the ORM broker deliberately, because it buys a property worth more than throughput
+# at this scale: enqueueing writes a row in the same database and therefore in the same
+# transaction, so a task queued inside `transaction.atomic()` is discarded if that block
+# rolls back. Notifications are sent from inside atomic blocks (forum, assessments, batches,
+# enrolment import), and none of them wrap the send in `on_commit` — with a Redis broker each
+# rollback would leave an email or SMS already queued for work that never happened. Redis is
+# still required in production, for the shared throttle/cache; it just is not the broker.
+# Switching to Redis means adding `transaction.on_commit` at every send site first.
 Q_CLUSTER = {
     "name": "AdvantagePro",
     "workers": env.int("Q_CLUSTER_WORKERS", default=2),
+    # retry must exceed timeout, or django-q2 re-queues a task that is still running.
     "retry": 90,
     "timeout": 60,
     "queue_limit": 50,
     "bulk": 10,
     "orm": "default",
-    "sync": REDIS_URL == "",
+    # Run tasks inline instead of handing them to a worker. Keyed off REDIS_URL as a proxy
+    # for "this is a real deployment with a qcluster process running" — prod.py requires
+    # REDIS_URL, dev has none. It is not a statement about the broker.
+    "sync": env.bool("Q_CLUSTER_SYNC", default=REDIS_URL == ""),
 }
-if REDIS_URL:
-    _redis_bits = urlparse(REDIS_URL)
-    Q_CLUSTER["redis"] = {
-        "host": _redis_bits.hostname or "localhost",
-        "port": _redis_bits.port or 6379,
-        "db": int((_redis_bits.path or "/0").lstrip("/") or 0),
-        "password": _redis_bits.password,
-    }

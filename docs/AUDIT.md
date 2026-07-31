@@ -232,7 +232,8 @@ matrix test as the permanent regression gate; new endpoint = new test in the sam
 
 Hostinger **VPS (KVM)** required — shared hosting cannot run Django/Postgres/Redis/cron. nginx
 (TLS, dist/, media X-Accel) → gunicorn (2×CPU+1) → Django; Postgres 16 (nightly pg_dump, weekly
-restore rehearsal, 7/4 retention); Redis (cache/throttle + queue broker); django-q2 worker via
+restore rehearsal, 7/4 retention); Redis (cache/throttle only — *correction: not the queue
+broker; django-q2 resolves to the ORM broker, so the queue lives in Postgres*); worker via
 systemd; cron = six documented commands. **Email via Hostinger SMTP ✔; SMS/WhatsApp are NOT
 Hostinger products — third-party (MSG91/Twilio, Meta WhatsApp Cloud) required.** No Hostinger
 object storage — VPS disk first, Cloudflare R2/Backblaze B2 when video grows. Sentry env-gated;

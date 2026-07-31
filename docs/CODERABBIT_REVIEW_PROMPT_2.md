@@ -89,18 +89,23 @@ race-safe write. Round 1 closed the known cases. Now check the *transactional* l
    specifically want to know about: batch state transitions, enrolment + user creation,
    test submission + attendance marking, and device approval + binding update.
 2. **`transaction.on_commit` is used zero times, but notifications are sent inside atomic
-   blocks.** If the transaction rolls back after `notify()`, has a message already gone out?
-   Trace it through `notifications/dispatch.py` for **both** modes: dev (`Q_CLUSTER["sync"]`,
-   inline) and prod (queued via the `orm` broker, which writes to the same database). Do the
-   two modes differ in observable behaviour? That divergence is itself a finding.
+   blocks.** I chased this one down already, so treat it as a claim to check rather than an
+   open question: the broker is the **ORM** broker (`get_broker()` tests `Conf.ORM` before
+   `Conf.REDIS`), so enqueueing writes a row on the same connection and a task queued inside
+   `atomic()` rolls back with it — production is correct without `on_commit`. **Dev is the
+   wrong one:** `Q_CLUSTER["sync"]` runs the deliverer inline, so a rollback cannot unsend.
+   **Check:** is that reasoning right, does the dev/prod divergence matter for test fidelity,
+   and are there send sites where even the ORM broker's rollback is insufficient (e.g. a send
+   after the atomic block closes but before the request finishes)?
 3. **`select_for_update` is used zero times.** Find every read-modify-write on a row that two
    requests can hit at once and say whether the surrounding constraint actually saves it.
    Look hard at: `TestAttempt` scoring/grading, `AbsenceFollowUp` status updates,
    `Enrollment` mutation during import, and `IntegrationSetting` saves.
-4. **django-q2 retry semantics.** `Q_CLUSTER` has `retry: 90`, `timeout: 60`, `bulk: 10`,
-   `queue_limit: 50`. Confirm `retry > timeout` is satisfied (a classic misconfiguration that
-   silently double-executes). Then: **is every queued task idempotent?** What happens if a
-   notification task runs twice — duplicate email, duplicate SMS charge, duplicate row?
+4. **django-q2 retry semantics.** `retry: 90` > `timeout: 60`, so a running task is not
+   re-queued underneath itself — pinned by `tests/test_queue_broker.py`. The open question is
+   the one that matters: **is every queued task idempotent?** django-q2 retries on failure, so
+   what happens if `deliver_external` runs twice — duplicate email, a second SMS charge, a
+   duplicate provider call? There is no dedup key on the task payload.
 5. **Cron/scheduled jobs.** `escalations/services.py`, `attendance/services.py`,
    `certification/services.py`, `liveclasses/services.py`. For each: is it safe to run twice
    concurrently, safe to run twice sequentially, and safe to run after missing a day? What
