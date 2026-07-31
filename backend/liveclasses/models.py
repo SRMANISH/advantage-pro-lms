@@ -29,6 +29,7 @@ class LiveClass(TimeStampedModel):
     )
 
     class Meta:
+        verbose_name_plural = "live classes"
         ordering = ["scheduled_at"]
         indexes = [models.Index(fields=["status"])]
 

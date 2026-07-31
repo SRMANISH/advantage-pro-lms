@@ -55,6 +55,7 @@ class VideoProgress(TimeStampedModel):
     completed = models.BooleanField(default=False)
 
     class Meta:
+        verbose_name_plural = "video progress"
         constraints = [
             models.UniqueConstraint(fields=["video", "student"], name="uniq_video_student")
         ]

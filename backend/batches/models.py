@@ -64,6 +64,7 @@ class Batch(TimeStampedModel):
     faculty = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="batches", blank=True)
 
     class Meta:
+        verbose_name_plural = "batches"
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["state"]),

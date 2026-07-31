@@ -30,3 +30,11 @@ class UserAdmin(DjangoUserAdmin):
             },
         ),
     )
+
+    # Closed here specifically: there is no user-deletion endpoint, so this was the only way
+    # to remove an account — and it cascades to attendance, submissions, attempts and video
+    # progress with no warning. Suspension (UserStatusView) is the reversible operation staff
+    # actually want. A genuine erasure request should be a deliberate, logged operation with
+    # the cascade understood, not two clicks in a list view.
+    def has_delete_permission(self, request, obj=None):
+        return False

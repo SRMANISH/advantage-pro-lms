@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.db.models import ProtectedError, RestrictedError
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as _drf_exception_handler
 
@@ -39,7 +41,46 @@ def _first_message(data: Any) -> str:
     return _FALLBACK
 
 
+def _protected_delete_response(exc: ProtectedError | RestrictedError) -> Response:
+    """Turn a database-refused delete into a 409 in the standard envelope.
+
+    ``on_delete=PROTECT`` raises during the delete, and ``ProtectedError`` is not a DRF
+    exception — so without this it escapes as an unhandled 500 and the caller is told the
+    server broke rather than that the operation is not allowed. ``CourseViewSet.destroy`` is
+    the live example: it has no ``perform_destroy`` guard, so deleting a course whose batches
+    issued certificates hits the protection directly.
+
+    The blocking model is named because that is what makes the message actionable ("this has
+    issued certificates"); the individual rows are not, since they are other people's records.
+    """
+    # ProtectedError exposes `protected_objects`, RestrictedError `restricted_objects`; either
+    # may be absent or empty, so coerce before iterating rather than relying on `or` chaining.
+    raw = getattr(exc, "protected_objects", None) or getattr(exc, "restricted_objects", None)
+    protected = tuple(raw) if raw else ()
+    names = sorted({str(type(obj)._meta.verbose_name_plural).lower() for obj in protected})
+    what = ", ".join(names) if names else "other records"
+    return Response(
+        {
+            "detail": (
+                f"This cannot be deleted because {what} depend on it. "
+                "Those are kept as academic records — archive it instead of deleting."
+            ),
+            "errors": {"protected_by": names},
+        },
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
 def exception_handler(exc: Exception, context: dict) -> Response | None:
+    # Before DRF's handler: it does not recognise these and would return None, leaving a 500.
+    #
+    # Deliberately narrow. ProtectedError and RestrictedError are both IntegrityError
+    # subclasses, but catching IntegrityError wholesale would turn genuine bugs — a NOT NULL
+    # violation, a unique constraint tripped by broken logic — into a tidy 409 and hide them
+    # from Sentry. Only a refused *delete* is a legitimate conflict.
+    if isinstance(exc, (ProtectedError, RestrictedError)):
+        return _protected_delete_response(exc)
+
     response = _drf_exception_handler(exc, context)
     if response is None:
         return None  # Not a DRF-recognised exception — let Django handle it as normal.

@@ -43,6 +43,7 @@ class Reply(TimeStampedModel):
     body = models.TextField()
 
     class Meta:
+        verbose_name_plural = "replies"
         ordering = ["created_at"]
 
 
