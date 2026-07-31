@@ -12,8 +12,17 @@ from enrollments.models import Enrollment
 
 
 class Certificate(TimeStampedModel):
+    # PROTECT, not CASCADE: a certificate is the institute's record that a student completed
+    # the course, and it is the one row here that cannot be reconstructed from anything else.
+    # BatchViewSet.perform_destroy already refuses to delete a batch that has certificates,
+    # but that is an application check on one code path — a shell `Batch.objects.filter(...)
+    # .delete()`, a data migration, or a future endpoint would cascade straight through
+    # Enrollment and destroy them silently. The database refuses regardless of the caller.
+    #
+    # CertificateFollowUp below stays CASCADE deliberately: it is workflow state (who is
+    # chasing whom), not a record of achievement, and loses nothing irreplaceable.
     enrollment = models.OneToOneField(
-        Enrollment, on_delete=models.CASCADE, related_name="certificate"
+        Enrollment, on_delete=models.PROTECT, related_name="certificate"
     )
     certificate_id = models.CharField(max_length=100)
     certified_at = models.DateTimeField(auto_now_add=True)

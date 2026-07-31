@@ -268,7 +268,7 @@ as defects is noise.
 
 ## 6. Open-gap register
 
-Style follows `FUNCTIONAL_REVIEW.md`'s R-xx register. **P-01…P-08 and P-15…P-19 were found in this review
+Style follows `FUNCTIONAL_REVIEW.md`'s R-xx register. **P-01…P-08 and P-15…P-20 were found in this review
 and are closed.** Remaining items are open.
 
 | ID | Sev | Finding | Status |
@@ -283,7 +283,7 @@ and are closed.** Remaining items are open.
 | **P-08** | Low | Three duplications (batch resolution ×3, batch picker ×9, test helpers ×34) | ✅ **Closed** — consolidated |
 | **P-09** | Low | ~40 plain `APIView`s return hand-built dicts, so their OpenAPI entries are untyped | 🔷 **Open — accepted.** Cosmetic; schema generates cleanly |
 | **P-10** | Low | Frontend unit coverage (35 tests / ~60 components) is thin; money-flow pages rely on E2E | 🔷 **Open** — deliberate trade-off, E2E covers the flows that matter |
-| **P-11** | Low | Table search filters the current server page rather than all pages (roster excepted) | 🔷 **Open** — acceptable at current data volumes |
+| **P-11** | Low | ~~Table search filters the current server page rather than all pages~~ **Restated — the original wording was wrong.** Search is not the problem: the two client-side-search pages (`PerformancePage`, `StaffPage`) receive complete unpaginated datasets, and the six `useServerTable` pages send `search`/`q` to the server. The real defect was three fetches hard-capped at `page_size: 100` with no paginator — and since `max_page_size` is also 100, row 101 was invisible with nothing telling the user | ✅ **Closed** — `/threads/` and `/activity/` now use `useServerTable` + `Paginator`; `enrollmentsApi.list` was dead code and was deleted |
 | **P-12** | Info | Locust numbers are local SQLite/single-process, not a staging benchmark | 🔷 **Open** — re-run before quoting SLAs |
 | **P-13** | ⚠️ **Infra** | **Nothing has run on a production VPS.** Postgres, Redis, nginx, X-Accel, gunicorn, qcluster, Sentry and backup restore are configured and documented but unexercised | 🔴 **Open — the one true caveat** |
 | **P-14** | Medium | TOTP verification had **no application-level attempt cap** — a 6-digit secret could be guessed indefinitely, bounded only by request rate (which an attacker can spread across IPs) | ✅ **Closed** — per-device `failed_attempts` cap mirroring the OTP pattern, cleared on success, reset by re-enrollment |
@@ -292,6 +292,7 @@ and are closed.** Remaining items are open.
 | **P-17** | Low | Absence-reminder dedup was an in-memory set built from today's Notification rows — two overlapping runs both read it as empty and both sent | ✅ **Closed** (Phase 2) — `AbsenceReminderLog` unique on (student, day), claimed before the send; migration backfills from existing notifications so the deploy itself does not re-send |
 | **P-18** | Medium | The feedback inbox and the forum doubt monitor serialised their entire (unbounded, monotonically growing) datasets on every open | ✅ **Closed** (Phase 3) — both server-paginated; the monitor's whole-dataset counts ride beside the page rather than inside it |
 | **P-19** | Low | `Q_CLUSTER` built a `redis` broker block from `REDIS_URL` that django-q2 never reads — `get_broker()` tests `Conf.ORM` first, so the ORM broker always won. The settings, `DEPLOYMENT.md`, `PROJECT_OVERVIEW.md` and the prod compose file all described a Redis-backed queue that did not exist | ✅ **Closed** — dead key removed; the ORM broker kept deliberately (it gives queued tasks transactional rollback, which the send sites rely on since none use `on_commit`) and pinned by `tests/test_queue_broker.py`; docs corrected |
+| **P-20** | Medium | `Certificate.enrollment` was CASCADE, so deleting a batch destroyed the certificates issued from it — the institute's only record that a student completed the course. `BatchViewSet.perform_destroy` refused that, but as an application check on one code path: a shell `.delete()`, a data migration or a future endpoint would cascade straight through | ✅ **Closed** — changed to PROTECT (migration `certification/0003`), so the database refuses regardless of caller. `CertificateFollowUp` stays CASCADE: it is workflow state, not a record of achievement |
 
 ### Correction to P-01 — severity was overstated
 

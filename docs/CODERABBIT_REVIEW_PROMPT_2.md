@@ -115,11 +115,20 @@ race-safe write. Round 1 closed the known cases. Now check the *transactional* l
 
 ## 4. Priority 2 — Data model and query behaviour
 
-1. **`on_delete`: 48 CASCADE, 18 SET_NULL, 1 PROTECT.** Walk the CASCADE graph from `User`,
-   `Batch` and `Course`. What does deleting a batch actually destroy? Is any of it something
-   an institute is legally or operationally required to keep (attendance history, audit rows,
-   certification records, submitted work)? Flag every CASCADE that should be PROTECT or
-   SET_NULL. This is the single area where a wrong default is unrecoverable.
+1. **`on_delete` — I have now walked this graph, so treat it as findings to check rather than
+   an open question.** Deleting a `Batch` cascades to: all tests/tasks and every submission and
+   attempt, all `AttendanceEvent` rows, all enrolments, forum threads/replies/attachments, live
+   classes and check-ins. Deleting a `User` cascades to their submissions, attempts, attendance
+   and video progress, while `AuditLog.actor` and `Batch.primary_faculty` are correctly
+   SET_NULL so the audit trail and batch records survive.
+
+   The one unrecoverable path — batch deletion destroying issued certificates — is now PROTECT
+   at the database level (was CASCADE behind an application-only check). **Check:** did I miss a
+   relation that is equally unrecoverable? I judged `AttendanceEvent.batch` acceptable as
+   CASCADE because deleting a started batch is already restricted to Super Admin and is an
+   intentional destructive act — is that the right call, or is attendance history the evidence
+   base for certificates and therefore equally protected? And should `CertificateFollowUp`
+   really stay CASCADE?
 2. **Denormalised snapshots.** `Feedback` stores `registration_number`, `batch_code` and
    `course_name` at submission time; `TestAttempt` stores `total`. Are these deliberate
    point-in-time snapshots or accidental staleness? Is that distinction documented anywhere a

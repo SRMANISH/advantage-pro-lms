@@ -1,19 +1,29 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { RoleDef } from "../../app/roles";
-import { Card, EmptyState, ListSkeleton, SectionHeading } from "../../design-system";
+import {
+  Card,
+  EmptyState,
+  Input,
+  ListSkeleton,
+  Paginator,
+  SectionHeading,
+} from "../../design-system";
+import { useServerTable } from "../../lib/useServerTable";
 import { PortalLayout } from "../portal/PortalLayout";
-import { activityApi } from "./api";
+import { activityApi, type ActivityRow } from "./api";
 
 const prettyAction = (a: string) => a.replace(/_/g, " ");
 
 export function ActivityPage({ role }: { role: RoleDef }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const rows = useQuery({
-    queryKey: ["activity", from, to],
-    queryFn: () => activityApi.list(from || undefined, to || undefined),
+  // The audit log grows without bound and is the one screen that reads it, so it has to
+  // page rather than fetch a fixed slice. Changing either date resets to page 1.
+  const rows = useServerTable<ActivityRow>({
+    key: ["activity"],
+    params: { from: from || undefined, to: to || undefined },
+    fetcher: (p) => activityApi.list(p),
   });
 
   return (
@@ -27,22 +37,22 @@ export function ActivityPage({ role }: { role: RoleDef }) {
           <label className="text-muted" htmlFor="activity-from">
             From
           </label>
-          <input
+          <Input
             id="activity-from"
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+            className="h-9 w-auto"
           />
           <label className="text-muted" htmlFor="activity-to">
             To
           </label>
-          <input
+          <Input
             id="activity-to"
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="h-9 rounded-lg border border-brdr bg-surface px-2 text-sm"
+            className="h-9 w-auto"
           />
           {(from || to) && (
             <button
@@ -58,9 +68,9 @@ export function ActivityPage({ role }: { role: RoleDef }) {
         </div>
         {rows.isLoading ? (
           <ListSkeleton items={4} />
-        ) : rows.data && rows.data.length > 0 ? (
+        ) : rows.rows.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
-            {rows.data.map((r) => (
+            {rows.rows.map((r) => (
               <div key={r.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                 <div className="min-w-0">
                   <span className="font-medium capitalize text-ink">{prettyAction(r.action)}</span>
@@ -75,6 +85,12 @@ export function ActivityPage({ role }: { role: RoleDef }) {
         ) : (
           <EmptyState title="No activity in this window" />
         )}
+        <Paginator
+          page={rows.page}
+          pageCount={rows.pageCount}
+          onPage={rows.setPage}
+          total={rows.total}
+        />
       </Card>
     </PortalLayout>
   );

@@ -1,4 +1,4 @@
-import { api, unwrap, type Paginated } from "../../lib/api";
+import { api, fetchPage, type Page } from "../../lib/api";
 
 export interface Attachment {
   id: string;
@@ -75,11 +75,10 @@ export interface MonitorResult {
 }
 
 export const forumApi = {
-  async list(q?: string): Promise<ThreadItem[]> {
-    const { data } = await api.get<ThreadItem[] | Paginated<ThreadItem>>("/threads/", {
-      params: { page_size: 100, ...(q ? { q } : {}) },
-    });
-    return unwrap(data);
+  /** Server-paginated. Previously fetched page_size:100 and rendered the lot, so thread 101
+   *  was silently invisible with nothing telling the user. */
+  async list(params: Record<string, unknown> = {}): Promise<Page<ThreadItem>> {
+    return fetchPage<ThreadItem>("/threads/", params);
   },
   async get(id: string): Promise<ThreadDetail> {
     return (await api.get<ThreadDetail>(`/threads/${id}/`)).data;

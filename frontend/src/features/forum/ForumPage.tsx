@@ -10,11 +10,13 @@ import {
   EmptyState,
   Input,
   ListSkeleton,
+  Paginator,
   SectionHeading,
 } from "../../design-system";
 import { useAuth } from "../auth/auth";
 import { PortalLayout } from "../portal/PortalLayout";
-import { forumApi, type Attachment, type ThreadStatus } from "./api";
+import { useServerTable } from "../../lib/useServerTable";
+import { forumApi, type Attachment, type ThreadItem, type ThreadStatus } from "./api";
 
 // Only Faculty and Tech Support may respond to doubts (students ask; MIS has no forum).
 const RESPONDERS = new Set(["faculty", "tech_support"]);
@@ -79,10 +81,14 @@ export function ForumPage({ role }: { role: RoleDef }) {
 
 function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
   const qc = useQueryClient();
+  // The endpoint's search param is `q`, not DRF's `search`, so it rides in `params` rather
+  // than through useServerTable's `searchable` flag — same debounce-and-reset-to-page-1
+  // behaviour either way.
   const [q, setQ] = useState("");
-  const threads = useQuery({
-    queryKey: ["threads", q],
-    queryFn: () => forumApi.list(q || undefined),
+  const threads = useServerTable<ThreadItem>({
+    key: ["threads"],
+    params: { q: q.trim() || undefined },
+    fetcher: (p) => forumApi.list(p),
   });
   const batches = useQuery({ queryKey: ["forum-batches"], queryFn: forumApi.batches });
 
@@ -155,9 +161,9 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        {threads.data && threads.data.length > 0 ? (
+        {threads.rows.length > 0 ? (
           <div className="flex flex-col divide-y divide-brdr">
-            {threads.data.map((t) => (
+            {threads.rows.map((t) => (
               <button
                 key={t.id}
                 onClick={() => onOpen(t.id)}
@@ -181,6 +187,12 @@ function ThreadList({ onOpen }: { onOpen: (id: string) => void }) {
         ) : (
           <EmptyState title="No doubts found" hint="Post a doubt to start a thread." />
         )}
+        <Paginator
+          page={threads.page}
+          pageCount={threads.pageCount}
+          onPage={threads.setPage}
+          total={threads.total}
+        />
       </Card>
     </div>
   );
