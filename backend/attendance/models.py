@@ -45,6 +45,17 @@ class AttendanceEvent(TimeStampedModel):
             # above already serves the grouped per-batch query in
             # batch_attendance_summaries()).
             models.Index(fields=["student", "batch", "source", "date"]),
+            # The student dashboard's login streak: filter(student, source).values_list(
+            # "date").distinct() — dashboard/views.py. Every index above puts `batch` between
+            # student and source, so none can match the source predicate; this one covers all
+            # three columns the query touches, making it an index-only scan. It is the hottest
+            # read in the app: every student loads it on every visit.
+            models.Index(fields=["student", "source", "date"]),
+            # The ops dashboard's "logged in today" count: filter(source, date=today,
+            # batch__state=ACTIVE) — dashboard/views.py. No existing index leads with date or
+            # source, so this was a full scan. `date` leads because a single day is far more
+            # selective than a source with a handful of values.
+            models.Index(fields=["date", "source"]),
         ]
 
 

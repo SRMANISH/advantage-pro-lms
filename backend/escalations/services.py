@@ -91,8 +91,12 @@ def _escalate_low_attendance() -> int:
             ).values_list("student_id", flat=True)
         )
         for student in students:
-            summary = summaries.get(student.id, {"total": 0, "percent": 0})
-            if summary["total"] == 0 or summary["percent"] >= 50:
+            summary = summaries.get(student.id, {"present": 0, "total": 0, "percent": 0})
+            # Compare the raw ratio, not summary["percent"], which is round()ed for display.
+            # 99 of 200 days is 49.5% — genuinely below the threshold — but round(49.5) is 50
+            # (Python rounds halves to even), so the rounded value silently failed the test and
+            # the student was never escalated. Every case in [49.5, 50) was invisible.
+            if summary["total"] == 0 or summary["present"] * 2 >= summary["total"]:
                 continue
             if student.id in already:
                 continue
@@ -108,7 +112,7 @@ def _escalate_low_attendance() -> int:
                 faculty + counselors + mis,
                 "low_attendance",
                 f"{student.full_name or student.username} is below 50% attendance in "
-                f"{batch.code} ({summary['percent']}%).",
+                f"{batch.code} ({summary['present']}/{summary['total']} days).",
                 subject="Low attendance",
                 channels=("in_app", "email"),
             )

@@ -211,6 +211,15 @@ MEDIA_XACCEL_PREFIX = env("MEDIA_XACCEL_PREFIX", default="")
 # Data retention (days) for purge_old_data — activity data only, never academic records.
 RETENTION_AUDIT_DAYS = env.int("RETENTION_AUDIT_DAYS", default=365)
 RETENTION_NOTIFICATION_DAYS = env.int("RETENTION_NOTIFICATION_DAYS", default=180)
+# Unread notifications are normally kept indefinitely — the user has not seen them yet. This
+# is the backstop for ones nobody will ever read: a year out, an unread in-app message is not
+# pending, it is abandoned, and the table grows forever without it. Deliberately much longer
+# than the read window above.
+RETENTION_UNREAD_NOTIFICATION_DAYS = env.int("RETENTION_UNREAD_NOTIFICATION_DAYS", default=365)
+# AbsenceReminderLog is a dedup ledger: one row per (student, day) proving that day's reminder
+# was claimed. Once the day is well past, the row can never suppress anything again, so it is
+# pure growth — one row per absent student per working day, forever.
+RETENTION_ABSENCE_REMINDER_DAYS = env.int("RETENTION_ABSENCE_REMINDER_DAYS", default=120)
 
 # Frontend (SPA) integration
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
