@@ -5,6 +5,7 @@ Advantage Pro goodies). Admin/MIS see the resulting address/goodies register and
 goodies dispatched. Admins are notified when a student submits a new/updated address.
 """
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -15,6 +16,7 @@ from batches.models import BatchState
 from core.pagination import paginate_rows
 from core.permissions import has_any_role
 from core.roles import Role
+from core.schema import DetailResponse, OkResponse
 from core.utils import get_client_ip
 from notifications.services import admins_and_mis, notify_many
 
@@ -23,6 +25,32 @@ from .models import Enrollment
 RegisterRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS)
 
 
+class PendingWelcomeSerializer(serializers.Serializer):
+    """An enrolment still waiting on the student's postal address."""
+
+    enrollment = serializers.UUIDField()
+    batch_code = serializers.CharField()
+    batch_name = serializers.CharField()
+    address = serializers.CharField(allow_blank=True)
+
+
+class GoodiesRegisterRowSerializer(serializers.Serializer):
+    """One row of the Admin/MIS goodies register."""
+
+    enrollment = serializers.UUIDField()
+    registration_number = serializers.CharField()
+    student_name = serializers.CharField()
+    batch_code = serializers.CharField()
+    address = serializers.CharField(allow_blank=True)
+    goodies_sent = serializers.BooleanField()
+
+
+class GoodiesSentResponse(serializers.Serializer):
+    ok = serializers.BooleanField()
+    goodies_sent = serializers.BooleanField()
+
+
+@extend_schema(responses=PendingWelcomeSerializer(many=True))
 class WelcomeMeView(APIView):
     """The student's pending welcome popups — active enrolments not yet answered."""
 
@@ -58,6 +86,7 @@ class WelcomeSubmitSerializer(serializers.Serializer):
     address = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+@extend_schema(request=WelcomeSubmitSerializer, responses={200: OkResponse, 404: DetailResponse})
 class WelcomeSubmitView(APIView):
     """Record the student's answers. If the address isn't on file, capture it and alert
     Admin/MIS so goodies can be dispatched."""
@@ -109,6 +138,7 @@ class WelcomeSubmitView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(responses=GoodiesRegisterRowSerializer(many=True))
 class GoodiesRegisterView(APIView):
     """Admin/MIS register: every enrolment's address + goodies state."""
 
@@ -143,6 +173,9 @@ class GoodiesSentSerializer(serializers.Serializer):
     sent = serializers.BooleanField()
 
 
+@extend_schema(
+    request=GoodiesSentSerializer, responses={200: GoodiesSentResponse, 404: DetailResponse}
+)
 class GoodiesSentView(APIView):
     """Admin/MIS mark a student's goodies dispatched (or not)."""
 

@@ -1,5 +1,6 @@
 """Device-change approval: Faculty (during a live class) and MIS (outside class hours)."""
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,6 +8,7 @@ from rest_framework.views import APIView
 from audit.services import record_action
 from core.permissions import has_any_role
 from core.roles import Role
+from core.schema import DetailResponse, OkResponse
 from core.utils import get_client_ip
 
 from .. import device
@@ -46,6 +48,7 @@ def _window_block(decider, student) -> str | None:
     return None
 
 
+@extend_schema(responses=DeviceRequestSerializer(many=True))
 class DeviceRequestListView(APIView):
     """Pending new-device requests (faculty see only their students')."""
 
@@ -60,6 +63,16 @@ class DeviceRequestListView(APIView):
         return Response(DeviceRequestSerializer(qs, many=True).data)
 
 
+@extend_schema(
+    request=None,
+    responses={
+        200: OkResponse,
+        400: DetailResponse,
+        403: DetailResponse,
+        404: DetailResponse,
+        409: DetailResponse,
+    },
+)
 class DeviceRequestDecideView(APIView):
     permission_classes = [DeviceManageRoles]
 

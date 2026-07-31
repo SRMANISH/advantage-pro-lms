@@ -311,8 +311,8 @@ Documented in `docs/PROJECT_OVERVIEW.md` §13. Reporting them is noise:
    server fails to enforce what the UI hides.
 4. Email is intentionally non-unique (one account per course per person); ambiguous email
    logins fall back to Registration ID.
-5. ~40 plain `APIView`s return hand-built dicts, so their OpenAPI entries are untyped. Known
-   cosmetic gap; the schema generates cleanly.
+5. ~~40 plain `APIView`s return hand-built dicts...~~ **Fixed.** All 71 now declare request and
+   response bodies via `@extend_schema`; zero errors, zero warnings, no silenced checks.
 6. Nothing has run on a production VPS yet. Postgres, Redis, nginx, X-Accel, gunicorn,
    qcluster, Sentry and backup restore are configured and documented but unexercised. Report
    *config* errors you can see; do not report "this is untested in production" as a finding.

@@ -10,6 +10,8 @@ from django.conf import settings
 from django.db.models import Count, Q
 from django.db.models.functions import TruncWeek
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -43,6 +45,7 @@ def _weekly_logins(student=None, batch_ids=None) -> list[dict]:
     return [{"label": m.strftime("%d %b"), "value": counts.get(m, 0)} for m in mondays]
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
 

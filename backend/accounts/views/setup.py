@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -11,6 +12,13 @@ from rest_framework.views import APIView
 from audit.services import record_action
 from core.permissions import has_any_role
 from core.roles import Role
+from core.schema import (
+    DetailResponse,
+    OkResponse,
+    TokenCodeRequest,
+    TokenPasswordRequest,
+    TokenResponse,
+)
 from core.utils import get_client_ip
 
 from .. import setup as setup_service
@@ -22,6 +30,9 @@ def _resolve_token(request):
     return setup_service.get_valid_token(request.data.get("token", ""))
 
 
+@extend_schema(
+    request=None, responses={200: TokenResponse, 400: DetailResponse, 429: DetailResponse}
+)
 class SetupStartView(APIView):
     """Open the setup link -> send the email OTP."""
 
@@ -44,6 +55,10 @@ class SetupStartView(APIView):
         return Response(data)
 
 
+@extend_schema(
+    request=TokenCodeRequest,
+    responses={200: TokenResponse, 400: DetailResponse, 429: DetailResponse},
+)
 class SetupVerifyEmailView(APIView):
 
     throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
@@ -64,6 +79,10 @@ class SetupVerifyEmailView(APIView):
         return Response(data)
 
 
+@extend_schema(
+    request=TokenCodeRequest,
+    responses={200: OkResponse, 400: DetailResponse, 429: DetailResponse},
+)
 class SetupVerifyPhoneView(APIView):
 
     throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
@@ -81,6 +100,10 @@ class SetupVerifyPhoneView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(
+    request=TokenPasswordRequest,
+    responses={200: OkResponse, 400: DetailResponse, 429: DetailResponse},
+)
 class SetupCompleteView(APIView):
 
     throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
@@ -110,6 +133,9 @@ class SetupCompleteView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(
+    request=None, responses={200: TokenResponse, 404: DetailResponse, 429: DetailResponse}
+)
 class SetupResendView(APIView):
     """Admin/MIS/Super Admin: (re)issue a setup link for a pending student."""
 

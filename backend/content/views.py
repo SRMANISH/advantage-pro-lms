@@ -1,5 +1,6 @@
 """Video & material APIs: upload (faculty), list (role-scoped), gated streaming, progress."""
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -13,6 +14,7 @@ from batches.models import Batch
 from core.permissions import MatrixPermission, has_any_role
 from core.permissions_matrix import Action
 from core.roles import Role
+from core.schema import DetailResponse, OkResponse
 from core.utils import get_client_ip
 from notifications.services import batch_student_users, notify_many
 
@@ -53,6 +55,8 @@ class VideoViewSet(viewsets.ModelViewSet):
         return VideoUploadSerializer if self.action == "create" else VideoSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Video.objects.none()  # OpenAPI schema generation (no real request)
         from django.db.models import Prefetch
 
         qs = Video.objects.select_related("batch", "uploaded_by")
@@ -160,6 +164,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
         return deliver(request, material.storage_key, material.content_type)
 
 
+@extend_schema(request=None, responses={200: OkResponse, 404: DetailResponse})
 class RevokeVideoAccessView(APIView):
     """MIS revokes an individual student's video access (optionally per batch)."""
 
@@ -189,6 +194,7 @@ class RevokeVideoAccessView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(request=None, responses={200: OkResponse, 404: DetailResponse})
 class RestoreVideoAccessView(APIView):
     """MIS restores a previously revoked individual student's video access."""
 
@@ -212,6 +218,7 @@ class RestoreVideoAccessView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(request=None, responses={200: OkResponse, 404: DetailResponse})
 class CloseCourseVideoAccessView(APIView):
     """Admin or MIS close a whole batch's video access at course end."""
 

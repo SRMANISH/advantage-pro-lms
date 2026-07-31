@@ -151,12 +151,13 @@ REST_FRAMEWORK = {
     "NUM_PROXIES": TRUSTED_PROXY_COUNT,
 }
 
-# `manage.py check --deploy` runs in CI at --fail-level WARNING so a security.W* regression
-# breaks the build. drf-spectacular's W001/W002 ("unable to guess serializer" on the plain
-# APIViews that return hand-built dicts) would otherwise drown that signal in ~77 lines of
-# known, accepted noise — see docs/PROJECT_OVERVIEW.md §13.7. The schema still generates
-# cleanly; these views simply appear without typed request/response bodies.
-SILENCED_SYSTEM_CHECKS = ["drf_spectacular.W001", "drf_spectacular.W002"]
+# Deliberately empty. drf_spectacular.W001/W002 used to be silenced here: ~40 plain APIViews
+# returned hand-built dicts, so `check --deploy --fail-level WARNING` drowned the security.W*
+# signal it exists to protect in known schema noise. Those views now declare their request and
+# response bodies via @extend_schema, the schema generates with zero warnings and zero errors,
+# and nothing needs suppressing. Re-adding an entry here should mean fixing the underlying
+# view instead.
+SILENCED_SYSTEM_CHECKS: list[str] = []
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Advantage Pro LMS API",

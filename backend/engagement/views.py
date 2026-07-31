@@ -1,6 +1,8 @@
 """Engagement APIs: student status + actions, Admin/MIS reports, and utility links."""
 
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,6 +15,7 @@ from content.delivery import deliver
 from core.adapters.registry import get_storage
 from core.permissions import has_any_role
 from core.roles import Role
+from core.schema import DetailResponse, OkResponse
 from core.uploads import storage_name, validate_upload
 from notifications.services import admins_and_mis, notify_many
 
@@ -42,6 +45,57 @@ def _link_row(link) -> dict:
     }
 
 
+class PromptStateSerializer(serializers.Serializer):
+    """Whether a nudge should be shown, and where the student got to with it."""
+
+    status = serializers.CharField(allow_null=True, required=False)
+    show = serializers.BooleanField()
+
+
+class EngagementMeResponse(serializers.Serializer):
+    """The three post-course nudges, as the student portal sees them."""
+
+    linkedin = PromptStateSerializer()
+    google_review = PromptStateSerializer()
+    next_plan = PromptStateSerializer()
+
+
+class PromptActionResponse(serializers.Serializer):
+    ok = serializers.BooleanField()
+    status = serializers.CharField()
+
+
+class EngagementStudentRowSerializer(serializers.Serializer):
+    registration_number = serializers.CharField()
+    student_name = serializers.CharField()
+    status = serializers.CharField()
+    updated_at = serializers.DateTimeField(required=False)
+
+
+class EngagementReportResponse(serializers.Serializer):
+    """A confirmed/pending tally plus the students behind it."""
+
+    confirmed = serializers.IntegerField(required=False)
+    submitted = serializers.IntegerField(required=False)
+    pending = serializers.IntegerField()
+    students = EngagementStudentRowSerializer(many=True)
+
+
+class NextPlanRowSerializer(serializers.Serializer):
+    registration_number = serializers.CharField()
+    student_name = serializers.CharField()
+    batch_code = serializers.CharField(allow_null=True)
+    planning_another_course = serializers.BooleanField()
+    interested_course = serializers.CharField(allow_blank=True)
+    expected_timing = serializers.CharField(allow_blank=True)
+    goal = serializers.CharField(allow_blank=True)
+    preferred_contact_time = serializers.CharField(allow_blank=True, required=False)
+
+
+@extend_schema(
+    request=UtilityLinkSerializer,
+    responses={200: UtilityLinkSerializer(many=True), 201: UtilityLinkSerializer},
+)
 class UtilityLinksView(APIView):
     """Public notice board: anyone reads; MIS posts (optionally with a thumbnail image)."""
 
@@ -69,6 +123,7 @@ class UtilityLinksView(APIView):
         return Response(_link_row(link), status=201)
 
 
+@extend_schema(responses={204: None, 404: DetailResponse})
 class UtilityLinkDetailView(APIView):
     permission_classes = [UtilityManageRoles]
 
@@ -81,6 +136,7 @@ class UtilityLinkDetailView(APIView):
         return Response(status=204)
 
 
+@extend_schema(responses={200: OpenApiTypes.BINARY, 404: DetailResponse})
 class UtilityLinkThumbnailView(APIView):
     """Public: serve a utility link's MIS-uploaded thumbnail (the board is public)."""
 
@@ -103,6 +159,7 @@ def _completed_students():
     ).distinct()
 
 
+@extend_schema(responses={200: EngagementMeResponse, 403: DetailResponse})
 class EngagementMeView(APIView):
     """Status a student's portal needs to drive the LinkedIn / review / next-plan popups."""
 
@@ -129,6 +186,7 @@ class EngagementMeView(APIView):
         )
 
 
+@extend_schema(request=None, responses={200: PromptActionResponse, 400: DetailResponse})
 class LinkedInActionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -149,6 +207,7 @@ class LinkedInActionView(APIView):
         return Response({"ok": True, "status": follow.status})
 
 
+@extend_schema(request=None, responses={200: PromptActionResponse, 400: DetailResponse})
 class GoogleReviewActionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -169,6 +228,7 @@ class GoogleReviewActionView(APIView):
         return Response({"ok": True, "status": review.status})
 
 
+@extend_schema(request=None, responses={200: OkResponse, 400: DetailResponse})
 class NextPlanView(APIView):
     """Student submits their end-of-course next plan; Admin is notified."""
 
@@ -203,6 +263,7 @@ class NextPlanView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(responses=EngagementReportResponse)
 class LinkedInReportView(APIView):
     permission_classes = [ReportRoles]
 
@@ -229,6 +290,7 @@ class LinkedInReportView(APIView):
         )
 
 
+@extend_schema(responses=EngagementReportResponse)
 class GoogleReviewReportView(APIView):
     permission_classes = [ReportRoles]
 
@@ -255,6 +317,7 @@ class GoogleReviewReportView(APIView):
         )
 
 
+@extend_schema(responses=NextPlanRowSerializer(many=True))
 class NextPlanListView(APIView):
     permission_classes = [ReportRoles]
 

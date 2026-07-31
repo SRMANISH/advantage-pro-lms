@@ -5,12 +5,20 @@ import secrets
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from audit.services import record_action
+from core.schema import (
+    DetailResponse,
+    OkResponse,
+    TokenCodeRequest,
+    TokenPasswordRequest,
+    TokenResponse,
+)
 from core.utils import get_client_ip
 
 from .. import password as password_service
@@ -22,6 +30,9 @@ def _reset_token(request):
     return password_service.get_valid_reset_token(request.data.get("token", ""))
 
 
+@extend_schema(
+    request=None, responses={200: TokenResponse, 400: DetailResponse, 429: DetailResponse}
+)
 class ForgotPasswordStartView(APIView):
     """Step 0: identify the account (email or Registration ID) and send the email OTP."""
 
@@ -57,6 +68,10 @@ class ForgotPasswordStartView(APIView):
         return Response(data)
 
 
+@extend_schema(
+    request=TokenCodeRequest,
+    responses={200: TokenResponse, 400: DetailResponse, 429: DetailResponse},
+)
 class ForgotPasswordVerifyEmailView(APIView):
 
     throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
@@ -77,6 +92,10 @@ class ForgotPasswordVerifyEmailView(APIView):
         return Response(data)
 
 
+@extend_schema(
+    request=TokenCodeRequest,
+    responses={200: OkResponse, 400: DetailResponse, 429: DetailResponse},
+)
 class ForgotPasswordVerifyPhoneView(APIView):
 
     throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
@@ -94,6 +113,10 @@ class ForgotPasswordVerifyPhoneView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(
+    request=TokenPasswordRequest,
+    responses={200: OkResponse, 400: DetailResponse, 429: DetailResponse},
+)
 class ForgotPasswordCompleteView(APIView):
 
     throttle_classes = [OTPRateThrottle, VerificationRateThrottle]
@@ -121,6 +144,9 @@ class ForgotPasswordCompleteView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(
+    request=None, responses={200: TokenResponse, 400: DetailResponse, 429: DetailResponse}
+)
 class ForgotPasswordResendView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [LoginRateThrottle]
@@ -140,6 +166,7 @@ class ForgotPasswordResendView(APIView):
         return Response(data)
 
 
+@extend_schema(request=None, responses={200: OkResponse, 400: DetailResponse, 429: DetailResponse})
 class ChangePasswordView(APIView):
     """Logged-in users change their own password."""
 

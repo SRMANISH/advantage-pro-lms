@@ -41,6 +41,8 @@ class LiveClassViewSet(viewsets.ModelViewSet):
         return LiveClassWriteSerializer if self.action == "create" else LiveClassSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return LiveClass.objects.none()  # OpenAPI schema generation (no real request)
         qs = LiveClass.objects.select_related("batch")
         batch = self.request.query_params.get("batch")
         if batch:

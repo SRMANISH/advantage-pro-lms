@@ -159,8 +159,9 @@ Reporting them is noise:
    the server fails to enforce what the UI hides.
 4. **Email is intentionally non-unique** (one account per course per person); ambiguous email
    logins fall back to the Registration ID.
-5. **~40 plain `APIView`s** return hand-built dicts, so the OpenAPI schema lists them without
-   typed request/response bodies. Known cosmetic gap; the schema generates with zero warnings.
+5. ~~40 plain `APIView`s return hand-built dicts...~~ **Fixed.** All 71 now declare request and
+   response bodies via `@extend_schema`; the schema generates with zero errors and zero warnings,
+   and `SILENCED_SYSTEM_CHECKS` is empty.
 6. **Nothing has run on a production VPS yet** — Postgres/Redis/nginx/qcluster/Sentry/backup
    restore are configured and documented but not yet exercised on real infrastructure.
 

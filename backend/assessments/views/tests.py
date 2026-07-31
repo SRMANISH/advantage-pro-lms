@@ -62,6 +62,8 @@ class TestViewSet(viewsets.ModelViewSet):
         return TestListSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Test.objects.none()  # OpenAPI schema generation (no real request)
         qs = Test.objects.select_related("batch")
         if self.action in {"list"}:
             qs = qs.annotate(
@@ -223,6 +225,9 @@ class TestViewSet(viewsets.ModelViewSet):
 
 class TestAttemptViewSet(viewsets.GenericViewSet):
     queryset = TestAttempt.objects.select_related("test", "test__batch", "student")
+    # Only the `grade` action exists here; naming its body means the view appears in the
+    # schema instead of being skipped for having no serializer_class.
+    serializer_class = GradeSerializer
     permission_classes = [AssessmentRoles, MatrixPermission]
 
     _ACTIONS = {"grade": Action.CREATE_TESTS}

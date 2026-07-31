@@ -1,12 +1,14 @@
 """Staff TOTP enrollment and management. Login-time enforcement lives in views/auth.py."""
 
-from rest_framework import status
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers, status
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from audit.services import record_action
 from core.roles import Role
+from core.schema import CodeRequest, DetailResponse, OkResponse, PasswordRequest
 from core.utils import get_client_ip
 
 from .. import totp as totp_service
@@ -24,6 +26,20 @@ class IsStaffUser(BasePermission):
         return bool(user and user.is_authenticated and user.role != Role.STUDENT)
 
 
+class TOTPEnrolledResponse(serializers.Serializer):
+    """``{"enabled": bool}`` — whether a confirmed authenticator is on the account."""
+
+    enabled = serializers.BooleanField()
+
+
+class TOTPSecretResponse(serializers.Serializer):
+    """The shared secret and otpauth:// URI, returned once at enrollment."""
+
+    secret = serializers.CharField()
+    otpauth_url = serializers.CharField()
+
+
+@extend_schema(responses=TOTPEnrolledResponse)
 class TOTPStatusView(APIView):
     permission_classes = [IsStaffUser]
 
@@ -32,6 +48,7 @@ class TOTPStatusView(APIView):
         return Response({"enabled": bool(device and device.confirmed)})
 
 
+@extend_schema(request=None, responses={200: TOTPSecretResponse, 400: DetailResponse})
 class TOTPEnrollView(APIView):
     """Start (or restart) enrollment: issues a pending secret + QR provisioning URI."""
 
@@ -49,6 +66,9 @@ class TOTPEnrollView(APIView):
         )
 
 
+@extend_schema(
+    request=CodeRequest, responses={200: OkResponse, 400: DetailResponse, 429: DetailResponse}
+)
 class TOTPConfirmView(APIView):
     """Verify the first code from the authenticator app and enable 2FA."""
 
@@ -75,6 +95,7 @@ class TOTPConfirmView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(request=PasswordRequest, responses={200: OkResponse, 400: DetailResponse})
 class TOTPDisableView(APIView):
     """Turn 2FA off — requires the current password as confirmation."""
 

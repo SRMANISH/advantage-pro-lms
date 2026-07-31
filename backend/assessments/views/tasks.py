@@ -51,6 +51,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         return TaskWriteSerializer if self.action == "create" else TaskSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Task.objects.none()  # OpenAPI schema generation (no real request)
         qs = Task.objects.select_related("batch")
         if self.action == "list":
             qs = qs.annotate(submission_count=Count("submissions", distinct=True))
@@ -126,6 +128,9 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class TaskSubmissionViewSet(viewsets.GenericViewSet):
     queryset = TaskSubmission.objects.select_related("task", "task__batch", "student")
+    # Only the `grade` action exists here; naming its body means the view appears in the
+    # schema instead of being skipped for having no serializer_class.
+    serializer_class = GradeSerializer
     permission_classes = [AssessmentRoles, MatrixPermission]
 
     _ACTIONS = {"grade": Action.CREATE_TASKS}

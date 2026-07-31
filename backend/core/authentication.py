@@ -14,6 +14,8 @@ view automatically, including ones written later that forget about it.
 
 from __future__ import annotations
 
+from django.conf import settings
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework import authentication, exceptions
 
 
@@ -40,3 +42,27 @@ class ActiveSessionAuthentication(authentication.SessionAuthentication):
                 "This account is no longer active. Please contact the office."
             )
         return user, auth
+
+
+class ActiveSessionAuthenticationScheme(OpenApiAuthenticationExtension):
+    """Teach drf-spectacular about the authentication class above.
+
+    Without this, every view logs "could not resolve authenticator" during schema generation
+    — 85 warnings across the API, purely because the authenticator is a subclass it has no
+    extension for. It is registered by import side-effect, which is why drf_spectacular
+    discovers it: the module is referenced from DEFAULT_AUTHENTICATION_CLASSES.
+
+    The wire protocol is unchanged from DRF's own SessionAuthentication (a session cookie),
+    so the emitted security scheme is the same; only the status re-check differs, and that is
+    behaviour rather than transport.
+    """
+
+    target_class = "core.authentication.ActiveSessionAuthentication"
+    name = "cookieAuth"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": settings.SESSION_COOKIE_NAME,
+        }

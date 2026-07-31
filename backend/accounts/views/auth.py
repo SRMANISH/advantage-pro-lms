@@ -5,6 +5,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -13,6 +14,7 @@ from rest_framework.views import APIView
 from attendance.services import record_login_attendance
 from audit.services import record_action
 from core.roles import Role
+from core.schema import DetailResponse
 from core.utils import get_client_ip
 from notifications.services import admins_and_mis, notify_many
 
@@ -35,6 +37,7 @@ def _alert_admins_first_login(user) -> None:
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
+@extend_schema(responses=DetailResponse)
 class CSRFView(APIView):
     """Sets the CSRF cookie so the SPA can send X-CSRFToken on later writes."""
 
@@ -44,6 +47,16 @@ class CSRFView(APIView):
         return Response({"detail": "CSRF cookie set"})
 
 
+@extend_schema(
+    request=None,
+    responses={
+        200: UserSerializer,
+        400: DetailResponse,
+        401: DetailResponse,
+        403: DetailResponse,
+        429: DetailResponse,
+    },
+)
 class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [LoginRateThrottle]
@@ -146,6 +159,7 @@ class LoginView(APIView):
         return Response(UserSerializer(user).data)
 
 
+@extend_schema(request=None, responses={204: None})
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -155,6 +169,7 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(responses=UserSerializer)
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -3,6 +3,8 @@
 import csv
 
 from django.http import HttpResponse
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 
 from accounts.models import User
@@ -10,6 +12,7 @@ from attendance.services import batch_attendance_summaries
 from batches.selectors import resolve_batch
 from core.permissions import has_any_role
 from core.roles import Role
+from core.schema import DetailResponse
 from enrollments.models import Enrollment
 from performance.services import batch_performance
 
@@ -38,6 +41,7 @@ def _csv(filename: str, header: list[str], rows) -> HttpResponse:
     return response
 
 
+@extend_schema(responses={(200, "text/csv"): OpenApiTypes.STR, 400: DetailResponse})
 class StudentsReport(APIView):
     permission_classes = [has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.FACULTY)]
 
@@ -63,6 +67,7 @@ class StudentsReport(APIView):
         )
 
 
+@extend_schema(responses={(200, "text/csv"): OpenApiTypes.STR, 400: DetailResponse})
 class AttendanceReport(APIView):
     permission_classes = [
         has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR, Role.FACULTY)
@@ -87,6 +92,7 @@ class AttendanceReport(APIView):
         )
 
 
+@extend_schema(responses={(200, "text/csv"): OpenApiTypes.STR, 400: DetailResponse})
 class PerformanceReport(APIView):
     permission_classes = [
         has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR, Role.FACULTY)

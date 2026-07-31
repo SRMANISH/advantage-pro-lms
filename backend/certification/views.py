@@ -1,5 +1,6 @@
 """Certification: student enters Certificate ID; admins trigger reminders."""
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -10,6 +11,7 @@ from batches.models import BatchState
 from core.pagination import paginate_rows
 from core.permissions import has_any_role
 from core.roles import Role
+from core.schema import DetailResponse, OkResponse
 from enrollments.models import Enrollment
 
 from .models import CertFollowUpStatus, Certificate, CertificateFollowUp
@@ -17,6 +19,22 @@ from .models import CertFollowUpStatus, Certificate, CertificateFollowUp
 CertFollowUpRoles = has_any_role(Role.ADMIN, Role.MIS)
 
 
+class CertificationRowSerializer(serializers.Serializer):
+    """One completed enrolment and whether its Certificate ID has been entered."""
+
+    enrollment = serializers.UUIDField()
+    batch_code = serializers.CharField()
+    batch_name = serializers.CharField()
+    certificate_id = serializers.CharField(allow_null=True)
+    certified = serializers.BooleanField()
+
+
+class CertFollowUpStatusResponse(serializers.Serializer):
+    ok = serializers.BooleanField()
+    status = serializers.CharField()
+
+
+@extend_schema(responses=CertificationRowSerializer(many=True))
 class CertificationMeView(APIView):
     """A student's completed courses and their certificate status."""
 
@@ -48,6 +66,9 @@ class SubmitCertificateSerializer(serializers.Serializer):
     certificate_id = serializers.CharField(max_length=100)
 
 
+@extend_schema(
+    request=SubmitCertificateSerializer, responses={200: OkResponse, 404: DetailResponse}
+)
 class SubmitCertificateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -69,6 +90,21 @@ class SubmitCertificateView(APIView):
         return Response({"ok": True})
 
 
+class CertFollowUpRowSerializer(serializers.Serializer):
+    """One completed enrolment's certification and follow-up state."""
+
+    enrollment = serializers.UUIDField()
+    registration_number = serializers.CharField()
+    student_name = serializers.CharField()
+    batch_code = serializers.CharField()
+    certified = serializers.BooleanField()
+    certificate_id = serializers.CharField(allow_null=True)
+    status = serializers.CharField()
+    reminder_count = serializers.IntegerField()
+    last_reminder_at = serializers.DateTimeField(allow_null=True)
+
+
+@extend_schema(responses=CertFollowUpRowSerializer(many=True))
 class CertificateFollowUpListView(APIView):
     """MIS/Admin dashboard: certificate-pending vs completed students + follow-up state."""
 
@@ -109,6 +145,10 @@ class CertFollowUpStatusSerializer(serializers.Serializer):
     note = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+@extend_schema(
+    request=CertFollowUpStatusSerializer,
+    responses={200: CertFollowUpStatusResponse, 404: DetailResponse},
+)
 class CertFollowUpStatusView(APIView):
     """MIS/Admin set the follow-up status for a student's certificate."""
 

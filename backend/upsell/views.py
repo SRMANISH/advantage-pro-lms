@@ -4,6 +4,8 @@ Per the plan, messaging stays honest — it uses the student's employment as gen
 social proof and points to real courses we offer; it never fabricates outcomes.
 """
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +15,7 @@ from core.roles import Role
 from enrollments.models import Enrollment
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class UpsellView(APIView):
     permission_classes = [IsAuthenticated]
 

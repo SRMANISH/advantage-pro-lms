@@ -4,6 +4,7 @@ A faculty maintains these in their own portal; Super Admin/Admin see them when c
 faculty for a batch (they ride along on FacultyBriefSerializer).
 """
 
+from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,6 +23,7 @@ class IsFaculty(BasePermission):
         return bool(user and user.is_authenticated and user.role == Role.FACULTY)
 
 
+@extend_schema(request=FacultyProfileSerializer, responses=FacultyProfileSerializer)
 class FacultyProfileView(APIView):
     """A faculty reads (GET) and updates (PUT) their own skills + certifications."""
 

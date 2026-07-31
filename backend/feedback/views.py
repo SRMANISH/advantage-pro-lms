@@ -1,5 +1,6 @@
 """Feedback endpoints: students submit; only Super Admin reads (req 20)."""
 
+from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -9,12 +10,17 @@ from audit.services import record_action
 from core.pagination import StandardResultsPagination
 from core.permissions import IsSuperAdmin
 from core.roles import Role
+from core.schema import DetailResponse, OkResponse
 from core.utils import get_client_ip
 
 from .models import Feedback
 from .serializers import FeedbackCreateSerializer, FeedbackSerializer
 
 
+@extend_schema(
+    request=FeedbackCreateSerializer,
+    responses={201: OkResponse, 403: DetailResponse, 429: DetailResponse},
+)
 class FeedbackCreateView(APIView):
     """A student sends private feedback to management -> Super Admin WhatsApp + in-app."""
 
@@ -69,6 +75,7 @@ class FeedbackCreateView(APIView):
         return Response({"ok": True}, status=201)
 
 
+@extend_schema(responses=FeedbackSerializer(many=True))
 class FeedbackListView(APIView):
     """Super Admin's private feedback inbox. No other role can read feedback."""
 

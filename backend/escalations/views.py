@@ -1,3 +1,5 @@
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -13,6 +15,7 @@ from .services import run_escalations
 ReviewRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR)
 
 
+@extend_schema(request=None, responses=OpenApiTypes.OBJECT)
 class RunEscalationsView(APIView):
     """Trigger the escalation scan now (production runs it on a schedule)."""
 
@@ -29,6 +32,7 @@ class RunEscalationsView(APIView):
         return Response(result)
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class EscalationListView(APIView):
     """Batch-wise escalation ledger (req 23): filter with ``?batch=<id>``."""
 

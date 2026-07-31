@@ -1,5 +1,7 @@
 """Performance read APIs: a student's own record and a per-batch ranked board."""
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,6 +14,7 @@ from enrollments.models import Enrollment
 from .services import batch_performance_cached
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class MyPerformanceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -33,6 +36,7 @@ class MyPerformanceView(APIView):
         return Response(rows)
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class BatchPerformanceView(APIView):
     permission_classes = [
         has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR, Role.FACULTY)

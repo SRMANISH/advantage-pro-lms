@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -19,6 +21,7 @@ from core.adapters.registry import get_storage
 from core.pagination import StandardResultsPagination, paginate_rows
 from core.permissions import has_any_role
 from core.roles import Role
+from core.schema import DetailResponse
 from core.uploads import storage_name, validate_upload
 from enrollments.models import Enrollment
 from notifications.services import notify, notify_many
@@ -200,6 +203,7 @@ class ThreadViewSet(viewsets.ModelViewSet):
         return Response({"ok": True})
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class ForumMonitorView(APIView):
     """Tech Support doubt dashboard: unanswered doubts, overdue flags, and status
     counts (new, unanswered, faculty-response-pending, answered-by-TS). MIS has no
@@ -253,6 +257,7 @@ class ForumMonitorView(APIView):
         )
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class ForumBatchesView(APIView):
     """Batches the user can post a doubt in (for the New-doubt picker)."""
 
@@ -271,6 +276,9 @@ class ForumBatchesView(APIView):
         return Response([{"id": str(b.id), "code": b.code, "name": b.name} for b in qs])
 
 
+@extend_schema(
+    responses={(200, "application/octet-stream"): OpenApiTypes.BINARY, 404: DetailResponse}
+)
 class AttachmentDownloadView(APIView):
     """Serve a forum attachment, gated by the same batch access as the forum itself."""
 

@@ -1,4 +1,5 @@
 from django.conf import settings
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -11,6 +12,7 @@ from core.adapters.registry import get_email, get_sms, get_whatsapp
 from core.crypto import encrypt_secret
 from core.pagination import StandardResultsPagination
 from core.permissions import IsSuperAdmin
+from core.schema import DetailResponse, OkResponse
 
 from .models import IntegrationSetting, Notification
 from .serializers import NotificationSerializer
@@ -51,6 +53,32 @@ class IntegrationSettingSerializer(serializers.Serializer):
     secret = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
 
 
+class ChannelStateSerializer(serializers.Serializer):
+    """One row of the channel board. ``secret`` is deliberately absent — only whether one is
+    set is ever exposed."""
+
+    kind = serializers.CharField()
+    adapter = serializers.CharField()
+    dev_stub = serializers.BooleanField()
+    editable = serializers.BooleanField()
+    provider = serializers.CharField(allow_blank=True)
+    config = serializers.DictField()
+    secret_set = serializers.BooleanField()
+
+
+class ChannelsResponse(serializers.Serializer):
+    channels = ChannelStateSerializer(many=True)
+
+
+class ChannelSavedResponse(serializers.Serializer):
+    ok = serializers.BooleanField()
+    secret_set = serializers.BooleanField()
+
+
+@extend_schema(
+    request=IntegrationSettingSerializer,
+    responses={200: ChannelsResponse, 201: ChannelSavedResponse},
+)
 class ChannelsView(APIView):
     """Super Admin: view and edit the third-party connection behind each channel (req 21)."""
 
@@ -104,6 +132,7 @@ class ChannelTestSerializer(serializers.Serializer):
     message = serializers.CharField()
 
 
+@extend_schema(request=ChannelTestSerializer, responses={200: OkResponse, 400: DetailResponse})
 class ChannelTestView(APIView):
     """Super Admin: send a test message through a channel's adapter."""
 

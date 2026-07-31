@@ -1,5 +1,6 @@
 """Staff account administration: create/list staff, suspend/reactivate, change role."""
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +10,7 @@ from audit.services import record_action
 from core.permissions import MatrixPermission
 from core.permissions_matrix import Action, can
 from core.roles import Role
+from core.schema import DetailResponse
 from core.utils import get_client_ip
 from notifications.services import notify
 
@@ -28,6 +30,10 @@ def _active_batches_of(faculty) -> list[str]:
     )
 
 
+@extend_schema(
+    request=StaffCreateSerializer,
+    responses={200: UserSerializer(many=True), 201: UserSerializer},
+)
 class StaffAccountsView(APIView):
     """Create and list staff accounts — Super Admin only (updated procedure removed the
     Admin path entirely). New accounts go through the same two-step setup (email link ->
@@ -65,6 +71,10 @@ class StaffAccountsView(APIView):
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    request=None,
+    responses={200: UserSerializer, 400: DetailResponse, 403: DetailResponse, 404: DetailResponse},
+)
 class UserStatusView(APIView):
     """Suspend or reactivate a student or faculty account.
 
@@ -132,6 +142,10 @@ class UserStatusView(APIView):
         return Response(UserSerializer(target).data)
 
 
+@extend_schema(
+    request=None,
+    responses={200: UserSerializer, 400: DetailResponse, 404: DetailResponse},
+)
 class UserRoleView(APIView):
     """Super Admin changes a staff account's role (matrix CHANGE_USER_ROLE)."""
 

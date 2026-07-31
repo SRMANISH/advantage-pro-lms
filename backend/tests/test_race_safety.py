@@ -58,9 +58,7 @@ def test_only_the_first_decision_wins(pending_request):
     pending_request.refresh_from_db()
     assert pending_request.decided_by_id == first.id  # first decision stands
     assert (
-        Notification.objects.filter(
-            recipient=pending_request.user, kind="device_approved"
-        ).count()
+        Notification.objects.filter(recipient=pending_request.user, kind="device_approved").count()
         == 1
     )
 
@@ -133,7 +131,9 @@ def test_overlapping_reminder_runs_send_once(uncertified):
     assert run_certificate_reminders() == 1
     assert run_certificate_reminders() == 0
 
-    assert Notification.objects.filter(recipient=uncertified, kind="certificate_pending").count() == 1
+    assert (
+        Notification.objects.filter(recipient=uncertified, kind="certificate_pending").count() == 1
+    )
     followup = CertificateFollowUp.objects.get(enrollment__student=uncertified)
     assert followup.reminder_count == 1
 

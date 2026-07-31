@@ -1,6 +1,8 @@
 """Student enrolment: bulk import (all-or-nothing) and a role-scoped list."""
 
 from django.conf import settings
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -25,6 +27,7 @@ def _truthy(value) -> bool:
     return str(value).lower() in {"1", "true", "yes", "on"}
 
 
+@extend_schema(request=None, responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT})
 class EnrollmentImportView(APIView):
     """POST a CSV/XLSX. ``dry_run=true`` validates only; otherwise imports atomically."""
 

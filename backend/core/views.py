@@ -5,11 +5,14 @@ The code matrix stays the default; these endpoints create/remove per-action over
 matrix cache TTL (seconds) across all workers.
 """
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from audit.services import record_action
+from core.schema import DetailResponse
 from core.utils import get_client_ip
 
 from .models import PermissionOverride
@@ -25,6 +28,7 @@ from .permissions_matrix import (
 from .roles import Role
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class MatrixView(APIView):
     """The full effective matrix: defaults, current roles, and override state."""
 
@@ -51,6 +55,10 @@ class MatrixView(APIView):
         )
 
 
+@extend_schema(
+    request=None,
+    responses={200: OpenApiTypes.OBJECT, 400: DetailResponse, 404: DetailResponse},
+)
 class MatrixActionView(APIView):
     """Replace (PUT) or reset (DELETE) one action's allowed-roles set."""
 

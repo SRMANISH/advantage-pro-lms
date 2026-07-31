@@ -2,6 +2,7 @@
 
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,6 +14,7 @@ from batches.models import Batch
 from batches.selectors import resolve_batch
 from core.permissions import has_any_role
 from core.roles import Role
+from core.schema import DetailResponse, OkResponse
 from core.utils import get_client_ip
 from enrollments.models import Enrollment
 from notifications.services import notify
@@ -25,6 +27,49 @@ ReviewRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELO
 FollowUpRoles = has_any_role(Role.SUPER_ADMIN, Role.ADMIN, Role.MIS, Role.COUNSELOR)
 
 
+class AttendanceSummarySerializer(serializers.Serializer):
+    """One batch's attendance for the signed-in student."""
+
+    batch = serializers.CharField()
+    batch_name = serializers.CharField()
+    present = serializers.IntegerField()
+    total = serializers.IntegerField()
+    percent = serializers.IntegerField()
+
+
+class RosterRowSerializer(serializers.Serializer):
+    """One student's standing in a batch roster."""
+
+    student = serializers.UUIDField()
+    student_name = serializers.CharField()
+    registration_number = serializers.CharField()
+    present = serializers.IntegerField()
+    total = serializers.IntegerField()
+    percent = serializers.IntegerField()
+
+
+class ReviewBatchSerializer(serializers.Serializer):
+    """A batch the caller may review, for the batch picker."""
+
+    id = serializers.UUIDField()
+    code = serializers.CharField()
+    name = serializers.CharField()
+
+
+class DailyRosterResponse(serializers.Serializer):
+    """Per-student login status for one day, plus whether that day counts at all."""
+
+    date = serializers.DateField()
+    weekend_excluded = serializers.BooleanField()
+    rows = serializers.ListField(child=serializers.DictField())
+
+
+class FollowUpStatusResponse(serializers.Serializer):
+    ok = serializers.BooleanField()
+    status = serializers.CharField()
+
+
+@extend_schema(responses=AttendanceSummarySerializer(many=True))
 class MyAttendanceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -37,6 +82,7 @@ class MyAttendanceView(APIView):
         return Response(rows)
 
 
+@extend_schema(responses=RosterRowSerializer(many=True))
 class BatchAttendanceView(APIView):
     permission_classes = [ReviewRoles]
 
@@ -58,6 +104,7 @@ class BatchAttendanceView(APIView):
         return Response(rows)
 
 
+@extend_schema(responses=ReviewBatchSerializer(many=True))
 class ReviewBatchesView(APIView):
     """Batches the user can review attendance for (for the picker)."""
 
@@ -75,6 +122,7 @@ class FollowUpSerializer(serializers.Serializer):
     message = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+@extend_schema(request=FollowUpSerializer, responses={200: OkResponse, 404: DetailResponse})
 class FollowUpView(APIView):
     """Counselor (or admin/MIS) sends a standard absence follow-up to a student."""
 
@@ -110,6 +158,7 @@ class FollowUpView(APIView):
         return Response({"ok": True})
 
 
+@extend_schema(responses={200: DailyRosterResponse, 400: DetailResponse})
 class DailyAttendanceView(APIView):
     """Per-day login attendance for a batch: who logged in / who did not, with
     follow-up status. Seen by Counselor and MIS (and Admin/Faculty-own-batch)."""
@@ -140,6 +189,10 @@ class FollowUpStatusSerializer(serializers.Serializer):
     note = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+@extend_schema(
+    request=FollowUpStatusSerializer,
+    responses={200: FollowUpStatusResponse, 404: DetailResponse},
+)
 class FollowUpStatusView(APIView):
     """Counselor/MIS set or update the follow-up status for an absent student."""
 
