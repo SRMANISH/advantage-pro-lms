@@ -30,7 +30,7 @@ def notify(user, kind, message, *, link="", subject=None, channels=("in_app",)):
     note = None
     if "in_app" in channels:
         note = Notification.objects.create(recipient=user, kind=kind, message=message, link=link)
-    queue_external(user.id, channels, subject or kind, message)
+    queue_external(user.id, channels, subject or kind, message, kind)
     return note
 
 

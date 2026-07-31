@@ -49,3 +49,20 @@ class SchedulerAdapter(ABC):
 
     @abstractmethod
     def cancel(self, job_id: str) -> None: ...
+
+
+def mask_recipient(value: str) -> str:
+    """Reduce an email or phone number to something identifiable but not personal.
+
+    Adapter failures are logged and shipped to Sentry, so the raw address must not appear —
+    it is the single most sensitive field these adapters touch. Enough is kept to correlate a
+    failure with an account when someone is debugging: "as***@example.com", "*******0001".
+    """
+    value = (value or "").strip()
+    if not value:
+        return "(none)"
+    if "@" in value:
+        local, _, domain = value.partition("@")
+        head = local[:2] if len(local) > 2 else local[:1]
+        return f"{head}{'*' * max(len(local) - len(head), 1)}@{domain}"
+    return f"{'*' * max(len(value) - 4, 0)}{value[-4:]}"

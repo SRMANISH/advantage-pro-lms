@@ -12,7 +12,7 @@ import logging
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
 
-from .base import EmailAdapter
+from .base import EmailAdapter, mask_recipient
 
 logger = logging.getLogger("lms.adapters")
 
@@ -50,4 +50,4 @@ class SmtpEmailAdapter(EmailAdapter):
         except Exception:
             # Never let a provider outage break the request that triggered the email —
             # log loudly so it's visible in monitoring, and let the caller move on.
-            logger.exception("SMTP send failed for %s (subject=%r)", to, subject)
+            logger.exception("SMTP send failed: to=%s subject=%r", mask_recipient(to), subject)

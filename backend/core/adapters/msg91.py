@@ -13,7 +13,7 @@ import logging
 import requests
 from django.conf import settings
 
-from .base import SmsAdapter
+from .base import SmsAdapter, mask_recipient
 
 logger = logging.getLogger("lms.adapters")
 
@@ -34,7 +34,10 @@ class Msg91SmsAdapter(SmsAdapter):
         route = str(c.get("route") or getattr(settings, "MSG91_ROUTE", "4"))
         country = str(c.get("country") or getattr(settings, "MSG91_COUNTRY", "91"))
         if not auth_key or not sender:
-            logger.warning("MSG91_AUTH_KEY/MSG91_SENDER_ID not configured — SMS not sent to %s", to)
+            logger.warning(
+                "MSG91_AUTH_KEY/MSG91_SENDER_ID not configured — SMS not sent to %s",
+                mask_recipient(to),
+            )
             return
         payload = {
             "sender": sender,
@@ -50,6 +53,16 @@ class Msg91SmsAdapter(SmsAdapter):
                 timeout=10,
             )
             if resp.status_code >= 400:
-                logger.error("MSG91 send failed (%s): %s", resp.status_code, resp.text[:300])
+                logger.error(
+                    "MSG91 send failed: to=%s status=%s body=%.200s",
+                    mask_recipient(to),
+                    resp.status_code,
+                    resp.text,
+                )
         except requests.RequestException:
-            logger.exception("MSG91 request failed for %s", to)
+            logger.exception("MSG91 request failed: to=%s", mask_recipient(to))
+        except Exception:
+            # Not just RequestException: a malformed provider config raises KeyError here, and
+            # an unexpected payload raises on parse. Either would otherwise escape and abort
+            # every channel queued behind this one.
+            logger.exception("MSG91 send failed unexpectedly: to=%s", mask_recipient(to))

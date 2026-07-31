@@ -68,6 +68,17 @@ services:
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 5 --timeout 60
              --access-logfile -"
     expose: ["8000"]
+    # Readiness, not liveness: this gates whether the container is considered usable, and it
+    # should go unhealthy when Postgres or Redis is unreachable — serving requests without
+    # either is worse than not serving them. start_period covers migrate + collectstatic.
+    healthcheck:
+      test:
+        ["CMD-SHELL",
+         "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/ready/', timeout=4).status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   qcluster:
     <<: *django

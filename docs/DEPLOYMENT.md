@@ -105,6 +105,28 @@ Redis broker therefore requires adding `on_commit` at every send site first.
 cache**, which genuinely does need to be shared across gunicorn workers. It is just not the
 queue broker. Sizing Redis for queue throughput would be sizing the wrong thing.
 
+### Health probes
+
+Two endpoints, answering different questions. Wiring them the wrong way round is the classic
+way to turn a dependency outage into an application outage.
+
+| Endpoint | Question | Checks | Wire it to |
+|---|---|---|---|
+| `/api/v1/health/` | Is the process alive? | Nothing — returns static JSON | Restart policy / liveness probe |
+| `/api/v1/ready/` | Can it serve a request? | `SELECT 1` on the database, plus a cache write-and-read | Load-balancer rotation / readiness probe |
+
+Readiness returns **503** with the failing dependency named (`{"status": "unavailable",
+"failed": ["cache"]}`) so an operator can see which one is down without reading logs.
+
+The cache check writes and reads back rather than only reading: a misconfigured cache that
+silently drops every write returns `None` for everything and looks healthy to a `get()`-only
+probe, while every rate limit and session in the application is quietly broken.
+
+**Do not point the restart policy at readiness.** A thirty-second Postgres failover would take
+every container unhealthy at once and restart the lot, converting a recoverable blip into a
+cold start of the whole application. `deploy/nginx.conf` and `docker-compose.prod.yml` are
+already wired this way.
+
 Point cron at the scheduled commands:
 ```cron
 */5 * * * *  cd /srv/lms/backend && .venv/bin/python manage.py send_due_reminders          # live-class 1h/15m (skips cancelled)

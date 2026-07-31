@@ -15,12 +15,16 @@ through here and are unaffected.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
+from django.conf import settings
 from django.db.models import ProtectedError, RestrictedError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as _drf_exception_handler
+
+logger = logging.getLogger("lms.api")
 
 _FALLBACK = "Something went wrong — please try again."
 
@@ -83,7 +87,30 @@ def exception_handler(exc: Exception, context: dict) -> Response | None:
 
     response = _drf_exception_handler(exc, context)
     if response is None:
-        return None  # Not a DRF-recognised exception — let Django handle it as normal.
+        # An exception DRF does not recognise, i.e. a bug. In DEBUG we hand it back so the
+        # developer gets Django's traceback page; in production the client would otherwise
+        # receive Django's bare 500 — an HTML error page from a JSON API, which the
+        # frontend's error handling cannot read, so the user sees nothing useful at all.
+        if settings.DEBUG:
+            return None
+
+        # Log before returning, and this is load-bearing rather than tidiness: returning a
+        # Response here stops DRF calling raise_uncaught_exception(), so Django never sends
+        # got_request_exception and Sentry's Django integration never sees the error. The
+        # ERROR-level record is what keeps it reported (sentry-sdk's logging integration
+        # captures ERROR and above as events). Without this line, adding a friendly envelope
+        # would have silently blinded production monitoring.
+        logger.exception(
+            "Unhandled exception in %s", getattr(context.get("view"), "__class__", type(None))
+        )
+        return Response(
+            # Deliberately says nothing about the exception: str(exc) on a database error
+            # carries the SQL and often the parameter values, and on a KeyError the internal
+            # field name. The request id in the response header is how this gets correlated
+            # with the logged traceback.
+            {"detail": _FALLBACK, "errors": {}},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
     data = response.data
     if isinstance(data, dict) and set(data.keys()) <= {"detail"}:
         return response  # Already the uniform shape.

@@ -14,7 +14,7 @@ from typing import Any
 import requests
 from django.conf import settings
 
-from .base import WhatsAppAdapter
+from .base import WhatsAppAdapter, mask_recipient
 
 logger = logging.getLogger("lms.adapters")
 
@@ -71,6 +71,14 @@ class WhatsAppCloudAdapter(WhatsAppAdapter):
                 timeout=10,
             )
             if resp.status_code >= 400:
-                logger.error("WhatsApp send failed (%s): %s", resp.status_code, resp.text[:300])
+                logger.error(
+                    "WhatsApp send failed: to=%s status=%s body=%.200s",
+                    mask_recipient(to),
+                    resp.status_code,
+                    resp.text,
+                )
         except requests.RequestException:
-            logger.exception("WhatsApp request failed for %s", to)
+            logger.exception("WhatsApp request failed: to=%s", mask_recipient(to))
+        except Exception:
+            # See msg91: RequestException alone leaves config and parse errors to escape.
+            logger.exception("WhatsApp send failed unexpectedly: to=%s", mask_recipient(to))
