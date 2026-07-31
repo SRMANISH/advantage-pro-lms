@@ -23,6 +23,7 @@ from core.utils import get_client_ip
 
 from .. import password as password_service
 from .. import setup as setup_service
+from ..models import PasswordResetToken
 from ..throttling import LoginRateThrottle, OTPRateThrottle, VerificationRateThrottle
 
 
@@ -187,5 +188,11 @@ class ChangePasswordView(APIView):
             return Response({"detail": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(new_password)
         user.save(update_fields=["password"])
+        # Burn any reset token still in flight. Otherwise a link requested before this change
+        # stays live for its whole window: someone who triggered a reset (or intercepted the
+        # email) could use it *after* the owner had already changed the password, silently
+        # undoing the change. Changing your password is exactly when you want that closed —
+        # it is the action a user takes when they suspect their account.
+        PasswordResetToken.objects.filter(user=user, used=False).update(used=True)
         record_action(actor=user, action="password_changed", ip_address=get_client_ip(request))
         return Response({"ok": True})

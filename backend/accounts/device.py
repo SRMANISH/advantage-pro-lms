@@ -3,8 +3,10 @@
 A student is tied to the device they first sign in from. A login from a new device is
 blocked and raises an approval request: during one of the student's live classes, their
 Faculty approve it; outside class hours, MIS does. After the student's course ends, the
-bound device still works (so they can sign in to look up their Certificate ID), but
-device *changes* are closed for good.
+bound device still works (so they can sign in to look up their Certificate ID). A device
+*change* after the course is no longer automatic — it needs Tech Support to approve it,
+because there is no live class left to route it through — but it is still possible: a
+graduate who loses their phone must not be locked out of their own certificate.
 
 On the identifier: a web app *cannot* read a device's hardware MAC address — browsers
 deliberately don't expose it. So a device is identified by a stable browser fingerprint
@@ -68,8 +70,47 @@ def handle_device_login(student, device_id: str, course_ended: bool = False) -> 
     if created or binding.device_id == device_id:
         return True, ""
 
+    # After the course, the change is not automatic but it is not a dead end either.
+    #
+    # The rule was "device changes are closed for good", which reads fine until you follow it
+    # through: post-course login exists so a graduate can sign in and enter their Certificate
+    # ID, and the one thing guaranteed to happen over that period is that people replace or
+    # lose phones. A student in that position had no route back at all — not "ask the office",
+    # just a permanent refusal — and the record they were locked out of is their own
+    # certification. Nobody decided that; it fell out of an unconditional block.
+    #
+    # So the request is still raised and still requires staff approval; only the routing
+    # changes. There is no live class to hand it to, so it goes to Tech Support, and the
+    # message tells the student that rather than implying they are finished.
     if course_ended:
-        return False, "Your course has ended — device changes are closed."
+        try:
+            _, created = DeviceChangeRequest.objects.get_or_create(
+                user=student,
+                new_device_id=device_id,
+                status=DeviceChangeRequest.Status.PENDING,
+                defaults={
+                    "old_device_id": binding.device_id,
+                    "during_class": False,
+                    "class_context": "post-course",
+                },
+            )
+        except IntegrityError:
+            created = False
+        if created:
+            who = student.full_name or student.username
+            notify_many(
+                _tech_support_users(),
+                "new_device",
+                f"{who} has completed their course and is trying to sign in from a new "
+                "device — approval needed so they can reach their certificate.",
+                subject="New-device sign-in (after course)",
+                channels=("in_app", "email"),
+            )
+        return (
+            False,
+            "Your course has ended, so a new device needs Tech Support to approve it. "
+            "We have let them know — they will be in touch.",
+        )
 
     # During a live class the change is approved by Faculty; outside class hours by MIS.
     from liveclasses.services import active_live_class_for_student

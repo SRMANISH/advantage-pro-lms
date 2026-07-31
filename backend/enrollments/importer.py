@@ -9,7 +9,9 @@ from __future__ import annotations
 import csv
 import io
 import re
+import zipfile
 
+from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import validate_email
 from django.db import transaction
@@ -44,14 +46,72 @@ def _canonical_header(key: str) -> str:
 
 
 def parse_rows(uploaded) -> list[dict]:
-    """Return a list of dict rows from a CSV or XLSX upload. Raises ValueError on bad files."""
+    """Return a list of dict rows from a CSV or XLSX upload. Raises ValueError on bad files.
+
+    The size checks happen *before* parsing. MAX_IMPORT_ROWS is enforced by the view on the
+    parsed result, which is too late to help: by then the file has already been decompressed
+    and materialised in memory, which is exactly what a hostile upload is trying to make us
+    do. This is the largest untrusted-input surface in the application — an MIS user uploads
+    a spreadsheet they were sent.
+    """
+    max_mb = int(getattr(settings, "MAX_IMPORT_UPLOAD_MB", 10))
+    size = getattr(uploaded, "size", 0) or 0
+    if size > max_mb * 1024 * 1024:
+        raise ValueError(f"File is too large (maximum {max_mb} MB).")
+
     name = (uploaded.name or "").lower()
     raw = uploaded.read()
+    # `size` can be absent or wrong on a file-like that is not an UploadedFile; the bytes we
+    # actually hold are the authority.
+    if len(raw) > max_mb * 1024 * 1024:
+        raise ValueError(f"File is too large (maximum {max_mb} MB).")
+
     if name.endswith(".xlsx"):
         return _parse_xlsx(raw)
     if name.endswith(".csv") or not name:
         return _parse_csv(raw)
     raise ValueError("Unsupported file type. Upload a .csv or .xlsx file.")
+
+
+def _reject_hostile_workbook(raw: bytes) -> None:
+    """Inspect the XLSX container before handing it to openpyxl.
+
+    An .xlsx is a ZIP. ``read_only=True`` streams rows, but it still decompresses
+    sharedStrings.xml in full, so a small file can expand to gigabytes — the classic zip bomb.
+    The ZIP central directory records each entry's decompressed size without decompressing
+    anything, so the whole check costs one directory read.
+
+    Two limits, because either alone is evadable: a total decompressed cap catches the big
+    payload, and a per-entry compression ratio catches a file that stays under the cap while
+    still being wildly disproportionate.
+    """
+    max_mb = int(getattr(settings, "MAX_IMPORT_DECOMPRESSED_MB", 200))
+    max_ratio = int(getattr(settings, "MAX_IMPORT_COMPRESSION_RATIO", 200))
+    max_sheets = int(getattr(settings, "MAX_IMPORT_SHEETS", 25))
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+            infos = zf.infolist()
+            total = sum(i.file_size for i in infos)
+            if total > max_mb * 1024 * 1024:
+                raise ValueError(
+                    "This workbook expands to far more data than an enrolment list should "
+                    "— it was not opened. Export a plain .csv and upload that instead."
+                )
+            for info in infos:
+                if info.compress_size > 0 and info.file_size / info.compress_size > max_ratio:
+                    raise ValueError(
+                        "This workbook is compressed far beyond what a spreadsheet needs "
+                        "— it was not opened. Export a plain .csv and upload that instead."
+                    )
+            sheets = sum(1 for i in infos if i.filename.startswith("xl/worksheets/"))
+            if sheets > max_sheets:
+                raise ValueError(
+                    f"This workbook has {sheets} sheets. Upload one with the enrolment list "
+                    "on a single sheet."
+                )
+    except zipfile.BadZipFile as exc:
+        raise ValueError("That .xlsx file is not a readable workbook.") from exc
 
 
 def _parse_csv(raw: bytes) -> list[dict]:
@@ -65,6 +125,7 @@ def _parse_csv(raw: bytes) -> list[dict]:
 def _parse_xlsx(raw: bytes) -> list[dict]:
     from openpyxl import load_workbook
 
+    _reject_hostile_workbook(raw)
     wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
     ws = wb.active
     rows = ws.iter_rows(values_only=True)
@@ -72,10 +133,20 @@ def _parse_xlsx(raw: bytes) -> list[dict]:
         header = [_canonical_header(str(h)) if h is not None else "" for h in next(rows)]
     except StopIteration as exc:
         raise ValueError("The file is empty.") from exc
-    out = []
+    # Bail out during iteration rather than after: the view's MAX_IMPORT_ROWS check runs on a
+    # fully-built list, so a sheet claiming a million rows would be materialised before being
+    # rejected. A little headroom over the limit so the view still produces the friendly
+    # "too many rows" message for merely-oversized (not hostile) files.
+    hard_cap = int(getattr(settings, "MAX_IMPORT_ROWS", 5000)) * 2
+    out: list[dict] = []
     for values in rows:
         if values is None or all(v is None for v in values):
             continue
+        if len(out) > hard_cap:
+            raise ValueError(
+                "This sheet has far more rows than an enrolment list should — it was not "
+                f"read past {hard_cap} rows."
+            )
         cells = ["" if v is None else str(v).strip() for v in values]
         out.append(dict(zip(header, cells, strict=False)))
     return out

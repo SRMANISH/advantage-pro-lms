@@ -114,6 +114,16 @@ AUTH_PASSWORD_VALIDATORS = [
 # nginx topology (deploy/nginx.conf), 2 if a CDN sits in front of that.
 TRUSTED_PROXY_COUNT = env.int("TRUSTED_PROXY_COUNT", default=0)
 
+# 12 hours, not Django's two-week default. ActiveSessionAuthentication re-checks UserStatus on
+# every request so a suspension takes effect immediately, but that only covers accounts we
+# know about — a session cookie stolen from a shared or public machine is not something the
+# server can detect, and two weeks of validity is a long time to hand over. A working day
+# covers the actual usage pattern (staff sign in each morning; students log in to be marked
+# present) without asking anyone to re-authenticate mid-task.
+SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=12 * 60 * 60)
+# Refresh the window on activity, so a long working day does not expire under someone.
+SESSION_SAVE_EVERY_REQUEST = True
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         # Re-checks UserStatus on every request. Plain SessionAuthentication would let a
@@ -194,6 +204,13 @@ LIVE_CLASS_DURATION_MINUTES = env.int("LIVE_CLASS_DURATION_MINUTES", default=120
 ATTENDANCE_COUNT_WEEKENDS = env.bool("ATTENDANCE_COUNT_WEEKENDS", default=True)
 # Student import: hard cap per file so one upload can't stall a worker (split larger lists).
 MAX_IMPORT_ROWS = env.int("MAX_IMPORT_ROWS", default=5000)
+# Import-surface caps. The row limit above is checked *after* parsing, which is too late to
+# protect anything: these bound the file before it is decompressed or iterated. An .xlsx is a
+# ZIP, so a few hundred KB can expand to gigabytes (see importer._reject_hostile_workbook).
+MAX_IMPORT_UPLOAD_MB = env.int("MAX_IMPORT_UPLOAD_MB", default=10)
+MAX_IMPORT_DECOMPRESSED_MB = env.int("MAX_IMPORT_DECOMPRESSED_MB", default=200)
+MAX_IMPORT_COMPRESSION_RATIO = env.int("MAX_IMPORT_COMPRESSION_RATIO", default=200)
+MAX_IMPORT_SHEETS = env.int("MAX_IMPORT_SHEETS", default=25)
 
 # Upload limits. DATA_UPLOAD_MAX_MEMORY_SIZE caps non-file POST bodies; the per-file hard
 # caps (video/document) are enforced by core.uploads.validate_upload.

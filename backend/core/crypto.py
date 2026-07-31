@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
+
+logger = logging.getLogger("lms.crypto")
 
 
 def _fernet() -> Fernet:
@@ -37,4 +40,14 @@ def decrypt_secret(token: str) -> str:
     try:
         return _fernet().decrypt(token.encode()).decode()
     except InvalidToken:
+        # Almost always one thing: SECRET_KEY was rotated, so every stored provider secret is
+        # now undecryptable. Returning "" keeps the app up, but silently — the adapters then
+        # behave as though no credentials were configured and every email, SMS and WhatsApp
+        # stops being delivered with nothing in the logs to say why. Warn loudly instead; the
+        # recovery is to re-enter each secret (docs/DEPLOYMENT.md).
+        logger.warning(
+            "Could not decrypt a stored integration secret — this normally means SECRET_KEY "
+            "was rotated. Re-enter the provider secrets in Channels; until then that channel "
+            "sends nothing."
+        )
         return ""

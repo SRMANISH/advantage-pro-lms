@@ -109,9 +109,18 @@ def test_login_with_totp_enabled_requires_code_then_succeeds():
     assert resp.status_code == 401
 
     # Step 3: correct code -> session established.
+    #
+    # The *next* step's code, not now(). Enrollment was confirmed a moment ago with the
+    # current code, and each time-step is accepted at most once (RFC 6238 §5.2), so replaying
+    # it here is refused by design. That is real behaviour, not a test artefact: confirm 2FA
+    # and try to sign in within the same 30 seconds and you must wait for the next code. A
+    # +1-step code is inside the drift window the server already allows.
+    import time
+
+    next_code = pyotp.TOTP(secret).at(time.time() + 30)
     resp = APIClient().post(
         LOGIN,
-        {"username": "adm", "password": "Secret123!", "totp_code": pyotp.TOTP(secret).now()},
+        {"username": "adm", "password": "Secret123!", "totp_code": next_code},
         content_type="application/json",
     )
     assert resp.status_code == 200

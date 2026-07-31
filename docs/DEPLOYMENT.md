@@ -105,6 +105,31 @@ Redis broker therefore requires adding `on_commit` at every send site first.
 cache**, which genuinely does need to be shared across gunicorn workers. It is just not the
 queue broker. Sizing Redis for queue throughput would be sizing the wrong thing.
 
+### Rotating SECRET_KEY
+
+`SECRET_KEY` is not only Django's signing key here — `core/crypto.py` derives the Fernet key
+that encrypts every provider secret in `IntegrationSetting` from it. **Rotating it makes those
+secrets undecryptable.** There is no automatic re-encryption, and the failure is quiet by
+design: `decrypt_secret` returns an empty string so the application stays up, which means the
+adapters behave as though no credentials were configured and email, SMS and WhatsApp simply
+stop being delivered.
+
+Since the rotation, that path also logs a warning naming `SECRET_KEY`, so grep the logs for it
+if channels go silent after a deploy.
+
+To rotate:
+
+1. Note which channels are configured (Super Admin → Channels; the secrets themselves are not
+   readable, only whether one is set).
+2. Roll `DJANGO_SECRET_KEY` and restart. Every signed session is invalidated, so everyone is
+   logged out — expected.
+3. **Re-enter each provider secret** in Super Admin → Channels. Until you do, that channel
+   sends nothing.
+4. Send a test message per channel (Channels → Test) to confirm.
+
+Rotating outside a maintenance window means silent delivery failure for the gap, so do step 3
+immediately after step 2.
+
 ### Health probes
 
 Two endpoints, answering different questions. Wiring them the wrong way round is the classic

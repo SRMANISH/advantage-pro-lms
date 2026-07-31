@@ -7,12 +7,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from audit.services import record_action
+from core.permissions import IsSuperAdmin
 from core.roles import Role
 from core.schema import CodeRequest, DetailResponse, OkResponse, PasswordRequest
 from core.utils import get_client_ip
 
 from .. import totp as totp_service
-from ..models import TOTPDevice
+from ..models import TOTPDevice, User
 from ..throttling import OTPRateThrottle, VerificationRateThrottle
 
 
@@ -110,4 +111,41 @@ class TOTPDisableView(APIView):
             )
         TOTPDevice.objects.filter(user=request.user).delete()
         record_action(actor=request.user, action="totp_disabled", ip_address=get_client_ip(request))
+        return Response({"ok": True})
+
+
+@extend_schema(
+    request=None,
+    responses={200: OkResponse, 403: DetailResponse, 404: DetailResponse},
+)
+class TOTPResetView(APIView):
+    """Super Admin clears a staff member's 2FA lockout.
+
+    Without this the attempt cap has no way out. Five mistyped codes — or a phone whose clock
+    has drifted past the ±1 step window — and the account is locked out of its own second
+    factor permanently, recoverable only from a database shell. That is not a security
+    property, it is an outage.
+
+    Clears the counter only. The user keeps their existing authenticator entry, so they are
+    not re-enrolling; and ``last_used_step`` is deliberately left in place, since resetting it
+    would re-open the replay window this is not meant to touch.
+
+    Super-Admin-only and audited: whoever can lift a 2FA lockout can, with the password, reach
+    the account.
+    """
+
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request, pk=None):
+        target = User.objects.filter(id=pk).first()
+        if not target:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        cleared = totp_service.reset_attempts(target)
+        record_action(
+            actor=request.user,
+            action="totp_lockout_reset",
+            target=target,
+            metadata={"was_locked": cleared},
+            ip_address=get_client_ip(request),
+        )
         return Response({"ok": True})

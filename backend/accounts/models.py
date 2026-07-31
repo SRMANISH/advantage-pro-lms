@@ -166,6 +166,11 @@ class TOTPDevice(TimeStampedModel):
     # still needs a per-device ceiling that an attacker cannot sidestep by rotating IPs.
     # Reset to 0 on any successful verification.
     failed_attempts = models.PositiveSmallIntegerField(default=0)
+    # The RFC 6238 time-step (unix time // 30) of the last code accepted for this device.
+    # A TOTP code stays valid for its whole window, so without this a code observed once —
+    # over a shoulder, in a screenshot, from a logged request — can be replayed for the rest
+    # of that window. RFC 6238 §5.2 requires exactly this: accept each step at most once.
+    last_used_step = models.BigIntegerField(null=True, blank=True)
 
     def __str__(self) -> str:
         return f"totp<{self.user_id}>"

@@ -23,6 +23,7 @@ from .views import (
     TOTPConfirmView,
     TOTPDisableView,
     TOTPEnrollView,
+    TOTPResetView,
     TOTPStatusView,
     UserRoleView,
     UserStatusView,
@@ -57,6 +58,8 @@ urlpatterns = [
     path("totp/enroll/", TOTPEnrollView.as_view(), name="totp-enroll"),
     path("totp/confirm/", TOTPConfirmView.as_view(), name="totp-confirm"),
     path("totp/disable/", TOTPDisableView.as_view(), name="totp-disable"),
+    # Super Admin lifts a staff lockout; see TOTPResetView for why this exists.
+    path("totp/<uuid:pk>/reset/", TOTPResetView.as_view(), name="totp-reset"),
     path("staff/", StaffAccountsView.as_view(), name="staff-accounts"),
     path("users/<uuid:pk>/status/", UserStatusView.as_view(), name="user-status"),
     path("users/<uuid:pk>/role/", UserRoleView.as_view(), name="user-role"),

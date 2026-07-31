@@ -14,12 +14,49 @@ viewer with no download control. `disposition="attachment"` is for genuinely
 downloadable artefacts (a student's own task file).
 """
 
+import ntpath
+
 from django.conf import settings
+from django.core.exceptions import SuspiciousFileOperation
 from django.http import HttpResponse, StreamingHttpResponse
 
 from core.adapters.registry import get_storage
 
 CHUNK = 8192
+
+
+def _reject_unsafe_key(storage_key: str) -> None:
+    """Refuse a storage key that could escape the media root or forge a response header.
+
+    This matters most on the path that looks safest. In dev the key goes to
+    ``LocalStorageAdapter.open()``, which resolves it and refuses anything outside
+    ``MEDIA_ROOT``. In **production it does not**: the key is interpolated into an
+    ``X-Accel-Redirect`` header and nginx resolves it, so the adapter's containment check is
+    never reached. The one deployment with a real filesystem to walk is the one without the
+    guard.
+
+    Keys are server-generated UUIDs now (``core.uploads.storage_name``), so nothing should
+    ever reach here that fails these tests — that is the point of a defence-in-depth check
+    rather than a reason to skip it.
+
+    Newlines are rejected for a different reason than the rest: a key containing CR or LF
+    would split the header and let a caller inject arbitrary response headers.
+    """
+    key = storage_key or ""
+    if not key:
+        raise SuspiciousFileOperation("Empty storage key.")
+    if any(ch in key for ch in ("\r", "\n", "\x00")):
+        raise SuspiciousFileOperation("Storage key contains a control character.")
+    if key.startswith("/") or key.startswith("\\") or ntpath.splitdrive(key)[0]:
+        raise SuspiciousFileOperation(f"Storage key must be relative: {key!r}")
+    if "\\" in key:
+        raise SuspiciousFileOperation(f"Storage key must not contain backslashes: {key!r}")
+    if ".." in key.split("/"):
+        raise SuspiciousFileOperation(f"Storage key escapes the media root: {key!r}")
+    # Percent-encoded separators, in case a proxy or client decodes them later.
+    lowered = key.lower()
+    if any(token in lowered for token in ("%2f", "%5c", "%2e%2e", "%00")):
+        raise SuspiciousFileOperation(f"Storage key contains an encoded separator: {key!r}")
 
 
 def _disposition_header(disposition: str, filename: str | None) -> str:
@@ -83,6 +120,7 @@ def deliver(
     filename: str | None = None,
 ):
     """Authorize in Django, then hand the actual byte-serving to the reverse proxy."""
+    _reject_unsafe_key(storage_key)
     prefix = getattr(settings, "MEDIA_XACCEL_PREFIX", "")
     if prefix:
         resp = HttpResponse(content_type=content_type)
