@@ -27,8 +27,9 @@ and `docs/PRODUCTION_PUSH_REPORT.md`. Do not reuse anything from here for it.
    - `lms-redis` — free Key Value, `maxmemoryPolicy: noeviction`
    - `advantage-pro-lms-api` — Docker web service from `backend/Dockerfile`
 
-   `DATABASE_URL` / `REDIS_URL` / `DJANGO_ALLOWED_HOSTS` are wired by reference in the
-   blueprint; `DJANGO_SECRET_KEY` is Render-generated.
+   `DATABASE_URL` / `REDIS_URL` are wired by reference in the blueprint;
+   `DJANGO_ALLOWED_HOSTS` is set to the public `advantage-pro-lms-api.onrender.com` host;
+   `DJANGO_SECRET_KEY` is Render-generated.
 
 2. **First deploy: build succeeded, start failed.**
    - Build proof: `Successfully installed Django-5.2.16 ... django-q2 ... cryptography-49.0.0`.
@@ -47,12 +48,25 @@ and `docs/PRODUCTION_PUSH_REPORT.md`. Do not reuse anything from here for it.
    - `.gitattributes` forces `*.sh` to `eol=lf`, so a CRLF shebang can never reach Linux and
      fail as `/usr/bin/env sh\r: not found`.
 
+4. **Second deploy: service started, health check failed with `DisallowedHost`.**
+   - Failure: `Invalid HTTP_HOST header: 'advantage-pro-lms-api.onrender.com'`.
+   - Root cause: the blueprint used `fromService.property: host` for `DJANGO_ALLOWED_HOSTS`.
+     Render documents that value as the private-network hostname, not the public
+     `*.onrender.com` hostname.
+   - Fix: `render.yaml` now sets `DJANGO_ALLOWED_HOSTS=advantage-pro-lms-api.onrender.com`,
+     and `prod.py` also adds Render's runtime `RENDER_EXTERNAL_HOSTNAME` as a safety net.
+
 ## 3. What to do next — resume here
 
-### Step A — redeploy the backend with the fix
+### Step A — redeploy the backend with the host fix
 
-The fix is on `main`. If the Render service auto-deploys on push it may already be rebuilding;
-otherwise **Manual Deploy → Deploy latest commit** on `advantage-pro-lms-api`.
+If the Render service auto-deploys on push it may already be rebuilding; otherwise
+**Manual Deploy → Deploy latest commit** on `advantage-pro-lms-api`. If the Blueprint does not
+auto-sync the environment variable, set this manually on the Render service before deploying:
+
+```
+DJANGO_ALLOWED_HOSTS=advantage-pro-lms-api.onrender.com
+```
 
 Expected in the logs: `==> Applying migrations`, `==> Collecting static files`, `==> Starting
 gunicorn`. Then the service goes **Live**.

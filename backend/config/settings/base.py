@@ -8,6 +8,8 @@ from pathlib import Path
 
 import environ
 
+from .hosts import DEV_ALLOWED_HOSTS, normalize_allowed_hosts
+
 # backend/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -16,7 +18,9 @@ environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-secret-change-me")
 DEBUG = env("DEBUG")
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+ALLOWED_HOSTS = normalize_allowed_hosts(
+    env.list("DJANGO_ALLOWED_HOSTS", default=list(DEV_ALLOWED_HOSTS))
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",

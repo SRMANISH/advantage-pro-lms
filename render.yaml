@@ -65,12 +65,11 @@ services:
           name: lms-redis
           property: connectionString
 
-      # prod.py refuses to boot if this is unset or still the dev default.
+      # Public hostname for Django's ALLOWED_HOSTS. Do not use Render's fromService `host`
+      # property here: for web services it is the private-network hostname, not the
+      # *.onrender.com host that arrives in the HTTP Host header.
       - key: DJANGO_ALLOWED_HOSTS
-        fromService:
-          type: web
-          name: advantage-pro-lms-api
-          property: host
+        value: advantage-pro-lms-api.onrender.com
 
       # Your Vercel URL. Left blank on purpose — fill both in the dashboard once the frontend
       # is deployed. CSRF_TRUSTED_ORIGINS is the one that bites: without it every login POST

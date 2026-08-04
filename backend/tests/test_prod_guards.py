@@ -14,6 +14,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
+from config.settings.hosts import is_missing_or_dev_default, normalize_allowed_hosts
+
 STUB = "core.adapters.local.ConsoleEmailAdapter"
 REAL_EMAIL = "core.adapters.smtp.SmtpEmailAdapter"
 REAL_SMS = "core.adapters.msg91.Msg91SmsAdapter"
@@ -75,6 +77,25 @@ def test_the_real_prod_settings_carry_the_guard():
     )
     assert "LMS_ALLOW_CONSOLE_ADAPTERS" in source
     assert "core.adapters.local" in source
+    assert "RENDER_EXTERNAL_HOSTNAME" in source
+    assert "is_missing_or_dev_default" in source
+
+
+def test_allowed_hosts_includes_render_external_hostname():
+    hosts = normalize_allowed_hosts(
+        ["advantage-pro-lms-api"],
+        "advantage-pro-lms-api.onrender.com",
+        " advantage-pro-lms-api.onrender.com ",
+    )
+
+    assert hosts == ["advantage-pro-lms-api", "advantage-pro-lms-api.onrender.com"]
+    assert not is_missing_or_dev_default(hosts)
+
+
+def test_allowed_hosts_guard_rejects_empty_and_dev_defaults():
+    assert is_missing_or_dev_default([])
+    assert is_missing_or_dev_default(["localhost", "127.0.0.1"])
+    assert not is_missing_or_dev_default(["advantage-pro-lms-api.onrender.com"])
 
 
 # --------------------------- demo seeder ---------------------------

@@ -4,7 +4,6 @@ from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F401,F403
 from .base import (
-    ALLOWED_HOSTS,
     LMS_ADAPTERS,
     MIDDLEWARE,
     REDIS_URL,
@@ -13,8 +12,17 @@ from .base import (
     SENTRY_TRACES_SAMPLE_RATE,
     env,
 )
+from .hosts import is_missing_or_dev_default, normalize_allowed_hosts
 
 DEBUG = False
+
+# Render's Blueprint `fromService.property: host` is the private-network hostname. Public
+# traffic arrives with RENDER_EXTERNAL_HOSTNAME (for example, app.onrender.com), so include it
+# automatically when this settings module runs on Render.
+ALLOWED_HOSTS = normalize_allowed_hosts(
+    env.list("DJANGO_ALLOWED_HOSTS", default=[]),
+    env("RENDER_EXTERNAL_HOSTNAME", default=""),
+)
 
 # Error monitoring (optional) — only active when a DSN is set and the SDK is installed.
 if SENTRY_DSN:
@@ -34,7 +42,7 @@ if SENTRY_DSN:
 # Fail fast on insecure dev defaults — never boot prod with these.
 if SECRET_KEY in ("", "dev-insecure-secret-change-me"):
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set to a strong secret in production.")
-if not ALLOWED_HOSTS or ALLOWED_HOSTS == ["localhost", "127.0.0.1"]:
+if is_missing_or_dev_default(ALLOWED_HOSTS):
     raise ImproperlyConfigured(
         "DJANGO_ALLOWED_HOSTS must be set to your real host(s) in production."
     )

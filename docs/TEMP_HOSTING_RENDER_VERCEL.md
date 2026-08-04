@@ -93,6 +93,9 @@ name and dies with `not found` (exit 127). That was verified the hard way on the
 **Simpler than all of the above:** the repo also ships `render.yaml`, so you can skip manual
 service creation entirely — Render dashboard → **New → Blueprint** → pick the repo, and the
 database, Key Value store and web service are created and wired together automatically.
+The blueprint sets `DJANGO_ALLOWED_HOSTS` to the public `*.onrender.com` hostname explicitly;
+Render's `fromService.host` value is private-network-only and is not valid for Django's public
+Host header checks.
 
 ### 1.4 Environment variables
 
