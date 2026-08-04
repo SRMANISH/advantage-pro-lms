@@ -82,8 +82,17 @@ CI-audited `requirements.txt`, so you get exactly what CI tested.
 **Docker Command** (overrides the Dockerfile `CMD`):
 
 ```
-sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60 --access-logfile -"
+sh ./render-start.sh
 ```
+
+The repo ships `backend/render-start.sh`, which runs migrate → collectstatic → (optional
+seeding) → gunicorn. It must be a script: Render **tokenises** this field rather than running
+it through a shell, so an inline `sh -c "a && b && c"` is handed to `sh` as one giant program
+name and dies with `not found` (exit 127). That was verified the hard way on the first deploy.
+
+**Simpler than all of the above:** the repo also ships `render.yaml`, so you can skip manual
+service creation entirely — Render dashboard → **New → Blueprint** → pick the repo, and the
+database, Key Value store and web service are created and wired together automatically.
 
 ### 1.4 Environment variables
 
@@ -132,15 +141,18 @@ python -c "import secrets; print(secrets.token_urlsafe(64))"
 
 ### 1.5 Deploy and seed
 
-Deploy. When it goes live, open **Shell** on the service:
+**The Shell tab is a paid feature** — on the Free plan you will not see it. Seeding works
+through an environment variable instead:
 
-```bash
-python manage.py seed_demo --force
-```
+1. In the service's **Environment** tab, set `SEED_DEMO=true` → **Save** (this triggers a
+   redeploy).
+2. Watch the logs for `==> Seeding demo data`.
+3. Set `SEED_DEMO=false` again. Leaving it on is harmless (the seeder is idempotent) but every
+   restart would reset the demo passwords, undoing any you changed while testing.
 
-`--force` is required: the seeder deliberately refuses to run outside `DEBUG` because it
-creates accounts with a publicly known password. That guard is doing its job here — you are
-overriding it knowingly, on a throwaway box.
+Under the hood this passes `--force` to the seeder, which otherwise refuses to run outside
+`DEBUG` because it creates accounts with a publicly known password. That guard is doing its
+job — the flag overrides it knowingly, on a throwaway box.
 
 This gives you the full demo dataset — see `docs/TESTING_GUIDE.md` for every account and
 password.

@@ -1,0 +1,4 @@
+# Shell scripts must stay LF regardless of core.autocrlf: they execute on Linux (Render,
+# Docker, the future VPS), and a CRLF shebang line fails with errors that do not mention
+# line endings — the interpreter is reported as "/usr/bin/env sh\r: not found".
+*.sh text eol=lf
