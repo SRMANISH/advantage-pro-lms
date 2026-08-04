@@ -110,3 +110,34 @@ def test_seed_demo_runs_normally_in_development(settings):
     from accounts.models import User
 
     assert User.objects.filter(username="faculty1").exists()
+
+
+@pytest.mark.django_db
+def test_reseeding_restores_a_drifted_demo_password(settings):
+    """Re-seeding must hand back a known-good environment, passwords included.
+
+    The seeder set passwords only on create, so a demo account whose password changed during
+    testing — the change-password flow, an E2E spec — kept the new value forever while every
+    document still said Demo!passLMS1. That is what had happened to `student1`: it was the one
+    account in the dev database that would not log in with its own documented credential.
+    """
+    from accounts.management.commands.seed_demo import PASSWORD
+    from accounts.models import User, UserStatus
+
+    settings.DEBUG = True
+    call_command("seed_demo", stdout=StringIO())
+
+    # Drift a staff account and a seeded student, the way real testing does.
+    for username in ("student1", "S101"):
+        account = User.objects.get(username=username)
+        account.set_password("something-else-entirely")
+        account.status = UserStatus.SUSPENDED
+        account.save(update_fields=["password", "status"])
+        assert not account.check_password(PASSWORD)
+
+    call_command("seed_demo", stdout=StringIO())
+
+    for username in ("student1", "S101"):
+        account = User.objects.get(username=username)
+        assert account.check_password(PASSWORD), f"{username} password not restored"
+        assert account.status == UserStatus.ACTIVE, f"{username} status not restored"

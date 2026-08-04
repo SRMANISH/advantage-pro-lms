@@ -134,7 +134,7 @@ class Command(BaseCommand):
     def _seed_accounts(self):
         users = {}
         for username, role, full_name in STAFF:
-            user, created = User.objects.get_or_create(
+            user, _ = User.objects.get_or_create(
                 username=username,
                 defaults={
                     "role": role,
@@ -146,16 +146,15 @@ class Command(BaseCommand):
                     "is_superuser": role == Role.SUPER_ADMIN,
                 },
             )
-            if created:
-                user.set_password(PASSWORD)
-                user.save()
-            elif user.role != role or user.status != UserStatus.ACTIVE:
-                # Repair drift: a demo account whose role/status was changed during testing
-                # is restored to its documented values on re-seed (get_or_create alone
-                # never touches an existing row).
-                user.role = role
-                user.status = UserStatus.ACTIVE
-                user.save(update_fields=["role", "status"])
+            # Repair drift on every run, not just on create. get_or_create never touches an
+            # existing row, so a demo account whose role, status *or password* was changed
+            # during testing kept the changed value forever while every document still said
+            # Demo!passLMS1 — which is exactly what happened to `student1`. Re-seeding is how
+            # you get a known-good environment back, so it has to actually restore one.
+            user.set_password(PASSWORD)
+            user.role = role
+            user.status = UserStatus.ACTIVE
+            user.save(update_fields=["password", "role", "status"])
             users[username] = user
         return users
 
@@ -167,7 +166,7 @@ class Command(BaseCommand):
         )
         students = [demo_student]
         for idx, (reg, name, company) in enumerate(DEMO_STUDENTS):
-            student, created = User.objects.get_or_create(
+            student, _ = User.objects.get_or_create(
                 username=reg,
                 defaults={
                     "role": Role.STUDENT,
@@ -177,9 +176,11 @@ class Command(BaseCommand):
                     "status": UserStatus.ACTIVE,
                 },
             )
-            if created:
-                student.set_password(PASSWORD)
-                student.save()
+            # Same reset as the staff accounts above — a student whose password was changed
+            # mid-test must come back to the documented one on re-seed.
+            student.set_password(PASSWORD)
+            student.status = UserStatus.ACTIVE
+            student.save(update_fields=["password", "status"])
             Enrollment.objects.get_or_create(
                 student=student,
                 batch=batch,
