@@ -1,0 +1,102 @@
+# Render Blueprint — creates the whole test backend in one go.
+#
+# Render dashboard -> New -> Blueprint -> pick this repo. It creates the Postgres database,
+# the Key Value (Redis) store and the web service together, and wires the connection strings
+# between them automatically — so you never copy an "Internal Database URL" by hand.
+#
+# TEST ENVIRONMENT ONLY. Free Postgres is deleted after 30 days, uploaded files do not survive
+# a redeploy, and no real email/SMS/WhatsApp is sent. Production is docs/DEPLOYMENT.md.
+#
+# NOTE: `name:` must be globally unique across Render for the web service, because it becomes
+# <name>.onrender.com. If the blueprint fails saying the name is taken, change it here AND in
+# frontend/vercel.json, which must point at the same host.
+
+databases:
+  - name: lms-db
+    databaseName: advantage_pro_lms
+    user: lms
+    plan: free
+    region: singapore
+
+services:
+  # --- Key Value (Redis) -----------------------------------------------------------------
+  # prod.py refuses to boot without REDIS_URL: it backs the shared rate-limit cache. Note the
+  # queue does NOT run on this — django-q2 resolves the ORM broker first, so background tasks
+  # live in Postgres. Do not size this for queue throughput.
+  - type: redis
+    name: lms-redis
+    plan: free
+    region: singapore
+    ipAllowList: [] # internal connections only
+    # Default is allkeys-lru, which silently drops keys under memory pressure. This app keeps
+    # rate-limit counters and the cron lock here, so eviction would quietly disable throttling.
+    maxmemoryPolicy: noeviction
+
+  # --- API -------------------------------------------------------------------------------
+  - type: web
+    name: advantage-pro-lms-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/v1/health/
+    dockerCommand: >-
+      sh -c "python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+      --workers 2 --timeout 60 --access-logfile -"
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+
+      # Render generates a strong value and stores it. Do not print or reuse it: it also
+      # derives the encryption key for stored provider secrets (core/crypto.py).
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+
+      # Wired automatically from the two services above — this is what saves you copying
+      # internal URLs out of the dashboard.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lms-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: lms-redis
+          property: connectionString
+
+      # prod.py refuses to boot if this is unset or still the dev default.
+      - key: DJANGO_ALLOWED_HOSTS
+        fromService:
+          type: web
+          name: advantage-pro-lms-api
+          property: host
+
+      # Your Vercel URL. Left blank on purpose — fill both in the dashboard once the frontend
+      # is deployed. CSRF_TRUSTED_ORIGINS is the one that bites: without it every login POST
+      # fails "CSRF verification failed" while reads work fine.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+
+      # Render puts one load balancer in front, so exactly one hop of X-Forwarded-For is
+      # trustworthy. Security setting, not tuning: too high starts trusting client-written
+      # values and defeats the login brute-force guard.
+      - key: TRUSTED_PROXY_COUNT
+        value: "1"
+
+      # Render's free tier has no background workers. Without this, every notification would
+      # queue forever and nobody would receive anything, with no error raised.
+      - key: Q_CLUSTER_SYNC
+        value: "true"
+
+      # Boot without real provider credentials. Production refuses this precisely because the
+      # console adapters log messages instead of sending them.
+      - key: LMS_ALLOW_CONSOLE_ADAPTERS
+        value: "1"
+
+      # Deliberately NOT set: MEDIA_XACCEL_PREFIX. It hands file serving to nginx, which does
+      # not exist here. Unset makes Django stream the bytes itself.
