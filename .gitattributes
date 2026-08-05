@@ -1,4 +1,21 @@
-# Shell scripts must stay LF regardless of core.autocrlf: they execute on Linux (Render,
-# Docker, the future VPS), and a CRLF shebang line fails with errors that do not mention
-# line endings — the interpreter is reported as "/usr/bin/env sh\r: not found".
+# Normalise every text file to LF in the working tree, not just in the repository.
+#
+# Without the `eol=lf`, git on Windows checks files out as CRLF while storing LF. Prettier
+# defaults to endOfLine: "lf", so `npm run format:check` then fails locally on 30+ files that
+# are perfectly fine in the repo and pass in CI — a gate that cries wolf gets ignored, and it
+# already wasted time twice during the Render deploy.
+* text=auto eol=lf
+
+# Shell scripts especially: they execute on Linux, and a CRLF shebang fails as
+# "/usr/bin/env sh\r: not found", which does not mention line endings at all.
 *.sh text eol=lf
+
+# Binary files git must not touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.xlsx binary
+*.mp4 binary
