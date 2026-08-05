@@ -65,7 +65,18 @@ export function LoginPage({ role }: LoginPageProps) {
         setNeedsTotp(true);
         setError(needsTotp ? e.message : null); // only show as an error on a retry
       } else {
-        setError(e instanceof Error ? e.message : "Invalid credentials for this portal.");
+        // Only call it a credential problem when the server actually said so. A 405, a
+        // proxy serving HTML, or a network failure previously all rendered as "Invalid
+        // credentials", which sends whoever is debugging to check the password — the one
+        // thing that is fine.
+        const status = (e as { response?: { status?: number } })?.response?.status;
+        setError(
+          status === 401 || status === 403
+            ? "Invalid credentials for this portal."
+            : e instanceof Error
+              ? e.message
+              : `Could not reach the server${status ? ` (HTTP ${status})` : ""}. Please try again.`,
+        );
       }
     } finally {
       setSubmitting(false);

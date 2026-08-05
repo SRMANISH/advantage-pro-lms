@@ -13,6 +13,26 @@ export const api = axios.create({
   xsrfHeaderName: "X-CSRFToken",
 });
 
+/**
+ * Fail loudly when the API returns HTML instead of JSON.
+ *
+ * This is always a routing or proxy misconfiguration — a static host serving index.html for
+ * an /api path, a rewrite that is not applied, a login page from some gateway. Without this
+ * guard the HTML flows into the app as a plain string and surfaces far away as
+ * "n.map is not a function" in whichever component happened to expect a list, which says
+ * nothing about the real cause. Caught here it names itself.
+ */
+api.interceptors.response.use((response) => {
+  const type = String(response.headers?.["content-type"] ?? "");
+  if (type.includes("text/html")) {
+    throw new Error(
+      "The API returned an HTML page instead of data. The /api proxy is probably not " +
+        "configured — check the deployment's rewrite rules.",
+    );
+  }
+  return response;
+});
+
 /** A DRF page envelope: `{ count, next, previous, results }`. */
 export interface Paginated<T> {
   count: number;
