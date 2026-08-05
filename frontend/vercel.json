@@ -5,6 +5,20 @@
       "source": "/api/:path*",
       "destination": "https://advantage-pro-lms-api.onrender.com/api/:path*"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "x-lms-vercel-config",
+          "value": "active"
+        }
+      ]
+    }
   ]
 }

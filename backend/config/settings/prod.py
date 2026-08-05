@@ -82,7 +82,12 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SAMESITE = "Lax"
+# "Lax" by default. A split deployment — frontend and API on different sites, as with
+# Vercel + Render — needs "None" (with Secure, set above) or the browser withholds the session
+# cookie on every cross-site request: login succeeds and every call after it is anonymous.
+# Env-driven rather than hardcoded so that topology does not require a code change.
+SESSION_COOKIE_SAMESITE = env("SESSION_COOKIE_SAMESITE", default="Lax")
+CSRF_COOKIE_SAMESITE = env("CSRF_COOKIE_SAMESITE", default="Lax")
 X_FRAME_OPTIONS = "DENY"
 
 # Serve hashed static files efficiently behind the app server.
