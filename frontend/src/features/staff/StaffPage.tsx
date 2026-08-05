@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import type { RoleDef } from "../../app/roles";
+import { ROLES, type RoleDef } from "../../app/roles";
 import {
   Badge,
   Button,
@@ -29,9 +29,38 @@ const ALL_STAFF_ROLES: { value: string; label: string }[] = [
   { value: "tech_support", label: "Tech Support" },
   { value: "faculty", label: "Faculty" },
 ];
-const ROLE_LABEL: Record<string, string> = Object.fromEntries(
-  ALL_STAFF_ROLES.map((r) => [r.value, r.label]),
-);
+/**
+ * Roles that may be *assigned* from a row dropdown. Narrower than ROLE_LABEL on purpose: a
+ * dropdown that cannot represent the row's own value silently displays its first option instead,
+ * so a Super Admin row would read "Admin" and demote the account on the first change event.
+ */
+const ASSIGNABLE_ROLES = new Set(ALL_STAFF_ROLES.map((r) => r.value));
+
+/**
+ * Display labels for *every* role, not just the assignable ones. This previously covered only
+ * ALL_STAFF_ROLES, so a Super Admin row fell through to the raw database value and rendered
+ * "Super_admin" — underscore and all. ALL_STAFF_ROLES wins on overlap so the dropdown options
+ * and the read-only badge never disagree on spelling.
+ */
+const ROLE_LABEL: Record<string, string> = {
+  ...Object.fromEntries(ROLES.map((r) => [r.value, r.label])),
+  ...Object.fromEntries(ALL_STAFF_ROLES.map((r) => [r.value, r.label])),
+};
+
+/** UserStatus rendered as a badge. Raw values ("active") must never reach the screen. */
+const STATUS: Record<string, { label: string; tone: "success" | "warning" | "neutral" }> = {
+  active: { label: "Active", tone: "success" },
+  pending: { label: "Pending setup", tone: "neutral" },
+  suspended: { label: "Suspended", tone: "warning" },
+};
+
+/**
+ * Shared column track for every staff row. Fixed widths, not `justify-between`: the action button
+ * renders on faculty rows only, and with content-driven widths its presence shoved that row's
+ * role dropdown ~120px left of every other one. The action cell is now always reserved, so the
+ * four columns line up whether or not a row has an action.
+ */
+const ROW_GRID = "sm:grid-cols-[minmax(0,1fr)_9.5rem_7rem_6rem]";
 
 const empty = { username: "", full_name: "", email: "", phone: "", role: "" };
 
@@ -45,7 +74,13 @@ export function StaffPage({ role }: { role: RoleDef }) {
     : ALL_STAFF_ROLES.filter((r) => r.value === "counselor");
 
   const staff = useQuery({ queryKey: ["staff"], queryFn: staffApi.list });
-  const table = useTableTools(staff.data, ["username", "full_name", "role"], 8);
+  // Search the *displayed* role, not the database value — the box promises "or role", and
+  // searching "Super Admin" or "Counsellor" matched nothing against `super_admin`/`counselor`.
+  const searchable = useMemo(
+    () => staff.data?.map((s) => ({ ...s, role_label: ROLE_LABEL[s.role] ?? s.role })),
+    [staff.data],
+  );
+  const table = useTableTools(searchable, ["username", "full_name", "role_label"], 8);
   const [form, setForm] = useState({ ...empty, role: roleOptions[0]?.value ?? "" });
   const [error, setError] = useState("");
 
@@ -157,14 +192,19 @@ export function StaffPage({ role }: { role: RoleDef }) {
               placeholder="Search staff by name, ID or role…"
             />
             <div className="flex flex-col divide-y divide-brdr">
-              {table.rows.map((s) => (
-                <div key={s.id} className="flex items-center justify-between py-2 text-sm">
-                  <div>
-                    <span className="font-medium text-ink">{s.full_name || s.username}</span>
-                    <span className="text-muted"> · {s.username}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isSuperAdmin && ROLE_LABEL[s.role] ? (
+              {table.rows.map((s) => {
+                const status = STATUS[s.status] ?? { label: s.status, tone: "neutral" as const };
+                return (
+                  <div
+                    key={s.id}
+                    className={`grid grid-cols-1 items-center gap-2 py-2.5 text-sm sm:gap-3 ${ROW_GRID}`}
+                  >
+                    <div className="min-w-0 truncate">
+                      <span className="font-medium text-ink">{s.full_name || s.username}</span>
+                      <span className="text-muted"> · {s.username}</span>
+                    </div>
+
+                    {isSuperAdmin && ASSIGNABLE_ROLES.has(s.role) ? (
                       <Select
                         aria-label={`Role for ${s.username}`}
                         className="h-8 py-1 text-xs"
@@ -178,28 +218,41 @@ export function StaffPage({ role }: { role: RoleDef }) {
                         ))}
                       </Select>
                     ) : (
-                      <Badge>{ROLE_LABEL[s.role] ?? s.role}</Badge>
+                      <div>
+                        <Badge>{ROLE_LABEL[s.role] ?? s.role}</Badge>
+                      </div>
                     )}
-                    <span
-                      className={
-                        s.status === "active" ? "text-xs text-muted" : "text-xs text-amber-600"
-                      }
-                    >
-                      {s.status}
-                    </span>
-                    {canSuspendFaculty && s.role === "faculty" && s.status !== "pending" && (
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          setStatus.mutate({ id: s.id, suspend: s.status !== "suspended" })
-                        }
-                      >
-                        {s.status === "suspended" ? "Reactivate" : "Suspend"}
-                      </Button>
-                    )}
+
+                    <div>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </div>
+
+                    {/*
+                      Always rendered so the columns stay aligned, but collapsed on mobile when
+                      empty — a one-column stack would otherwise reserve a gap for nothing.
+
+                      `h-8 text-xs` matches the Select, so a row is the same height with or
+                      without an action. The padding needs `!`: cn() is a plain string join, not
+                      tailwind-merge, so Button's base `px-4 py-2.5` is still in the class list
+                      and Tailwind emits utilities in lexicographic order — `.px-4` lands after
+                      `.px-3` and would win on equal specificity.
+                    */}
+                    <div className="empty:hidden sm:empty:block">
+                      {canSuspendFaculty && s.role === "faculty" && s.status !== "pending" && (
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-full !px-3 !py-1 text-xs"
+                          onClick={() =>
+                            setStatus.mutate({ id: s.id, suspend: s.status !== "suspended" })
+                          }
+                        >
+                          {s.status === "suspended" ? "Reactivate" : "Suspend"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <Paginator
               page={table.page}
