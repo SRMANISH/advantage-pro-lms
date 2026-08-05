@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://advantage-pro-lms-api.onrender.com/api/:path*"
+      "source": "/lms-api/(.*)",
+      "destination": "https://advantage-pro-lms-api.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",

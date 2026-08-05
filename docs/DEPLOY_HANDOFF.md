@@ -86,6 +86,26 @@ Free services cold-start (~50s on first hit).
 - `https://advantage-pro-lms-api.onrender.com/api/v1/ready/` → `{"status":"ready"}`
   A 503 names the failing dependency (`database` or `cache`).
 
+### IMPORTANT — the /api namespace is reserved on Vercel
+
+Proven on the live deployment, after two wrong diagnoses:
+
+- `x-lms-vercel-config: active` **is** returned, so Vercel *is* reading
+  `frontend/vercel.json`. The Root Directory was never the problem.
+- Bare `/api` returns **404** rather than the SPA fallback, while `/api/v1/health/` returns
+  `index.html`. Vercel intercepts `/api/*` for Serverless Functions before user rewrites, even
+  with no `frontend/api/` directory present.
+
+So the proxy is mounted at **`/lms-api`**, and the client is pointed at it with a Vercel
+environment variable:
+
+```
+VITE_API_URL=/lms-api/v1
+```
+
+**Keep that value relative.** It must stay same-origin so the session cookie remains
+first-party — setting it to the Render URL is what breaks login (see §6).
+
 ### Step D — deploy the frontend on Vercel
 
 1. [vercel.com/new](https://vercel.com/new) → import the same repo.
